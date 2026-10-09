@@ -1,0 +1,4044 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Montserrat:wght@400;500;600&display=swap");
+:root {
+  --cream: #f7f1e8;
+  --paper: #fbf8f3;
+  --ink: #2f211c;
+  --gold: #b7863e;
+  --brown: #321c15;
+  --muted: #76675e;
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: Montserrat, Arial, sans-serif;
+}
+button,
+a {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+.nav {
+  height: 108px;
+  display: flex;
+  align-items: center;
+  padding: 0 6%;
+  position: absolute;
+  z-index: 10;
+  width: 100%;
+  gap: 55px;
+}
+.brand {
+  width: 190px;
+  border: 0;
+  background: transparent;
+}
+.brand img {
+  width: 100%;
+  height: 78px;
+  object-fit: contain;
+}
+.nav nav {
+  display: flex;
+  gap: 40px;
+  margin: auto;
+}
+.nav nav a {
+  font-size: 14px;
+  cursor: pointer;
+}
+.nav-icons {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.nav-icons svg {
+  width: 20px;
+}
+.nav-icons button {
+  position: relative;
+  border: 0;
+  background: none;
+  padding: 0;
+}
+.nav-icons i {
+  position: absolute;
+  top: -12px;
+  right: -10px;
+  background: var(--gold);
+  color: #fff;
+  font-size: 10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+}
+.hamb {
+  display: none;
+}
+.hero {
+  height: 665px;
+  background: #eadfce;
+  display: grid;
+  grid-template-columns: 48% 52%;
+  position: relative;
+  overflow: hidden;
+}
+.hero-copy {
+  padding: 205px 5% 70px 9%;
+  z-index: 2;
+}
+.hero-copy span,
+.gem-categories > span,
+.beauty-intro > span,
+.jewellery > span,
+.signature article > span,
+.why > span {
+  font-size: 12px;
+  letter-spacing: 1.8px;
+  font-weight: 600;
+  color: #7a5431;
+}
+.hero h1,
+.gem-categories h2,
+.beauty h2,
+.jewellery h2,
+.signature h2,
+.story h2 {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 600;
+}
+.hero h1 {
+  font-size: 64px;
+  line-height: 0.94;
+  margin: 18px 0;
+}
+.hero-copy p {
+  font-size: 16px;
+  line-height: 1.65;
+  max-width: 450px;
+}
+.hero-copy button,
+.beauty-intro button,
+.signature article > button,
+.story button {
+  border: 0;
+  background: linear-gradient(90deg, #8f642c, #c69951);
+  color: #fff;
+  padding: 17px 24px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.hero-copy button svg,
+.beauty-intro button svg,
+.signature button svg,
+.story button svg {
+  width: 16px;
+}
+.hero-image {
+  height: 100%;
+  overflow: hidden;
+}
+.hero-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+}
+.hero > em {
+  position: absolute;
+  right: 4.5%;
+  top: 210px;
+  color: #f4eadb;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 25px;
+  line-height: 1.1;
+}
+.trust {
+  min-height: 105px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: center;
+  padding: 0 7%;
+  background: #fff;
+  border-bottom: 1px solid #e5ddd2;
+}
+.trust > div {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 28px;
+  border-right: 1px solid #ddd2c4;
+}
+.trust > div:last-child {
+  border: 0;
+}
+.trust svg {
+  width: 36px;
+  height: 36px;
+  color: var(--gold);
+  stroke-width: 1.5;
+}
+.trust p {
+  margin: 0;
+}
+.trust b,
+.trust small {
+  display: block;
+}
+.trust b {
+  font-family: "Cormorant Garamond";
+  font-size: 17px;
+}
+.trust small {
+  font-size: 10px;
+  margin-top: 5px;
+  color: var(--muted);
+}
+.gem-categories {
+  text-align: center;
+  padding: 52px 6% 46px;
+  background: radial-gradient(
+    circle at 50% 50%,
+    #fff 0,
+    #f8f3eb 65%,
+    #eee4d7 100%
+  );
+}
+.gem-categories h2,
+.jewellery h2 {
+  font-size: 43px;
+  margin: 6px 0 2px;
+}
+.gem-categories > p,
+.jewellery > p {
+  font-size: 13px;
+  margin: 0;
+  color: var(--muted);
+}
+.gem-row {
+  display: flex;
+  justify-content: center;
+  gap: 34px;
+  margin: 36px auto 26px;
+  max-width: 1180px;
+}
+.gem-row button {
+  border: 0;
+  background: none;
+  width: 92px;
+}
+.gem-row button span {
+  width: 68px;
+  height: 68px;
+  display: block;
+  border-radius: 50%;
+  padding: 4px;
+  border: 1px solid #d5b77e;
+  margin: auto;
+  transition: 0.35s;
+}
+.gem-row button img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.gem-row button b {
+  display: block;
+  font-size: 10px;
+  margin-top: 12px;
+  font-weight: 500;
+}
+.gem-row button:hover span {
+  transform: translateY(-7px) scale(1.06);
+  box-shadow: 0 10px 24px #6c4a2725;
+}
+.gem-categories > a,
+.view-all {
+  font-size: 10px;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.gem-categories > a svg,
+.view-all svg {
+  width: 13px;
+}
+.beauty {
+  padding: 55px 6% 50px;
+  display: grid;
+  grid-template-columns: 31% 69%;
+  position: relative;
+  background: #fffaf4;
+}
+.beauty-intro {
+  padding: 20px 55px 0 10px;
+}
+.beauty h2 {
+  font-size: 48px;
+  line-height: 0.95;
+  margin: 15px 0;
+}
+.beauty-intro p {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+  max-width: 310px;
+}
+.beauty-intro button {
+  margin-top: 25px;
+}
+.product-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.product-row article {
+  background: #fff;
+  box-shadow: 0 7px 30px #56391b0d;
+  transition: 0.35s;
+}
+.product-row article:hover {
+  transform: translateY(-7px);
+  box-shadow: 0 14px 35px #56391b18;
+}
+.product-photo {
+  height: 285px;
+  position: relative;
+  overflow: hidden;
+}
+.product-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: 0.45s;
+}
+.product-row article:hover img {
+  transform: scale(1.045);
+}
+.heart {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  border: 0;
+  background: #fff;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.heart svg {
+  width: 15px;
+}
+.product-row h3,
+.product-row > article > p,
+.product-row footer {
+  margin-left: 16px;
+  margin-right: 16px;
+}
+.product-row h3 {
+  font-family: "Cormorant Garamond";
+  font-size: 18px;
+  margin-bottom: 3px;
+}
+.product-row > article > p {
+  font-size: 9px;
+  color: var(--muted);
+}
+.product-row footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0 16px;
+}
+.product-row footer b {
+  font-size: 15px;
+}
+.product-row footer button {
+  border: 0;
+  background: var(--gold);
+  color: white;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+}
+.product-row footer svg {
+  width: 14px;
+}
+.view-all {
+  position: absolute;
+  bottom: 22px;
+  left: 58%;
+}
+.jewellery {
+  padding: 48px 6% 52px;
+  text-align: center;
+  color: #f8ecdc;
+  background: radial-gradient(
+    circle at 50% 10%,
+    #68402d 0,
+    #3b2118 45%,
+    #27130f 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+.jewellery > span {
+  color: #d5a659;
+}
+.jewellery > p {
+  color: #d7c6bb;
+}
+.jewellery-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 28px;
+  max-width: 1200px;
+  margin: 32px auto 0;
+}
+.jewellery-row article > div {
+  height: 235px;
+  border-radius: 110px 110px 0 0;
+  overflow: hidden;
+  border: 1px solid #c8a15e;
+  padding: 4px;
+}
+.jewellery-row img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 106px 106px 0 0;
+  transition: 0.45s;
+}
+.jewellery-row article:hover img {
+  transform: scale(1.06);
+}
+.jewellery-row h3 {
+  font-family: "Cormorant Garamond";
+  font-size: 21px;
+  margin: 10px 0 8px;
+}
+.jewellery-row a {
+  font-size: 9px;
+  border-bottom: 1px solid #d5a659;
+  padding-bottom: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.jewellery-row a svg {
+  width: 12px;
+}
+.signature {
+  display: grid;
+  grid-template-columns: 57% 43%;
+  min-height: 410px;
+  background: #f7f0e7;
+}
+.signature > div {
+  overflow: hidden;
+}
+.signature > div img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 50%;
+}
+.signature article {
+  padding: 52px 9% 35px 7%;
+}
+.signature h2 {
+  font-size: 42px;
+  line-height: 0.95;
+  margin: 14px 0;
+}
+.signature article > p {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+.sig-points {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 28px 0;
+}
+.sig-points b {
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.45;
+}
+.sig-points svg {
+  width: 25px;
+  color: #8e632c;
+}
+.signature strong {
+  font-family: "Cormorant Garamond";
+  font-size: 27px;
+  margin-right: 40px;
+}
+.signature article > button {
+  display: inline-flex;
+}
+.why {
+  text-align: center;
+  padding: 32px 7%;
+  background: white;
+}
+.why > div {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  max-width: 1150px;
+  margin: 24px auto 0;
+}
+.why article {
+  border-right: 1px solid #d9cfc4;
+  padding: 0 35px;
+}
+.why article:last-child {
+  border: 0;
+}
+.why svg {
+  color: var(--gold);
+  width: 34px;
+  height: 34px;
+}
+.why b {
+  display: block;
+  font-family: "Cormorant Garamond";
+  font-size: 18px;
+  margin: 8px;
+}
+.why p {
+  font-size: 10px;
+  color: var(--muted);
+  margin: 0;
+}
+.story {
+  height: 300px;
+  display: grid;
+  grid-template-columns: 55% 45%;
+  background: #2d1b15;
+  color: #fff;
+  overflow: hidden;
+}
+.story > div:first-child {
+  padding: 52px 8%;
+}
+.story h2 {
+  font-size: 43px;
+  line-height: 0.95;
+  margin: 0 0 10px;
+}
+.story p {
+  font-size: 12px;
+}
+.story button {
+  margin-top: 22px;
+}
+.story-art {
+  position: relative;
+  overflow: hidden;
+}
+.story-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.55);
+}
+.story-art span {
+  position: absolute;
+  left: 44%;
+  top: 18%;
+  font-family: "Cormorant Garamond";
+  font-style: italic;
+  font-size: 33px;
+  color: #d7a653;
+  transform: rotate(-7deg);
+}
+footer {
+  padding: 40px 6% 20px;
+  display: grid;
+  grid-template-columns: 1.2fr 0.7fr 0.8fr 1.2fr;
+  gap: 55px;
+  background: #faf7f2;
+  font-size: 12px;
+}
+footer .foot-brand img {
+  width: 180px;
+  height: 70px;
+  object-fit: contain;
+}
+footer p {
+  line-height: 1.6;
+  color: var(--muted);
+}
+footer b {
+  font-size: 13px;
+  margin-bottom: 13px;
+  display: block;
+}
+footer a {
+  display: block;
+  margin: 9px 0;
+  color: #5c514a;
+}
+.foot-brand svg {
+  width: 17px;
+  margin-right: 12px;
+}
+footer label {
+  display: flex;
+  border: 1px solid #c9b79f;
+  margin-top: 16px;
+}
+footer input {
+  border: 0;
+  background: transparent;
+  padding: 13px;
+  width: 100%;
+  outline: 0;
+}
+footer label button {
+  width: 48px;
+  border: 0;
+  background: var(--gold);
+  color: white;
+}
+footer > section {
+  grid-column: 1/-1;
+  border-top: 1px solid #ddd4ca;
+  padding-top: 17px;
+  color: #776b64;
+}
+footer > section span {
+  float: right;
+}
+@media (max-width: 900px) {
+  .nav {
+    height: 80px;
+    padding: 0 4%;
+  }
+  .brand {
+    width: 145px;
+  }
+  .nav nav {
+    display: none;
+    position: absolute;
+    top: 80px;
+    left: 0;
+    right: 0;
+    background: #fff;
+    padding: 25px;
+    flex-direction: column;
+  }
+  .nav nav.open {
+    display: flex;
+  }
+  .hamb {
+    display: block !important;
+  }
+  .hero {
+    height: auto;
+    grid-template-columns: 1fr;
+    padding-top: 80px;
+  }
+  .hero-copy {
+    padding: 60px 7%;
+  }
+  .hero h1 {
+    font-size: 48px;
+  }
+  .hero-image {
+    height: 430px;
+  }
+  .hero > em {
+    display: none;
+  }
+  .trust {
+    grid-template-columns: 1fr 1fr;
+    padding: 18px;
+  }
+  .trust > div {
+    border: 0;
+  }
+  .gem-row {
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+  .beauty {
+    grid-template-columns: 1fr;
+  }
+  .beauty-intro {
+    padding: 10px 0 35px;
+  }
+  .product-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .view-all {
+    position: static;
+    margin: 25px auto 0;
+  }
+  .jewellery-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .signature {
+    grid-template-columns: 1fr;
+  }
+  .signature > div {
+    height: 390px;
+  }
+  .why > div {
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+  }
+  .why article {
+    border: 0;
+  }
+  .story {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .story-art {
+    height: 260px;
+  }
+  footer {
+    grid-template-columns: 1fr 1fr;
+  }
+  .nav-icons > svg {
+    display: none;
+  }
+}
+@media (max-width: 560px) {
+  .product-row {
+    grid-template-columns: 1fr;
+  }
+  .jewellery-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
+  .jewellery-row article > div {
+    height: 190px;
+  }
+  .signature article {
+    padding: 38px 7%;
+  }
+  .sig-points {
+    grid-template-columns: 1fr;
+  }
+  .why > div,
+  footer {
+    grid-template-columns: 1fr;
+  }
+  footer > section span {
+    float: none;
+    display: block;
+    margin-top: 10px;
+  }
+  .trust {
+    grid-template-columns: 1fr;
+  }
+  .hero-image {
+    height: 350px;
+  }
+}
+
+/* v1.6.0 premium reference refinement */
+.nav {
+  height: 94px;
+  padding: 0 5.5%;
+  gap: 40px;
+  background: linear-gradient(
+    180deg,
+    rgba(247, 241, 232, 0.72),
+    rgba(247, 241, 232, 0.08)
+  );
+  backdrop-filter: blur(2px);
+}
+.brand {
+  width: 172px;
+}
+.brand img {
+  height: 66px;
+}
+.nav nav {
+  gap: 34px;
+}
+.nav nav a {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+.nav-icons svg {
+  stroke-width: 1.45;
+}
+.hero {
+  height: 650px;
+  grid-template-columns: 43% 57%;
+  background: linear-gradient(110deg, #f3eadf 0%, #e8d8c6 47%, #c5aa91 100%);
+}
+.hero:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 12% 75%,
+    rgba(255, 255, 255, 0.55),
+    transparent 28%
+  );
+  pointer-events: none;
+}
+.hero-copy {
+  padding: 188px 3% 60px 8.5%;
+}
+.hero-copy span {
+  font-size: 11px;
+  letter-spacing: 2.15px;
+  color: #654534;
+}
+.hero h1 {
+  font-size: 68px;
+  line-height: 0.91;
+  letter-spacing: -1.6px;
+  margin: 20px 0 14px;
+}
+.hero-copy p {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 20px;
+  line-height: 1.42;
+  max-width: 390px;
+  color: #4d4038;
+}
+.hero-copy button {
+  margin-top: 24px;
+  box-shadow: 0 12px 30px rgba(121, 78, 31, 0.18);
+}
+.hero-image {
+  position: relative;
+}
+.hero-image:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    #e8d8c6 0%,
+    rgba(232, 216, 198, 0.18) 16%,
+    transparent 40%
+  );
+}
+.hero-image img {
+  object-position: center center;
+  filter: saturate(0.92) contrast(1.02);
+}
+.hero > em {
+  right: 3.8%;
+  top: 235px;
+  font-size: 26px;
+}
+.trust {
+  min-height: 96px;
+  padding: 0 6%;
+  box-shadow: 0 8px 30px rgba(57, 37, 24, 0.04);
+}
+.trust > div {
+  justify-content: center;
+}
+.trust b {
+  font-size: 18px;
+}
+.gem-categories {
+  padding: 58px 6% 52px;
+  background: radial-gradient(
+    circle at 50% 35%,
+    #fffdfa 0,
+    #f7efe4 70%,
+    #eee1d1 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+.gem-categories h2 {
+  font-size: 48px;
+}
+.gem-row {
+  gap: 30px;
+  margin-top: 38px;
+}
+.gem-row button {
+  width: 88px;
+}
+.gem-row button span {
+  width: 62px;
+  height: 62px;
+  border-color: #c8a46a;
+  box-shadow: 0 7px 22px rgba(81, 53, 27, 0.1);
+  background: #fff;
+}
+.gem-row button b {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+.beauty {
+  padding: 72px 6% 62px;
+  grid-template-columns: 32% 68%;
+  background: linear-gradient(115deg, #fbf5ec 0%, #fffdf9 46%, #f6ede1 100%);
+  overflow: hidden;
+  isolation: isolate;
+}
+.beauty-glow {
+  position: absolute;
+  border-radius: 50%;
+  z-index: -1;
+}
+.beauty-glow-one {
+  width: 330px;
+  height: 330px;
+  left: -190px;
+  top: -90px;
+  background: radial-gradient(circle, #d8b98944, transparent 68%);
+}
+.beauty-glow-two {
+  width: 280px;
+  height: 280px;
+  right: -130px;
+  bottom: -150px;
+  background: radial-gradient(circle, #9b6b3b25, transparent 68%);
+}
+.beauty-intro {
+  padding: 28px 70px 0 10px;
+}
+.beauty h2 {
+  font-size: 57px;
+  line-height: 0.9;
+  letter-spacing: -1px;
+  margin: 18px 0 20px;
+}
+.beauty-intro p {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 16px;
+  line-height: 1.55;
+  color: #66554b;
+}
+.product-row {
+  gap: 22px;
+}
+.product-row article {
+  border: 1px solid rgba(178, 145, 99, 0.22);
+  box-shadow: 0 16px 45px rgba(70, 43, 24, 0.07);
+  overflow: hidden;
+}
+.product-photo {
+  height: 310px;
+}
+.product-row h3 {
+  font-size: 21px;
+}
+.product-row footer b {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 19px;
+}
+.jewellery {
+  padding: 64px 6% 68px;
+  background: radial-gradient(
+    circle at 50% -20%,
+    #6e4735 0,
+    #40251b 43%,
+    #24120e 100%
+  );
+  border-top: 1px solid #8b674d;
+  border-bottom: 1px solid #8b674d;
+}
+.jewel-ornament {
+  position: absolute;
+  color: #c89d5a;
+  opacity: 0.2;
+  font-size: 130px;
+}
+.jewel-ornament-left {
+  left: -25px;
+  top: 20px;
+}
+.jewel-ornament-right {
+  right: -20px;
+  bottom: -20px;
+}
+.jewellery h2 {
+  font-size: 50px;
+}
+.jewellery > p {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 16px;
+  color: #dfd0c5;
+}
+.jewellery-row {
+  gap: 32px;
+  margin-top: 38px;
+}
+.jewellery-row article {
+  transition: 0.35s;
+}
+.jewellery-row article > div {
+  height: 255px;
+  border-radius: 128px 128px 8px 8px;
+  border-color: #d2aa66;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+}
+.jewellery-row img {
+  border-radius: 122px 122px 5px 5px;
+}
+.jewellery-row article:hover {
+  transform: translateY(-8px);
+}
+.jewellery-row h3 {
+  font-size: 25px;
+}
+.signature {
+  min-height: 360px;
+  grid-template-columns: 56% 44%;
+  background: linear-gradient(110deg, #f6eee3, #fffaf4);
+}
+.signature > div {
+  height: 360px;
+}
+.signature article {
+  padding: 38px 9% 30px 7%;
+  align-self: center;
+}
+.signature h2 {
+  font-size: 45px;
+}
+.signature article > p {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 15px;
+}
+.sig-points {
+  margin: 22px 0;
+}
+.signature strong {
+  font-size: 30px;
+}
+.why {
+  padding: 42px 7% 45px;
+  background: #fffdf9;
+}
+.why article {
+  padding: 0 45px;
+}
+.why b {
+  font-size: 20px;
+}
+.why p {
+  font-size: 11px;
+}
+.story {
+  height: 330px;
+}
+.story > div:first-child {
+  padding: 62px 8%;
+}
+.story h2 {
+  font-size: 49px;
+}
+.story p {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 16px;
+}
+footer {
+  padding: 50px 6% 22px;
+  gap: 60px;
+  font-size: 13px;
+}
+footer b {
+  font-size: 14px;
+}
+footer a,
+footer p {
+  font-size: 13px;
+}
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .hero-copy {
+    padding: 130px 7% 50px;
+  }
+  .hero-image {
+    height: 460px;
+  }
+  .beauty {
+    grid-template-columns: 1fr;
+  }
+  .beauty-intro {
+    padding: 10px 0 38px;
+  }
+  .jewel-ornament {
+    display: none;
+  }
+  .signature {
+    grid-template-columns: 1fr;
+  }
+  .signature > div {
+    height: 330px;
+  }
+  .story {
+    height: auto;
+  }
+}
+@media (max-width: 560px) {
+  .hero-image {
+    height: 380px;
+  }
+  .hero h1 {
+    font-size: 47px;
+  }
+  .beauty h2 {
+    font-size: 47px;
+  }
+  .product-photo {
+    height: 360px;
+  }
+  .jewellery h2 {
+    font-size: 42px;
+  }
+  .jewellery-row article > div {
+    height: 210px;
+  }
+  .signature > div {
+    height: 300px;
+  }
+}
+
+/* v1.6.1 — reference-match refinements */
+.nav {
+  height: 118px;
+  padding-left: 4.5%;
+  padding-right: 4.5%;
+}
+.brand {
+  width: 245px;
+  min-width: 245px;
+}
+.brand img {
+  width: 100%;
+  height: 96px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.jewellery {
+  padding: 28px 4.8% 34px;
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    #5b3828 0%,
+    #3a2118 48%,
+    #28140f 100%
+  );
+  border: 0;
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 -1px rgba(255, 255, 255, 0.08);
+}
+.jewellery > span {
+  font-size: 10px;
+  letter-spacing: 1.9px;
+  color: #cfa35e;
+}
+.jewellery h2 {
+  font-size: 42px;
+  line-height: 1;
+  margin: 8px 0 8px;
+  font-weight: 500;
+}
+.jewellery > p {
+  font-family: Montserrat, Arial, sans-serif;
+  font-size: 11px;
+  color: #e3d7cf;
+  margin: 0;
+}
+.jewellery-row {
+  max-width: 1320px;
+  gap: 38px;
+  margin: 24px auto 0;
+}
+.jewellery-row article {
+  min-width: 0;
+}
+.jewellery-row article > div {
+  height: 225px;
+  border-radius: 112px 112px 0 0;
+  border: 1px solid #c8a15e;
+  padding: 2px;
+  box-shadow: none;
+  background: #4a2c20;
+}
+.jewellery-row img {
+  border-radius: 109px 109px 0 0;
+  object-position: center;
+  filter: saturate(0.9) contrast(1.03);
+}
+.jewellery-row h3 {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 9px 0 9px;
+}
+.jewellery-row a {
+  font-size: 8px;
+  letter-spacing: 0.7px;
+  color: #fff;
+  border-color: #cba15d;
+}
+.jewellery-row article:hover {
+  transform: translateY(-4px);
+}
+.jewel-ornament {
+  display: none;
+}
+
+.signature {
+  grid-template-columns: 55.5% 44.5%;
+  min-height: 315px;
+  height: 315px;
+  background: #f8f2e9;
+  border: 0;
+}
+.signature > div {
+  height: 315px;
+}
+.signature > div img {
+  object-position: center 55%;
+}
+.signature article {
+  padding: 28px 8% 24px 6%;
+  align-self: center;
+}
+.signature article > span {
+  font-size: 9px;
+  letter-spacing: 1.4px;
+}
+.signature h2 {
+  font-size: 38px;
+  line-height: 0.93;
+  margin: 9px 0 10px;
+  font-weight: 600;
+}
+.signature article > p {
+  font-family: Montserrat, Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1.5;
+  max-width: 480px;
+  margin: 0;
+  color: #65564e;
+}
+.sig-points {
+  margin: 19px 0 18px;
+  gap: 16px;
+}
+.sig-points b {
+  font-size: 8px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.sig-points svg {
+  width: 22px;
+  height: 22px;
+}
+.signature strong {
+  font-size: 27px;
+  margin-right: 45px;
+  vertical-align: middle;
+}
+.signature article > button {
+  padding: 14px 24px;
+  vertical-align: middle;
+}
+
+@media (max-width: 900px) {
+  .brand {
+    width: 190px;
+    min-width: 190px;
+  }
+  .brand img {
+    height: 78px;
+  }
+  .jewellery {
+    padding: 42px 5%;
+  }
+  .jewellery-row {
+    gap: 22px;
+  }
+  .signature {
+    height: auto;
+    min-height: 0;
+  }
+  .signature > div {
+    height: 340px;
+  }
+  .signature article {
+    padding: 36px 7%;
+  }
+}
+@media (max-width: 560px) {
+  .brand {
+    width: 165px;
+    min-width: 165px;
+  }
+  .jewellery-row article > div {
+    height: 185px;
+  }
+  .signature > div {
+    height: 300px;
+  }
+  .signature h2 {
+    font-size: 36px;
+  }
+}
+
+/* v1.6.2 — visual-match fixes */
+.nav {
+  height: 126px;
+  padding: 0 5.2%;
+  gap: 38px;
+  overflow: visible;
+}
+.brand {
+  width: 300px;
+  min-width: 300px;
+  height: 104px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: visible;
+}
+.brand img {
+  width: 270px;
+  height: auto;
+  max-height: 92px;
+  object-fit: contain;
+  object-position: left center;
+  display: block;
+}
+.nav nav {
+  gap: 46px;
+}
+.nav nav a {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Jewellery category section: compact, arched editorial tiles like reference */
+.jewellery {
+  padding: 22px 5.5% 28px;
+  background: radial-gradient(
+    ellipse at 50% 18%,
+    #563322 0%,
+    #3b2118 48%,
+    #28140f 100%
+  );
+}
+.jewellery > span {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+.jewellery h2 {
+  font-size: 38px;
+  line-height: 1;
+  margin: 0 0 5px;
+}
+.jewellery > p {
+  font-size: 10px;
+  line-height: 1.45;
+}
+.jewellery-row {
+  max-width: 1120px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 30px;
+  margin: 21px auto 0;
+}
+.jewellery-row article {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.jewellery-row article > div {
+  width: 100%;
+  height: 190px;
+  border-radius: 96px 96px 0 0;
+  border: 1px solid #d2aa63;
+  padding: 2px;
+  background: #4b2b20;
+  overflow: hidden;
+}
+.jewellery-row img {
+  width: 100%;
+  height: 100%;
+  border-radius: 93px 93px 0 0;
+  object-fit: cover;
+  object-position: center;
+  filter: none;
+}
+.jewellery-row h3 {
+  font-size: 18px;
+  line-height: 1;
+  margin: 9px 0 7px;
+}
+.jewellery-row a {
+  font-size: 7.5px;
+  letter-spacing: 0.75px;
+  padding-bottom: 3px;
+}
+
+/* Use the strongest available jewellery photography instead of tiny 64px assets. */
+.jewellery-row article:nth-child(1) img {
+  object-position: center 58%;
+}
+.jewellery-row article:nth-child(2) img {
+  object-position: center 46%;
+}
+.jewellery-row article:nth-child(3) img {
+  object-position: center 48%;
+}
+.jewellery-row article:nth-child(4) img {
+  object-position: center 52%;
+}
+.jewellery-row article:nth-child(5) img {
+  object-position: center 45%;
+}
+
+/* Signature piece: preserve the complete portrait product while filling a landscape panel. */
+.signature {
+  height: 300px;
+  min-height: 300px;
+  grid-template-columns: 55% 45%;
+  background: #faf5ed;
+}
+.signature > div {
+  height: 300px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background-image:
+    linear-gradient(rgba(247, 239, 228, 0.18), rgba(247, 239, 228, 0.18)),
+    url("/assets/pendant-purple.jpg");
+  background-size: cover;
+  background-position: center 58%;
+}
+.signature > div:before {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  background: inherit;
+  filter: blur(18px);
+  transform: scale(1.05);
+  opacity: 0.52;
+}
+.signature > div img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  filter: drop-shadow(0 10px 22px rgba(45, 25, 18, 0.12));
+}
+.signature article {
+  padding: 24px 8% 22px 6%;
+}
+.signature h2 {
+  font-size: 37px;
+  margin: 7px 0 8px;
+}
+.sig-points {
+  margin: 15px 0 15px;
+}
+
+@media (max-width: 1100px) {
+  .brand {
+    width: 240px;
+    min-width: 240px;
+  }
+  .brand img {
+    width: 220px;
+  }
+  .nav nav {
+    gap: 25px;
+  }
+  .nav nav a {
+    font-size: 16px;
+  }
+  .jewellery-row {
+    gap: 18px;
+  }
+  .jewellery-row article > div {
+    height: 170px;
+  }
+}
+@media (max-width: 900px) {
+  .nav {
+    height: 88px;
+  }
+  .brand {
+    width: 205px;
+    min-width: 205px;
+    height: 80px;
+  }
+  .brand img {
+    width: 190px;
+    max-height: 72px;
+  }
+  .jewellery-row {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 620px;
+  }
+  .jewellery-row article > div {
+    height: 250px;
+    border-radius: 126px 126px 0 0;
+  }
+  .jewellery-row img {
+    border-radius: 123px 123px 0 0;
+  }
+  .signature {
+    height: auto;
+    min-height: 0;
+  }
+  .signature > div {
+    height: 420px;
+  }
+}
+@media (max-width: 560px) {
+  .brand {
+    width: 180px;
+    min-width: 180px;
+  }
+  .brand img {
+    width: 170px;
+  }
+  .jewellery {
+    padding: 30px 5%;
+  }
+  .jewellery-row {
+    gap: 16px;
+  }
+  .jewellery-row article > div {
+    height: 190px;
+  }
+  .signature > div {
+    height: 340px;
+  }
+}
+
+/* v1.7.0 — commerce architecture + product detail */
+a {
+  cursor: pointer;
+}
+.site-nav {
+  z-index: 50;
+}
+.page {
+  padding-top: 126px;
+}
+.shop-card {
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid #eadfd2;
+  box-shadow: 0 12px 35px rgba(70, 43, 24, 0.06);
+  transition: 0.3s;
+  overflow: hidden;
+}
+.shop-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 18px 44px rgba(70, 43, 24, 0.11);
+}
+.shop-card-body {
+  padding: 18px 18px 16px;
+}
+.shop-card .product-photo {
+  height: 300px;
+}
+.shop-card h3 {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 24px;
+  margin: 0 0 6px;
+}
+.shop-card-body > p {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 0 17px;
+}
+.product-price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #eee4d9;
+  padding-top: 15px;
+  background: transparent !important;
+}
+.product-price b {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 26px;
+}
+.product-price button {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a36f2d, #c99748);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+.product-price svg {
+  width: 18px;
+}
+.product-row .shop-card-body h3,
+.product-row .shop-card-body p,
+.product-row .product-price {
+  margin-left: 0;
+  margin-right: 0;
+}
+.product-row .product-price {
+  padding-bottom: 0;
+}
+.product-row .product-price b {
+  font-size: 23px;
+}
+.signature {
+  height: 330px;
+  min-height: 330px;
+}
+.signature-media {
+  height: 330px !important;
+  background: #ead9c7 !important;
+  position: relative;
+  overflow: hidden;
+}
+.signature-media:before {
+  display: none !important;
+}
+.signature-media img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  object-position: center 57% !important;
+  background: #ead9c7;
+  filter: none !important;
+}
+.signature-buy {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.signature-buy strong {
+  margin: 0;
+}
+.signature-buy button {
+  border: 0;
+  background: linear-gradient(90deg, #8f642c, #c69951);
+  color: #fff;
+  padding: 15px 24px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.signature-buy button svg {
+  width: 15px;
+}
+.signature-buy a {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #a97b3b;
+  padding-bottom: 4px;
+}
+.page-hero {
+  text-align: center;
+  padding: 78px 6% 70px;
+  background: linear-gradient(135deg, #f5eadc, #fffaf3);
+}
+.page-hero span,
+.recommend > span,
+.pdp-info > span,
+.pdp-story span,
+.reviews span {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #94692f;
+  font-weight: 600;
+}
+.page-hero h1,
+.pdp-info h1,
+.recommend h2,
+.pdp-story h2,
+.reviews h2,
+.newsletter h2,
+.info-content h2 {
+  font-family: "Cormorant Garamond", serif;
+}
+.page-hero h1 {
+  font-size: 64px;
+  margin: 10px 0 8px;
+}
+.page-hero p {
+  color: var(--muted);
+  max-width: 650px;
+  margin: auto;
+  line-height: 1.7;
+}
+.listing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
+  padding: 65px 6%;
+  max-width: 1500px;
+  margin: auto;
+}
+.listing-grid .product-photo {
+  height: 360px;
+}
+.crumbs {
+  padding: 25px 6%;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #776b64;
+  border-bottom: 1px solid #eee3d6;
+}
+.pdp-hero {
+  display: grid;
+  grid-template-columns: 54% 46%;
+  max-width: 1450px;
+  margin: auto;
+  padding: 50px 6% 75px;
+  gap: 65px;
+}
+.pdp-gallery {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 18px;
+}
+.thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.thumbs button {
+  padding: 0;
+  border: 1px solid #dfd2c2;
+  background: #fff;
+  height: 88px;
+  overflow: hidden;
+}
+.thumbs img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pdp-main-image {
+  height: 620px;
+  background: #f3e8dc;
+  position: relative;
+  overflow: hidden;
+}
+.pdp-main-image > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  background: #f0e1d2;
+}
+.pdp-heart {
+  position: absolute;
+  right: 22px;
+  top: 22px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 0;
+  background: #fff;
+  display: grid;
+  place-items: center;
+}
+.pdp-info {
+  padding-top: 20px;
+}
+.pdp-info h1 {
+  font-size: 52px;
+  line-height: 0.96;
+  margin: 13px 0 14px;
+}
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.rating svg {
+  width: 14px;
+  height: 14px;
+  fill: #b8873f;
+  color: #b8873f;
+}
+.rating small {
+  margin-left: 7px;
+  color: var(--muted);
+}
+.pdp-info > strong {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 34px;
+  display: block;
+  margin: 24px 0 14px;
+}
+.pdp-info > p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--muted);
+  max-width: 540px;
+}
+.pdp-meta {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 10px;
+  padding: 22px 0;
+  border-top: 1px solid #e6dbcf;
+  border-bottom: 1px solid #e6dbcf;
+  margin-top: 24px;
+  font-size: 11px;
+}
+.pdp-meta span {
+  color: var(--muted);
+}
+.qty {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 22px 0;
+  font-size: 11px;
+}
+.qty > div {
+  display: flex;
+  border: 1px solid #d8c9b7;
+}
+.qty button {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  background: #fff;
+}
+.qty svg {
+  width: 13px;
+}
+.qty b {
+  width: 38px;
+  display: grid;
+  place-items: center;
+}
+.pdp-add,
+.pdp-buy {
+  width: 100%;
+  height: 52px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  font-weight: 600;
+}
+.pdp-add {
+  border: 0;
+  background: linear-gradient(90deg, #8f642c, #c69951);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.pdp-buy {
+  border: 1px solid #9b6e34;
+  background: #fff;
+  color: #6c4825;
+}
+.pdp-perks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 25px;
+}
+.pdp-perks span {
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #65564e;
+}
+.pdp-perks svg {
+  width: 20px;
+  color: #a87937;
+}
+.recommend {
+  text-align: center;
+  padding: 65px 6%;
+  background: #fbf6ef;
+}
+.recommend h2 {
+  font-size: 46px;
+  margin: 8px 0 32px;
+}
+.recommend > div {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1050px;
+  margin: auto;
+}
+.pdp-story {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 1250px;
+  margin: 80px auto;
+}
+.pdp-story > img {
+  width: 100%;
+  height: 380px;
+  object-fit: cover;
+}
+.pdp-story article {
+  padding: 70px;
+  background: #f5eadc;
+}
+.pdp-story h2 {
+  font-size: 42px;
+  margin: 10px 0;
+}
+.pdp-story p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.pdp-story button,
+.contact-form button {
+  border: 0;
+  background: #b4833e;
+  color: #fff;
+  padding: 14px 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.reviews {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 60px;
+  padding: 65px 12%;
+  background: #fff;
+}
+.reviews h2 {
+  font-size: 40px;
+  margin: 8px 0;
+}
+.reviews blockquote {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 23px;
+  line-height: 1.5;
+  margin: 0;
+  color: #55453d;
+}
+.reviews blockquote footer {
+  display: block;
+  background: none;
+  padding: 16px 0 0;
+  font-family: Montserrat;
+  font-size: 10px;
+}
+.newsletter {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  padding: 55px 12%;
+  background: #f2e5d5;
+}
+.newsletter h2 {
+  font-size: 38px;
+  margin: 0;
+}
+.newsletter p {
+  font-size: 11px;
+}
+.newsletter label {
+  display: flex;
+  border-bottom: 1px solid #a98760;
+}
+.newsletter input {
+  border: 0;
+  background: transparent;
+  padding: 16px;
+  width: 100%;
+  outline: 0;
+}
+.newsletter button {
+  width: 54px;
+  border: 0;
+  background: #b4833e;
+  color: #fff;
+}
+.info-content {
+  max-width: 1000px;
+  margin: 70px auto;
+  padding: 0 6%;
+}
+.info-content h2 {
+  font-size: 48px;
+}
+.info-content p {
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--muted);
+}
+.info-content img {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  margin-top: 30px;
+}
+.contact-form {
+  max-width: 760px;
+  margin: 65px auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  padding: 0 6%;
+}
+.contact-form input,
+.contact-form textarea {
+  padding: 16px;
+  border: 1px solid #dacbbb;
+  background: #fff;
+  font: inherit;
+}
+.contact-form textarea,
+.contact-form button {
+  grid-column: 1/-1;
+}
+@media (max-width: 900px) {
+  .page {
+    padding-top: 88px;
+  }
+  .listing-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .pdp-hero {
+    grid-template-columns: 1fr;
+    padding: 35px 5%;
+  }
+  .pdp-main-image {
+    height: 560px;
+  }
+  .pdp-story {
+    grid-template-columns: 1fr;
+    margin: 40px 5%;
+  }
+  .reviews,
+  .newsletter {
+    grid-template-columns: 1fr;
+  }
+  .signature {
+    height: auto;
+    min-height: 0;
+  }
+  .signature-media {
+    height: 420px !important;
+  }
+  .signature-media img {
+    object-fit: contain !important;
+  }
+  .recommend > div {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .listing-grid,
+  .recommend > div {
+    grid-template-columns: 1fr;
+  }
+  .pdp-gallery {
+    grid-template-columns: 1fr;
+  }
+  .thumbs {
+    display: none;
+  }
+  .pdp-main-image {
+    height: 460px;
+  }
+  .pdp-info h1 {
+    font-size: 42px;
+  }
+  .pdp-perks {
+    grid-template-columns: 1fr;
+  }
+  .contact-form {
+    grid-template-columns: 1fr;
+  }
+  .contact-form input {
+    grid-column: 1;
+  }
+  .page-hero h1 {
+    font-size: 50px;
+  }
+}
+
+/* v1.8.0 — category showcase, readable commerce pricing, cart + checkout */
+.jewellery {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 50% 15%,
+      rgba(151, 101, 62, 0.28),
+      transparent 35%
+    ),
+    linear-gradient(115deg, #24110c 0%, #4a281c 52%, #24120e 100%);
+  padding: 46px 5.5% 48px;
+  color: #f7ede2;
+  border-top: 1px solid #8e6038;
+  border-bottom: 1px solid #8e6038;
+}
+.jewellery:before,
+.jewellery:after {
+  content: "";
+  position: absolute;
+  width: 290px;
+  height: 100%;
+  top: 0;
+  z-index: -1;
+  opacity: 0.24;
+  background: url("/assets/pendant-purple.jpg") center/cover no-repeat;
+  filter: sepia(1) saturate(0.5) brightness(0.45);
+}
+.jewellery:before {
+  left: -125px;
+  clip-path: polygon(0 0, 65% 0, 100% 100%, 0 100%);
+}
+.jewellery:after {
+  right: -125px;
+  transform: scaleX(-1);
+  clip-path: polygon(0 0, 65% 0, 100% 100%, 0 100%);
+}
+.jewellery > span {
+  color: #d6a75f;
+  font-size: 11px;
+  letter-spacing: 2.2px;
+  font-weight: 700;
+}
+.jewellery > h2 {
+  font-size: 47px;
+  line-height: 1;
+  margin: 12px 0 8px;
+  color: #fff7ed;
+}
+.jewellery > p {
+  font-size: 12px;
+  color: #e4d4c8;
+  margin: 0 auto 30px;
+}
+.jewellery-row {
+  max-width: 1370px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 38px;
+}
+.jewellery-row article {
+  text-align: center;
+  color: #fff;
+  cursor: pointer;
+}
+.jewellery-row article > div {
+  height: 235px;
+  border: 1px solid #d3a25c;
+  border-radius: 120px 120px 0 0;
+  padding: 3px;
+  background: #382016;
+  overflow: hidden;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  transition:
+    transform 0.35s,
+    box-shadow 0.35s;
+}
+.jewellery-row article:hover > div {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.32);
+}
+.jewellery-row img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 116px 116px 0 0;
+  filter: saturate(0.88) contrast(1.04);
+}
+.jewellery-row h3 {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 14px 0 10px;
+  color: #fff6e9;
+}
+.jewellery-row a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #fff4e7;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #c99a54;
+}
+.jewellery-row a svg {
+  width: 12px;
+}
+.product-price b,
+.pdp-info > strong,
+.signature-buy strong,
+.cart-item > strong,
+.cart-summary > strong,
+.checkout-product > strong,
+.checkout-total b {
+  font-family: Montserrat, Arial, sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.product-price b {
+  font-size: 24px !important;
+  color: #2d211c;
+}
+.pdp-info > strong {
+  font-size: 31px;
+}
+.signature-buy strong {
+  font-size: 28px;
+}
+.cart-page,
+.checkout-page {
+  background: #fcf8f2;
+  min-height: 75vh;
+}
+.page-hero.compact {
+  padding: 48px 6% 42px;
+}
+.page-hero.compact h1 {
+  font-size: 52px;
+}
+.cart-layout {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 55px 6% 90px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) 390px;
+  gap: 55px;
+}
+.cart-items {
+  background: #fff;
+  border: 1px solid #eadfd2;
+  padding: 0 28px;
+}
+.cart-item {
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1fr) 120px 110px;
+  align-items: center;
+  gap: 24px;
+  padding: 28px 0;
+  border-bottom: 1px solid #eadfd2;
+}
+.cart-item:last-child {
+  border-bottom: 0;
+}
+.cart-item > img {
+  width: 145px;
+  height: 145px;
+  object-fit: cover;
+  background: #f2e6da;
+}
+.cart-item span {
+  font-size: 9px;
+  letter-spacing: 1.3px;
+  color: #a47639;
+  text-transform: uppercase;
+}
+.cart-item h2 {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 28px;
+  margin: 5px 0;
+  cursor: pointer;
+}
+.cart-item p {
+  font-size: 11px;
+  color: var(--muted);
+}
+.remove {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 8px;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #a67a45;
+}
+.cart-qty {
+  display: flex;
+  border: 1px solid #d9c8b6;
+  height: 40px;
+}
+.cart-qty button {
+  width: 38px;
+  border: 0;
+  background: #fff;
+}
+.cart-qty svg {
+  width: 13px;
+}
+.cart-qty b {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  font: 600 13px Montserrat;
+}
+.cart-item > strong {
+  font-size: 18px;
+  text-align: right;
+}
+.cart-summary,
+.checkout-summary {
+  background: #efe1d0;
+  padding: 34px;
+  align-self: start;
+  position: sticky;
+  top: 145px;
+}
+.cart-summary > span,
+.checkout-summary > span,
+.checkout-head > span {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #94692f;
+  font-weight: 700;
+}
+.cart-summary h2 {
+  font:
+    40px "Cormorant Garamond",
+    serif;
+  margin: 8px 0 25px;
+}
+.cart-summary > div {
+  border-top: 1px solid #d5c0a8;
+  border-bottom: 1px solid #d5c0a8;
+  padding: 14px 0;
+}
+.cart-summary p,
+.checkout-total p {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+.cart-summary > strong {
+  display: block;
+  font-size: 28px;
+  margin: 22px 0;
+}
+.cart-summary > button,
+.empty-cart button,
+.place-order {
+  width: 100%;
+  border: 0;
+  background: linear-gradient(90deg, #855a29, #c7954c);
+  color: #fff;
+  padding: 17px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: 1.1px;
+  font-weight: 700;
+}
+.cart-summary small {
+  display: block;
+  text-align: center;
+  margin-top: 13px;
+  color: #77685e;
+  font-size: 9px;
+}
+.empty-cart {
+  text-align: center;
+  padding: 100px 6%;
+}
+.empty-cart > svg {
+  width: 50px;
+  height: 50px;
+  color: #a97a3d;
+}
+.empty-cart h2 {
+  font:
+    42px "Cormorant Garamond",
+    serif;
+}
+.empty-cart button {
+  max-width: 260px;
+  margin: auto;
+}
+.checkout-head {
+  text-align: center;
+  padding: 52px 6% 24px;
+}
+.checkout-head h1 {
+  font:
+    54px "Cormorant Garamond",
+    serif;
+  margin: 8px 0;
+}
+.checkout-layout {
+  max-width: 1180px;
+  margin: auto;
+  padding: 20px 6% 90px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) 420px;
+  gap: 60px;
+}
+.checkout-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 34px;
+}
+.checkout-form legend {
+  font:
+    30px "Cormorant Garamond",
+    serif;
+  margin-bottom: 16px;
+}
+.checkout-form input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 15px 16px;
+  border: 1px solid #d9c8b6;
+  background: #fff;
+  margin-bottom: 12px;
+  font: 12px Montserrat;
+}
+.checkout-form .two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.pay-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d9c8b6;
+  background: #fff;
+  padding: 14px;
+  margin-bottom: 12px;
+  font-size: 11px;
+}
+.pay-option input {
+  width: auto;
+  margin: 0;
+}
+.checkout-product {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid #d3bfa6;
+}
+.checkout-product img {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+}
+.checkout-product p {
+  margin: 0;
+  font-size: 11px;
+}
+.checkout-product p b,
+.checkout-product small {
+  display: block;
+}
+.checkout-product small {
+  margin-top: 6px;
+  color: #7d6d62;
+}
+.checkout-product > strong {
+  font-size: 13px;
+}
+.checkout-total {
+  padding-top: 15px;
+}
+.checkout-total > strong {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #cbb394;
+  padding-top: 16px;
+  margin-top: 16px;
+  font:
+    24px "Cormorant Garamond",
+    serif;
+}
+.checkout-summary > small {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 22px;
+  font-size: 9px;
+  color: #6e5e53;
+}
+.checkout-summary > small svg {
+  width: 18px;
+  color: #9c6d32;
+}
+.order-success {
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 120px 6%;
+}
+.order-success > svg {
+  width: 62px;
+  height: 62px;
+  color: #a67536;
+}
+.order-success span {
+  display: block;
+  margin: 18px 0 5px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #94692f;
+}
+.order-success h1 {
+  font:
+    52px "Cormorant Garamond",
+    serif;
+  margin: 10px 0;
+}
+.order-success p {
+  color: var(--muted);
+  line-height: 1.8;
+}
+.order-success button {
+  border: 0;
+  background: #9d6f34;
+  color: #fff;
+  padding: 15px 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+@media (max-width: 1050px) {
+  .jewellery-row {
+    gap: 18px;
+  }
+  .jewellery-row article > div {
+    height: 190px;
+  }
+  .cart-layout,
+  .checkout-layout {
+    grid-template-columns: 1fr;
+  }
+  .cart-summary,
+  .checkout-summary {
+    position: static;
+  }
+  .cart-item {
+    grid-template-columns: 120px 1fr 110px;
+  }
+  .cart-item > strong {
+    grid-column: 2/4;
+  }
+  .checkout-summary {
+    order: -1;
+  }
+}
+@media (max-width: 720px) {
+  .jewellery-row {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 600px;
+  }
+  .jewellery-row article > div {
+    height: 240px;
+  }
+  .jewellery-row article:last-child {
+    grid-column: 1/-1;
+    max-width: 270px;
+    margin: auto;
+    width: 100%;
+  }
+  .cart-item {
+    grid-template-columns: 95px 1fr;
+    gap: 16px;
+  }
+  .cart-item > img {
+    width: 95px;
+    height: 110px;
+  }
+  .cart-qty {
+    grid-column: 2;
+  }
+  .cart-item > strong {
+    grid-column: 2;
+    text-align: left;
+  }
+  .checkout-form .two {
+    grid-template-columns: 1fr;
+  }
+}
+/* v1.9.0 — reliable cart feedback, phone OTP login and order history */
+.account-btn {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  width: auto !important;
+}
+.account-btn span {
+  font:
+    600 9px Montserrat,
+    sans-serif;
+  white-space: nowrap;
+}
+.cart-toast {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 200;
+  background: #2d1710;
+  color: #fff;
+  padding: 16px 18px;
+  box-shadow: 0 16px 45px #2d17104d;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font:
+    500 12px Montserrat,
+    sans-serif;
+  border: 1px solid #b88848;
+}
+.cart-toast svg {
+  width: 19px;
+}
+.cart-toast button {
+  border: 0;
+  border-bottom: 1px solid #d7ac6d;
+  background: none;
+  color: #e6c48f;
+  font: 700 9px Montserrat;
+  letter-spacing: 1px;
+  padding: 4px 0;
+  margin-left: 8px;
+}
+.login-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: #1d100ba8;
+  backdrop-filter: blur(7px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.login-modal {
+  position: relative;
+  width: min(440px, 100%);
+  box-sizing: border-box;
+  background: #fcf7ef;
+  padding: 48px 46px 42px;
+  box-shadow: 0 30px 90px #140a0759;
+  border: 1px solid #d8c3a5;
+}
+.login-close {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  border: 0;
+  background: none;
+}
+.login-close svg {
+  width: 20px;
+}
+.login-modal > span {
+  font: 700 9px Montserrat;
+  letter-spacing: 2px;
+  color: #a06d30;
+}
+.login-modal h2 {
+  font:
+    42px "Cormorant Garamond",
+    serif;
+  margin: 8px 0 7px;
+  color: #2c1b15;
+}
+.login-modal > p {
+  font-size: 12px;
+  color: #76665c;
+  line-height: 1.6;
+  margin: 0 0 25px;
+}
+.login-modal label {
+  display: block;
+  font: 600 10px Montserrat;
+  letter-spacing: 0.5px;
+}
+.phone-field {
+  display: flex;
+  border: 1px solid #d8c7b5;
+  background: #fff;
+  margin-top: 8px;
+}
+.phone-field b {
+  padding: 15px;
+  border-right: 1px solid #e3d7ca;
+  font: 600 12px Montserrat;
+}
+.phone-field input,
+.otp-field {
+  border: 0 !important;
+  outline: 0;
+  width: 100%;
+  padding: 15px !important;
+  margin: 0 !important;
+  background: #fff;
+  font: 14px Montserrat !important;
+  box-sizing: border-box;
+}
+.otp-field {
+  border: 1px solid #d8c7b5 !important;
+  margin-top: 8px !important;
+  letter-spacing: 8px !important;
+  font-size: 20px !important;
+}
+.login-submit {
+  width: 100%;
+  margin-top: 18px;
+  border: 0;
+  background: linear-gradient(90deg, #855a29, #c7954c);
+  color: #fff;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  font: 700 10px Montserrat;
+  letter-spacing: 1px;
+}
+.login-modal > small {
+  display: block;
+  text-align: center;
+  margin-top: 15px;
+  color: #75655a;
+}
+.change-phone {
+  display: block;
+  margin: 9px auto 0;
+  border: 0;
+  background: none;
+  border-bottom: 1px solid #9a6d36;
+  font: 600 9px Montserrat;
+  color: #6f4b28;
+}
+.orders-page {
+  background: #fcf8f2;
+  min-height: 75vh;
+}
+.orders-list {
+  max-width: 1050px;
+  margin: 0 auto;
+  padding: 55px 6% 100px;
+}
+.order-card {
+  background: #fff;
+  border: 1px solid #e2d5c7;
+  margin-bottom: 24px;
+}
+.order-card > header {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr auto;
+  gap: 25px;
+  align-items: center;
+  background: #f1e5d6;
+  padding: 20px 24px;
+}
+.order-card header span {
+  display: block;
+  font: 700 8px Montserrat;
+  letter-spacing: 1.3px;
+  color: #9a6b33;
+  margin-bottom: 5px;
+}
+.order-card header h2 {
+  font: 600 14px Montserrat;
+  margin: 0;
+}
+.order-card header b {
+  font: 600 12px Montserrat;
+}
+.order-card header em {
+  font: 700 9px Montserrat;
+  font-style: normal;
+  color: #fff;
+  background: #9a6c34;
+  padding: 9px 12px;
+}
+.order-item {
+  display: grid;
+  grid-template-columns: 90px 1fr auto;
+  gap: 20px;
+  align-items: center;
+  padding: 20px 24px;
+  border-top: 1px solid #eee4d9;
+}
+.order-item img {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+}
+.order-item h3 {
+  font:
+    26px "Cormorant Garamond",
+    serif;
+  margin: 0;
+}
+.order-item p {
+  font-size: 10px;
+  color: #77675d;
+}
+.order-item > strong {
+  font: 600 15px Montserrat;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 720px) {
+  .account-btn span {
+    display: none;
+  }
+  .cart-toast {
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+  }
+  .login-modal {
+    padding: 42px 26px 32px;
+  }
+  .order-card > header {
+    grid-template-columns: 1fr 1fr;
+  }
+  .order-card header em {
+    justify-self: start;
+  }
+  .order-item {
+    grid-template-columns: 70px 1fr;
+  }
+  .order-item img {
+    width: 70px;
+    height: 80px;
+  }
+  .order-item > strong {
+    grid-column: 2;
+  }
+}
+/* v1.10 premium collection banners, search, craft & about */
+.search-trigger {
+  border: 0;
+  background: transparent;
+  padding: 6px;
+  display: grid;
+  place-items: center;
+}
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(35, 20, 14, 0.55);
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+  padding-top: 90px;
+}
+.search-panel {
+  width: min(820px, 92vw);
+  margin: auto;
+  background: #fffaf3;
+  padding: 34px 38px 28px;
+  box-shadow: 0 25px 80px rgba(30, 15, 8, 0.3);
+  position: relative;
+}
+.search-panel > span {
+  font-size: 10px;
+  letter-spacing: 2.4px;
+  color: #9b6b30;
+  font-weight: 700;
+}
+.search-close {
+  position: absolute;
+  right: 25px;
+  top: 22px;
+  border: 0;
+  background: transparent;
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid #b99a76;
+  margin-top: 18px;
+  padding: 8px 0 13px;
+}
+.search-box input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  width: 100%;
+  font:
+    28px "Cormorant Garamond",
+    serif;
+  color: #30221c;
+}
+.search-results {
+  margin-top: 18px;
+  max-height: 370px;
+  overflow: auto;
+}
+.search-results > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 62px 1fr auto;
+  align-items: center;
+  gap: 15px;
+  border: 0;
+  border-bottom: 1px solid #eadfd2;
+  background: transparent;
+  padding: 10px 0;
+  text-align: left;
+}
+.search-results img {
+  width: 62px;
+  height: 62px;
+  object-fit: cover;
+}
+.search-results span {
+  display: grid;
+  gap: 3px;
+}
+.search-results b {
+  font:
+    20px "Cormorant Garamond",
+    serif;
+}
+.search-results small {
+  color: #817168;
+}
+.search-results strong {
+  font: 600 14px Montserrat;
+}
+.search-suggestions {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.search-suggestions > b {
+  font-size: 10px;
+  margin-right: 5px;
+}
+.search-suggestions button {
+  border: 1px solid #d6c4af;
+  background: #fff;
+  padding: 8px 13px;
+  font-size: 10px;
+}
+.page-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 100px 6% 92px;
+  background: radial-gradient(
+    circle at 50% 10%,
+    #fffdf8 0,
+    #f8efe3 55%,
+    #efe0ce 100%
+  );
+  border-bottom: 1px solid #eadbc8;
+}
+.page-hero:before,
+.page-hero:after {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border: 1px solid rgba(176, 130, 72, 0.15);
+  border-radius: 50%;
+  top: -150px;
+}
+.page-hero:before {
+  left: 5%;
+}
+.page-hero:after {
+  right: 5%;
+}
+.page-hero span {
+  font-size: 12px;
+  letter-spacing: 3.2px;
+}
+.page-hero h1 {
+  font-size: 76px;
+  line-height: 0.9;
+  margin: 18px 0;
+}
+.page-hero p {
+  font-size: 16px;
+  max-width: 720px;
+}
+.editorial-hero {
+  min-height: 590px;
+  display: grid;
+  grid-template-columns: 46% 54%;
+  background: #f6ecdf;
+  overflow: hidden;
+}
+.editorial-hero > div {
+  padding: 120px 11% 90px 14%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.editorial-hero span,
+.about-values > span,
+.info-feature span {
+  font-size: 10px;
+  letter-spacing: 2.6px;
+  color: #9d6d30;
+  font-weight: 700;
+}
+.editorial-hero h1 {
+  font:
+    64px/0.92 "Cormorant Garamond",
+    serif;
+  margin: 16px 0 22px;
+  color: #32231d;
+}
+.editorial-hero p {
+  font-size: 14px;
+  line-height: 1.9;
+  color: #76675e;
+  max-width: 520px;
+}
+.editorial-hero > img {
+  width: 100%;
+  height: 590px;
+  object-fit: cover;
+}
+.craft-hero > img {
+  filter: saturate(0.82);
+  object-position: center;
+}
+.about-hero {
+  background: #efe0cf;
+}
+.about-hero > img {
+  object-position: center top;
+}
+.craft-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 80px 6%;
+  gap: 0;
+}
+.craft-steps article {
+  padding: 15px 45px;
+  border-right: 1px solid #ddcdb9;
+}
+.craft-steps article:last-child {
+  border: 0;
+}
+.craft-steps b {
+  font:
+    italic 26px "Cormorant Garamond",
+    serif;
+  color: #b68442;
+}
+.craft-steps h2 {
+  font:
+    38px "Cormorant Garamond",
+    serif;
+  margin: 8px 0;
+}
+.craft-steps p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #76675e;
+}
+.info-feature {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  max-width: 1280px;
+  margin: 20px auto 90px;
+  background: #2e1811;
+  color: #f9f0e6;
+}
+.info-feature > img {
+  width: 100%;
+  height: 470px;
+  object-fit: cover;
+}
+.info-feature article {
+  padding: 75px 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.info-feature h2 {
+  font:
+    48px/0.98 "Cormorant Garamond",
+    serif;
+  margin: 14px 0;
+}
+.info-feature p {
+  font-size: 13px;
+  line-height: 1.9;
+  color: #d8c6b9;
+}
+.info-feature button {
+  align-self: flex-start;
+  border: 1px solid #c89a55;
+  background: transparent;
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 18px;
+}
+.info-feature.reverse {
+  background: #f2e4d3;
+  color: #33231d;
+}
+.info-feature.reverse > img {
+  order: 2;
+}
+.info-feature.reverse p {
+  color: #76675e;
+}
+.info-feature.reverse button {
+  color: #6d4928;
+}
+.about-values {
+  text-align: center;
+  padding: 85px 6%;
+  max-width: 1200px;
+  margin: auto;
+}
+.about-values > h2 {
+  font:
+    52px "Cormorant Garamond",
+    serif;
+  margin: 10px 0 42px;
+}
+.about-values > div {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 35px;
+}
+.about-values article {
+  padding: 35px 25px;
+  border: 1px solid #eadac7;
+  background: #fffaf4;
+}
+.about-values svg {
+  color: #a87839;
+}
+.about-values h3 {
+  font:
+    27px "Cormorant Garamond",
+    serif;
+  margin: 13px 0 8px;
+}
+.about-values p {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #76675e;
+}
+@media (max-width: 800px) {
+  .editorial-hero {
+    grid-template-columns: 1fr;
+  }
+  .editorial-hero > div {
+    padding: 75px 8%;
+  }
+  .editorial-hero > img {
+    height: 400px;
+  }
+  .editorial-hero h1 {
+    font-size: 52px;
+  }
+  .craft-steps,
+  .about-values > div {
+    grid-template-columns: 1fr;
+  }
+  .craft-steps article {
+    border-right: 0;
+    border-bottom: 1px solid #ddcdb9;
+  }
+  .info-feature {
+    grid-template-columns: 1fr;
+    margin: 0 5% 60px;
+  }
+  .info-feature.reverse > img {
+    order: 0;
+  }
+  .info-feature article {
+    padding: 45px 8%;
+  }
+  .page-hero h1 {
+    font-size: 58px;
+  }
+}
+/* Admin module v2 */
+.admin-page {
+  min-height: 100vh;
+  background: #f7f2ea;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  color: #2d1c16;
+}
+.admin-side {
+  background: #2a120d;
+  color: #f7ead7;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+}
+.admin-side img {
+  width: 180px;
+  filter: brightness(0) invert(1);
+  margin: 0 auto 28px;
+}
+.admin-side > b {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #d7aa63;
+  margin: 0 12px 12px;
+}
+.admin-side button {
+  border: 0;
+  background: transparent;
+  color: #eadfd7;
+  text-align: left;
+  padding: 13px 14px;
+  border-radius: 8px;
+  text-transform: capitalize;
+  font-size: 14px;
+  cursor: pointer;
+}
+.admin-side button.active,
+.admin-side button:hover {
+  background: #48261d;
+  color: #fff;
+}
+.admin-main {
+  padding: 36px 42px;
+  min-width: 0;
+}
+.admin-main > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 28px;
+}
+.admin-main header span {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #9c6b2d;
+}
+.admin-main h1 {
+  text-transform: capitalize;
+  font-family: Georgia, serif;
+  font-size: 42px;
+  margin: 4px 0;
+}
+.admin-main header label {
+  font-size: 11px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.admin-main header input {
+  padding: 10px;
+  border: 1px solid #d7c7b4;
+  background: #fff;
+}
+.admin-main header button,
+.admin-new {
+  background: #a97935;
+  color: #fff;
+  border: 0;
+  padding: 11px 18px;
+  cursor: pointer;
+}
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.admin-stats article {
+  background: #fff;
+  border: 1px solid #e6dbcd;
+  padding: 20px;
+}
+.admin-stats span {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #826f63;
+}
+.admin-stats b {
+  font-size: 26px;
+}
+.admin-new {
+  margin-bottom: 14px;
+}
+.admin-table-wrap {
+  background: #fff;
+  border: 1px solid #e5d9ca;
+  overflow: auto;
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.admin-table th,
+.admin-table td {
+  padding: 15px;
+  border-bottom: 1px solid #eee4d8;
+  text-align: left;
+  vertical-align: middle;
+}
+.admin-table th {
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: #fbf8f3;
+}
+.admin-table td b,
+.admin-table td small {
+  display: block;
+}
+.admin-table td small {
+  color: #8c7c72;
+  margin-top: 4px;
+}
+.admin-table td button {
+  border: 1px solid #cbb9a5;
+  background: #fff;
+  padding: 7px 10px;
+  margin-right: 6px;
+  cursor: pointer;
+}
+.admin-table td button.danger {
+  color: #9d2d22;
+}
+.admin-pill {
+  background: #efe5d6;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+}
+.admin-error {
+  background: #ffe9e5;
+  color: #8e261c;
+  padding: 12px;
+}
+.admin-modal {
+  position: fixed;
+  inset: 0;
+  background: #1e0d09aa;
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+}
+.admin-modal form {
+  width: min(820px, 90vw);
+  max-height: 88vh;
+  overflow: auto;
+  background: #fff;
+  padding: 30px;
+  position: relative;
+}
+.admin-modal h2 {
+  font-family: Georgia, serif;
+  font-size: 30px;
+}
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 20px 0;
+}
+.admin-form-grid label {
+  font-size: 11px;
+  text-transform: capitalize;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.admin-form-grid input {
+  padding: 11px;
+  border: 1px solid #d9cabb;
+}
+.admin-form-grid input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+.admin-modal .login-submit {
+  width: 100%;
+}
+@media (max-width: 900px) {
+  .admin-page {
+    grid-template-columns: 1fr;
+  }
+  .admin-side {
+    position: static;
+    min-height: auto;
+    flex-direction: row;
+    overflow: auto;
+  }
+  .admin-side img,
+  .admin-side > b {
+    display: none;
+  }
+  .admin-main {
+    padding: 22px;
+  }
+  .admin-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .admin-main > header {
+    align-items: flex-start;
+    gap: 15px;
+    flex-direction: column;
+  }
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Gemstone photography and collection navigation */
+.site-nav {
+  background: #faf6efef;
+  gap: 28px;
+  border-bottom: 1px solid #ddcbb344;
+}
+.site-nav .brand {
+  width: 240px;
+  min-width: 240px;
+}
+.site-nav .brand img {
+  width: 225px;
+}
+.site-nav nav {
+  gap: 28px;
+  align-items: center;
+}
+.site-nav nav > a {
+  white-space: nowrap;
+  text-decoration: none;
+  color: var(--ink);
+}
+.nav-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  padding: 20px 0;
+  font:
+    600 18px "Cormorant Garamond",
+    serif;
+}
+.nav-toggle svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.2s;
+}
+.nav-toggle[aria-expanded="true"] {
+  color: #996b32;
+}
+.nav-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.mega-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  gap: 45px;
+  background: #fffaf3;
+  padding: 38px 6% 42px;
+  border-top: 1px solid #e2d3c1;
+  border-bottom: 1px solid #c3a273;
+  box-shadow: 0 24px 35px #2d1b1526;
+  color: var(--ink);
+}
+.mega-intro > span,
+.mega-links > span {
+  font:
+    600 10px Montserrat,
+    Arial,
+    sans-serif;
+  letter-spacing: 2px;
+  color: #976b38;
+}
+.mega-intro h2 {
+  font:
+    38px/1.08 "Cormorant Garamond",
+    serif;
+  margin: 14px 0;
+}
+.mega-intro p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+  max-width: 270px;
+}
+.site-nav .mega-intro > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 13px;
+  font:
+    600 11px Montserrat,
+    Arial,
+    sans-serif;
+  border-bottom: 1px solid #b7863e;
+  padding-bottom: 8px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.mega-menu a svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.mega-links {
+  border-left: 1px solid #e5d7c7;
+  padding-left: 36px;
+}
+.mega-links > span {
+  display: block;
+  margin-bottom: 17px;
+}
+.site-nav .mega-links a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 10px 0;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 18px;
+}
+.mega-links a:hover {
+  color: #996b32;
+}
+.mega-feature {
+  display: block;
+  text-decoration: none;
+  color: var(--ink);
+}
+.mega-feature img {
+  display: block;
+  width: 100%;
+  height: 210px;
+  object-fit: cover;
+  object-position: center 55%;
+}
+.mega-feature > span {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 13px;
+  font:
+    italic 22px "Cormorant Garamond",
+    serif;
+}
+.gem-categories {
+  padding: 70px 5.5% 60px;
+  background: #f8f3eb;
+}
+.gem-categories h2 {
+  font-size: 48px;
+  margin: 10px 0;
+}
+.gem-categories > p {
+  line-height: 1.7;
+}
+.gem-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 20px;
+  max-width: 1400px;
+  margin: 36px auto 32px;
+  text-align: left;
+}
+.gem-card {
+  display: block;
+  background: #fffaf5;
+  text-decoration: none;
+  color: var(--ink);
+  border: 1px solid #e1d4c3;
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s;
+}
+.gem-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px #38201615;
+}
+.gem-image {
+  position: relative;
+  aspect-ratio: 4/5;
+  overflow: hidden;
+  background: #e9e3db;
+}
+.gem-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s;
+}
+.gem-card:hover img {
+  transform: scale(1.035);
+}
+.gem-image > span {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: #faf6efe8;
+  color: #6c5034;
+  border: 1px solid #d1b794;
+  padding: 5px 7px;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.gem-info {
+  padding: 19px 16px 16px;
+}
+.gem-info > small {
+  font-size: 8px;
+  letter-spacing: 1.3px;
+  color: #946e42;
+}
+.gem-info h3 {
+  font:
+    600 25px/1.1 "Cormorant Garamond",
+    serif;
+  min-height: 55px;
+  margin: 9px 0 13px;
+}
+.gem-info > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid #e4d7c7;
+  padding-top: 13px;
+  font-size: 10px;
+  color: #735638;
+}
+.gem-info svg {
+  width: 17px;
+  height: 17px;
+}
+.gem-card:focus-visible,
+.site-nav a:focus-visible,
+.site-nav button:focus-visible {
+  outline: 2px solid #94692f;
+  outline-offset: 5px;
+}
+.signature {
+  height: auto;
+  min-height: 480px;
+  grid-template-columns: 1fr 1fr;
+}
+.signature .signature-media {
+  height: 480px !important;
+  background: #d2bda4 !important;
+}
+.signature .signature-media img {
+  object-fit: contain !important;
+  object-position: center !important;
+  background: #d2bda4;
+}
+.signature article {
+  align-self: center;
+  padding: 42px 12%;
+}
+.signature h2 {
+  font-size: 44px;
+}
+.signature .sig-points {
+  margin: 26px 0;
+}
+.signature-buy {
+  gap: 20px;
+}
+.story {
+  height: 350px;
+}
+.story-art img {
+  filter: none;
+  object-position: center 55%;
+}
+.story > div:first-child {
+  align-self: center;
+  padding-top: 35px;
+  padding-bottom: 35px;
+}
+@media (max-width: 1100px) {
+  .site-nav {
+    height: 88px;
+    padding: 0 5%;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .site-nav .brand {
+    width: 185px;
+    min-width: 0;
+    height: auto;
+  }
+  .site-nav .brand img {
+    width: 180px;
+    max-height: 74px;
+  }
+  .site-nav .hamb {
+    display: block !important;
+  }
+  .site-nav nav {
+    display: none;
+    position: absolute;
+    top: 88px;
+    left: 0;
+    right: 0;
+    background: #fffaf3;
+    margin: 0;
+    padding: 16px 5% 24px;
+    max-height: calc(100dvh - 88px);
+    overflow: auto;
+    align-items: stretch;
+    gap: 0;
+    flex-direction: column;
+    box-shadow: 0 24px 35px #2d1b1526;
+  }
+  .site-nav nav.open {
+    display: flex;
+  }
+  .site-nav nav > a,
+  .nav-toggle {
+    padding: 15px 0;
+    width: 100%;
+    text-align: left;
+    font-size: 19px;
+  }
+  .nav-toggle {
+    justify-content: space-between;
+  }
+  .nav-group {
+    border-top: 1px solid #e6d9c8;
+  }
+  .mega-menu {
+    position: static;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 20px 0;
+    box-shadow: none;
+    border: 0;
+  }
+  .mega-intro {
+    display: none;
+  }
+  .mega-links {
+    border: 0;
+    padding: 0;
+  }
+  .mega-feature img {
+    height: 190px;
+  }
+  .site-nav .nav-icons {
+    gap: 16px;
+  }
+  .page {
+    padding-top: 88px;
+  }
+  .gem-grid {
+    gap: 14px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .signature article {
+    padding: 30px 7%;
+  }
+}
+@media (max-width: 700px) {
+  .gem-categories {
+    padding: 48px 5%;
+  }
+  .gem-categories h2 {
+    font-size: 38px;
+  }
+  .gem-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 25px;
+  }
+  .gem-grid .gem-card:last-child {
+    grid-column: 1/-1;
+    width: calc(50% - 6px);
+    justify-self: center;
+  }
+  .gem-info {
+    padding: 14px 12px;
+  }
+  .gem-info h3 {
+    font-size: 23px;
+    min-height: 51px;
+  }
+  .gem-info > small {
+    font-size: 7px;
+  }
+  .gem-info > div {
+    font-size: 9px;
+  }
+  .signature {
+    grid-template-columns: 1fr;
+  }
+  .signature .signature-media {
+    height: 390px !important;
+  }
+  .signature article {
+    padding: 36px 7%;
+  }
+  .signature h2 {
+    font-size: 39px;
+  }
+  .story {
+    height: auto;
+    grid-template-columns: 1fr;
+  }
+  .story-art {
+    height: 300px;
+  }
+  .mega-menu {
+    grid-template-columns: 1fr;
+  }
+  .mega-feature {
+    display: none;
+  }
+  .site-nav .brand img {
+    width: 145px;
+  }
+  .site-nav .brand {
+    width: 145px;
+  }
+  .site-nav .nav-icons {
+    gap: 13px;
+  }
+  .nav-icons .account-btn span {
+    display: none;
+  }
+  .hero {
+    padding-top: 88px;
+  }
+  .sig-points {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gem-card,
+  .gem-image img,
+  .nav-toggle svg {
+    transition: none;
+  }
+}
+
+/* Keep navigation visible with the original banner showing through. */
+.site-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: transparent;
+  border-bottom: 0;
+  backdrop-filter: none;
+}
+
+/* Opaque navigation on scroll and a contained desktop mega menu. */
+.site-nav {
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.site-nav.is-scrolled {
+  background: #faf6ef;
+  box-shadow: 0 3px 18px #321c1512;
+  border-bottom: 1px solid #e5d8c7;
+}
+html {
+  scroll-padding-top: 142px;
+}
+@media (min-width: 1101px) {
+  .mega-menu {
+    width: min(960px, calc(100% - 64px));
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    padding: 30px;
+    gap: 28px;
+    border: 1px solid #e2d3c1;
+    grid-template-columns: 1fr 1.15fr 1fr;
+  }
+  .mega-intro h2 {
+    font-size: 32px;
+  }
+  .mega-links {
+    padding-left: 24px;
+  }
+  .mega-feature img {
+    height: 190px;
+  }
+}
+@media (max-width: 1100px) {
+  html {
+    scroll-padding-top: 104px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-nav {
+    transition: none;
+  }
+}
+
+/* Match gemstone card typography to the curated jewellery product cards. */
+.gem-info h3 {
+  font-size: 24px;
+}
+.gem-info > div > span {
+  font-family: Montserrat, Arial, sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: #2d211c;
+}
+
+/* v2.0.1 — structured admin navigation */
+.admin-side{padding:26px 16px 18px;gap:0;overflow-y:auto;height:100vh}
+.admin-side img{width:168px;margin:0 auto 10px}
+.admin-side> b{margin:0 10px 24px;text-align:center;font-size:10px;letter-spacing:2.2px;color:#cfa568}
+.admin-nav{display:flex;flex-direction:column;gap:20px;flex:1}
+.admin-nav-group{display:flex;flex-direction:column;gap:4px}
+.admin-nav-group>span{display:block;padding:0 12px 7px;color:#a98470;font-size:9px;font-weight:700;letter-spacing:1.7px}
+.admin-side .admin-nav-group button,.admin-side-footer button{display:flex;align-items:center;gap:11px;width:100%;padding:10px 12px;border-radius:7px;text-transform:none;font-size:13px;color:#dbcac0}
+.admin-side .admin-nav-group button svg,.admin-side-footer button svg{width:17px;height:17px;stroke-width:1.7;flex:0 0 auto;color:#bd966d}
+.admin-side button em{font-style:normal;white-space:nowrap}
+.admin-side .admin-nav-group button.active{background:linear-gradient(90deg,#563127,#47251e);color:#fff;box-shadow:inset 2px 0 #d4a765}
+.admin-side .admin-nav-group button.active svg{color:#e2bd83}
+.admin-side-footer{border-top:1px solid rgba(255,255,255,.09);padding-top:12px;margin-top:20px;display:flex;flex-direction:column;gap:3px}
+.admin-side-footer button:last-child{color:#bfa9a0}
+@media(max-width:900px){.admin-nav{flex-direction:row;overflow-x:auto;gap:10px}.admin-nav-group{display:contents}.admin-nav-group>span{display:none}.admin-side .admin-nav-group button{width:auto;min-width:max-content}.admin-side-footer{display:none}}
+
+/* v2.2.3 — My Orders action styling */
+.order-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.order-card .order-card-actions button {
+  appearance: none;
+  border: 0;
+  background: linear-gradient(90deg, #8f642c, #c69951);
+  color: #fff;
+  min-height: 42px;
+  padding: 12px 18px;
+  font: 600 10px Montserrat, sans-serif;
+  letter-spacing: 1.15px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.order-card .order-card-actions button svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.8;
+}
+.order-card .order-card-actions button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(93, 57, 25, .16);
+  filter: brightness(.98);
+}
+.order-card .order-card-actions button:focus-visible {
+  outline: 2px solid #6f4b28;
+  outline-offset: 3px;
+}
+@media (max-width: 720px) {
+  .order-card-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .order-card .order-card-actions button {
+    min-height: 40px;
+    padding: 11px 15px;
+  }
+}
+.app-loader{display:flex;align-items:center;justify-content:center;gap:12px;min-height:120px;font-size:.9rem;letter-spacing:.08em;text-transform:uppercase}.app-loader-overlay{position:fixed;inset:0;z-index:9999;min-height:100vh;background:rgba(255,255,255,.82);backdrop-filter:blur(2px)}.app-loader-spinner{width:26px;height:26px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:crysmona-spin .7s linear infinite}@keyframes crysmona-spin{to{transform:rotate(360deg)}}.field-error{display:block;color:#a32626;font-size:.78rem;margin-top:5px}.invalid-field{outline:1px solid #a32626!important}

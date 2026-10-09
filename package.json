@@ -1,0 +1,49 @@
+{
+  "name": "crysmona-react-ecommerce",
+  "version": "2.3.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n web,api \"vite --config vite.config.ts\" \"tsx watch server/index.ts\"",
+    "dev:web": "vite --config vite.config.ts",
+    "dev:api": "tsx watch server/index.ts",
+    "build": "tsc -b && vite build --config vite.config.ts",
+    "preview": "vite preview --config vite.config.ts",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:setup": "tsx server/setup.ts",
+    "check:server": "tsc -p tsconfig.server.json --noEmit",
+    "format": "prettier --write src server shared",
+    "media:migrate": "tsx server/migrate-media.ts",
+    "test:integration": "tsx tests/integration.ts",
+    "admin:create": "tsx server/create-admin.ts",
+    "admin:reset": "tsx server/reset-admin.ts",
+    "db:migrate:admin": "tsx server/migrate-admin-security.ts",
+    "test:auth": "tsx --test tests/auth.test.ts",
+    "test:auth:db": "tsx --test tests/auth-db.test.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1146.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "lucide-react": "^0.468.0",
+    "pg": "^8.13.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "prettier": "^3.9.9",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  }
+}
