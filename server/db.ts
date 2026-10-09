@@ -11,5 +11,13 @@ const databaseUrl = new URL(
 if (decodeURIComponent(databaseUrl.pathname.slice(1)) !== "Crysmona") {
   throw new Error("DATABASE_URL must point to the Crysmona database.");
 }
-export const pool = new pg.Pool({ connectionString: databaseUrl.toString() });
+// Each serverless instance gets its own pool; keep it small so concurrent instances
+// stay within the database's connection limit, and fail fast instead of hanging.
+const serverless = Boolean(process.env.VERCEL);
+export const pool = new pg.Pool({
+  connectionString: databaseUrl.toString(),
+  max: serverless ? 3 : 10,
+  idleTimeoutMillis: serverless ? 10_000 : 30_000,
+  connectionTimeoutMillis: 10_000,
+});
 export const q = (sql: string, params: any[] = []) => pool.query(sql, params);

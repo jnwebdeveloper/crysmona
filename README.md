@@ -60,6 +60,17 @@ Set `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_ENV=sandbox` and the exa
 
 The existing OTP login remains a development preview (123456). Production rejects OTP requests until an SMS provider is implemented. Admin access uses email/password sign-in with a salted scrypt password hash and an 8-hour HttpOnly session stored in PostgreSQL. Create an account after database setup with `npm run admin:create`; it prompts for email and a hidden, confirmed password. See the admin authentication guide below for upgrades and resets. No access key is accepted. Before public launch, merchant decisions and integrations are still needed for production authentication, payment webhooks/reconciliation, refund processing, delivery policies and tax requirements. Live payments were not executed.
 
+## Deploy to Vercel + Neon
+
+The storefront and API deploy as one Vercel project on one origin. `vercel.json` builds the Vite app into `dist`, rewrites `/api/*` to the Express function in `api/index.ts` (which exports `server/app.ts`), and serves `index.html` for client routes such as `/admin` and `/checkout/paypal`. `server/index.ts` is only the local `listen()` entry.
+
+1. In Neon, create a database named exactly **Crysmona** and copy the **pooled** connection string (host contains `-pooler`, keep `?sslmode=require`).
+2. From your machine, point `DATABASE_URL` at Neon and run `npm run db:setup`, then `npm run admin:create`.
+3. Import the GitHub repository in Vercel and set these environment variables: `DATABASE_URL`, `WEB_ORIGIN` (the exact `https://` production domain), `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_ENV`, and the `R2_*` values for admin uploads. Do not set `DEFAULT_ADMIN_PASSWORD` or `TRUST_PROXY` on Vercel.
+4. Deploy, then open `/api/health`; it should report `database: connected`.
+
+On Vercel (`VERCEL` is set by the platform) the database pool is capped at 3 connections per instance, state tables are ensured once per cold start, and admin login rate limiting keys on Vercel's `x-real-ip` header. Admin writes and PayPal returns only work on the domain in `WEB_ORIGIN`, so test those on production rather than preview URLs.
+
 ## Verification
 
 - `npm run build`
