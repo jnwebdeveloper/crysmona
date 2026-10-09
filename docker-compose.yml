@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: Crysmona
+      POSTGRES_DB: crysmona
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports: ["127.0.0.1:5440:5432"]

@@ -6,13 +6,13 @@ React + TypeScript storefront, Express API and PostgreSQL. Prices and payments u
 
 1. Copy `.env.example` to `.env` for a new installation. Keep existing credentials when upgrading.
 2. Start PostgreSQL: `npm run db:up`. For this existing workstation, use `docker start crysmona-dev-db`; its port is 5436.
-3. Set `DATABASE_URL` to the exact, case-sensitive database **Crysmona**.
+3. Set `DATABASE_URL` to the database **crysmona** (lowercase, following the PostgreSQL convention).
 4. Run `npm install`, then `npm run db:setup`.
 5. Run `npm run dev`. Store: http://localhost:5173. Admin: http://localhost:5173/admin. Both UIs intentionally share this single browser origin; Vite proxies `/api` internally to the API server on port 4000. Always open `localhost`, not `127.0.0.1`, during development.
 
 For local development, `npm run db:setup` creates a bootstrap admin if that email does not already exist: **admin@crysmona.com** / **CrysmonaAdmin@2026**. Change it immediately with `npm run admin:reset`. Existing admin passwords are never overwritten by setup.
 
-The existing development database was backed up and renamed from `crysmona` to `Crysmona`. Do not start a second database container on the same port.
+The database is named `crysmona` (lowercase). An older local database named `"Crysmona"` can be renamed with `ALTER DATABASE "Crysmona" RENAME TO crysmona;` while nothing is connected to it. Do not start a second database container on the same port.
 
 ## Structure
 
@@ -64,7 +64,7 @@ The existing OTP login remains a development preview (123456). Production reject
 
 The storefront and API deploy as one Vercel project on one origin. `vercel.json` builds the Vite app into `dist`, rewrites `/api/*` to the Express function in `api/index.ts` (which exports `server/app.ts`), and serves `index.html` for client routes such as `/admin` and `/checkout/paypal`. `server/index.ts` is only the local `listen()` entry.
 
-1. In Neon, create a database named exactly **Crysmona** and copy the **pooled** connection string (host contains `-pooler`, keep `?sslmode=require`).
+1. In Neon, create a database named **crysmona** and copy the **pooled** connection string (host contains `-pooler`, keep `?sslmode=require`).
 2. From your machine, point `DATABASE_URL` at Neon and run `npm run db:setup`, then `npm run admin:create`.
 3. Import the GitHub repository in Vercel and set these environment variables: `DATABASE_URL`, `WEB_ORIGIN` (the exact `https://` production domain), `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_ENV`, and the `R2_*` values for admin uploads. Do not set `DEFAULT_ADMIN_PASSWORD` or `TRUST_PROXY` on Vercel.
 4. Deploy, then open `/api/health`; it should report `database: connected`.

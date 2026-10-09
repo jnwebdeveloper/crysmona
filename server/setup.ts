@@ -6,10 +6,10 @@ import { money } from "../src/features/products/model.js";
 import { hashPassword } from "./services/password.js";
 const url = new URL(
   process.env.DATABASE_URL ||
-    "postgresql://postgres:postgres@localhost:5436/Crysmona",
+    "postgresql://postgres:postgres@localhost:5436/crysmona",
 );
-if (decodeURIComponent(url.pathname.slice(1)) !== "Crysmona")
-  throw new Error("DATABASE_URL must point to the Crysmona database.");
+if (decodeURIComponent(url.pathname.slice(1)) !== "crysmona")
+  throw new Error("DATABASE_URL must point to the crysmona database.");
 const pool = new pg.Client({ connectionString: url.toString() });
 await pool.connect();
 try {

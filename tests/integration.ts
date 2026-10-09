@@ -53,7 +53,7 @@ try {
   );
   check(
     (await db.query("SELECT current_database() name")).rows[0].name ===
-      "Crysmona",
+      "crysmona",
     "Exact database name",
   );
   const catalog = await call("/products");

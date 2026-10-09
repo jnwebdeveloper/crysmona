@@ -6,10 +6,10 @@ if (process.env.NODE_ENV === "production" && !configuredUrl) {
   throw new Error("DATABASE_URL is required in production.");
 }
 const databaseUrl = new URL(
-  configuredUrl || "postgresql://postgres:postgres@localhost:5436/Crysmona",
+  configuredUrl || "postgresql://postgres:postgres@localhost:5436/crysmona",
 );
-if (decodeURIComponent(databaseUrl.pathname.slice(1)) !== "Crysmona") {
-  throw new Error("DATABASE_URL must point to the Crysmona database.");
+if (decodeURIComponent(databaseUrl.pathname.slice(1)) !== "crysmona") {
+  throw new Error("DATABASE_URL must point to the crysmona database.");
 }
 // Each serverless instance gets its own pool; keep it small so concurrent instances
 // stay within the database's connection limit, and fail fast instead of hanging.
