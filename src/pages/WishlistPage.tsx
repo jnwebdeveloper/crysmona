@@ -1,10 +1,11 @@
 import { ArrowRight, Heart } from "lucide-react";
 import React from "react";
 import { go, useStore } from "../lib/Store";
-import { Product } from "../lib/model";
+import { useCart } from "../lib/cart";
 import { WishButton } from "../components/WishButton";
-export function WishlistPage({ add }: { add: (p: Product) => void }) {
+export function WishlistPage() {
   const { catalog, wishlist, toggle } = useStore();
+  const { add } = useCart();
   const items = catalog.filter((p) => wishlist.includes(p.slug));
   return (
     <main className="page wishlist-page">

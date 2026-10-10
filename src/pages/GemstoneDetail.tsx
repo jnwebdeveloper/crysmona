@@ -3,15 +3,11 @@ import { useState } from "react";
 import { go, useStore } from "../lib/Store";
 import ProductGallery from "../components/ProductGallery";
 import { Product } from "../lib/model";
-export default function GemstoneDetail({
-  product,
-  add,
-}: {
-  product: Product;
-  add: (p: Product, qty?: number) => void;
-}) {
+import { useCart } from "../lib/cart";
+export default function GemstoneDetail({ product }: { product: Product }) {
   const [qty, setQty] = useState(1);
   const { catalog } = useStore();
+  const { add } = useCart();
   return (
     <main className="page gem-detail">
       <div className="crumbs">

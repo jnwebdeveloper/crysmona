@@ -17,10 +17,11 @@ The database is named `crysmona` (lowercase). An older local database named `"Cr
 ## Structure
 
 - `src/main.tsx`: application entry point only.
-- `src/App.tsx`: route selection and bag state.
-- `src/pages`: one file per route (home, listings, product and gemstone detail, cart, checkout, PayPal return, orders, wishlist, contact, content pages, admin).
-- `src/components`: reusable UI shared by pages (header, footer, login modal, product card and gallery, wishlist button, hero carousel, subscribe form, loader).
-- `src/lib`: non-UI code — `Store.tsx` (API client, navigation, global storefront state) and `model.ts` (types and price formatting).
+- `src/App.tsx`: the React Router route table. Admin is lazy-loaded as its own bundle; catalog-dependent routes sit under `RequireStore`, account routes under `RequireLogin`.
+- `src/pages`: one file per route (home, listings, product, cart, checkout, PayPal return, orders, order detail, wishlist, contact, content pages, admin, 404).
+- `src/components`: reusable UI shared by pages (store layout, route guards, header, footer, login modal, product card and gallery, wishlist button, hero carousel, subscribe form, loader).
+- `src/lib`: non-UI state and helpers — `Store.tsx` (API client, `go()` navigation, catalog/user/wishlist), `cart.tsx` (bag context and server sync), `ui.tsx` (toast and login dialog), `model.ts` (types and price formatting).
+- `src/hooks`: `useSeo` (per-route meta tags) and `useAnalytics` (Meta Pixel / GA4 with validated IDs).
 - `src/styles`: global stylesheets.
 - `server/services/twilio.ts`: SMS OTP via Twilio Verify.
 - `server/logger.ts`: structured request and event logging.

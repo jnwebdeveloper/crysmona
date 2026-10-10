@@ -1,17 +1,11 @@
 import { ArrowRight, Minus, Plus, ShoppingBag } from "lucide-react";
 
 import { go as navTo } from "../lib/Store";
-import { CartItem, formatPrice, money } from "../lib/model";
+import { formatPrice, money } from "../lib/model";
+import { useCart } from "../lib/cart";
 
-export default function CartPage({
-  items,
-  update,
-  remove,
-}: {
-  items: CartItem[];
-  update: (slug: string, qty: number) => void;
-  remove: (slug: string) => void;
-}) {
+export default function CartPage() {
+  const { items, update, remove } = useCart();
   const subtotal = items.reduce(
     (n, i) => n + money(i.product.price) * i.qty,
     0,

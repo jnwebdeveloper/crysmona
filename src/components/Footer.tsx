@@ -1,5 +1,6 @@
 import { Facebook, Instagram } from "lucide-react";
 
+import { Link } from "react-router";
 import { go as navTo, useStore } from "../lib/Store";
 
 import SubscribeForm from "./SubscribeForm";
@@ -99,11 +100,11 @@ export default function Footer() {
       </div>
       <div>
         <b>Customer Care</b>
-        <a href="/faq">FAQs</a>
-        <a href="/shipping">Shipping & Delivery</a>
-        <a href="/returns">Returns & Exchanges</a>
-        <a href="/care">Care Instructions</a>
-        <a href="/orders">Track Order</a>
+        <Link to="/faq">FAQs</Link>
+        <Link to="/shipping">Shipping & Delivery</Link>
+        <Link to="/returns">Returns & Exchanges</Link>
+        <Link to="/care">Care Instructions</Link>
+        <Link to="/orders">Track Order</Link>
       </div>
       <div>
         <b>Join Our Journey</b>
@@ -115,8 +116,8 @@ export default function Footer() {
       <section>
         © 2026 Crysmona. All rights reserved.
         <span>
-          <a href="/privacy">Privacy Policy</a> &nbsp; | &nbsp;{" "}
-          <a href="/terms">Terms &amp; Conditions</a>
+          <Link to="/privacy">Privacy Policy</Link> &nbsp; | &nbsp;{" "}
+          <Link to="/terms">Terms &amp; Conditions</Link>
         </span>
       </section>
     </footer>

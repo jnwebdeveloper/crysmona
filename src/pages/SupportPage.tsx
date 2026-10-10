@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import { useStore } from "../lib/Store";
 export default function SupportPage({ page }: { page: string }) {
   const { store } = useStore();
@@ -15,7 +16,7 @@ export default function SupportPage({ page }: { page: string }) {
           {block?.body ||
             "Please contact our team for the latest information before placing your order."}
         </p>
-        <a href="/contact">Contact Crysmona →</a>
+        <Link to="/contact">Contact Crysmona →</Link>
       </article>
     </main>
   );

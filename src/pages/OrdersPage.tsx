@@ -1,17 +1,50 @@
 import { ArrowRight, ShoppingBag } from "lucide-react";
+import React, { useEffect, useState } from "react";
 
-import { go as navTo } from "../lib/Store";
+import Loader from "../components/Loader";
+import { api, go as navTo, useStore } from "../lib/Store";
 import { Order, money } from "../lib/model";
 
-export default function OrdersPage({ orders }: { orders: Order[] }) {
+// Rendered inside RequireLogin, so a signed-in user is guaranteed.
+export default function OrdersPage() {
+  const { user, setUser } = useStore();
+  const [orders, setOrders] = useState<Order[] | null>(null),
+    [error, setError] = useState("");
+  useEffect(() => {
+    api("/orders")
+      .then((data) => {
+        setOrders(data);
+        setError("");
+      })
+      .catch((e) => setError(e.message));
+  }, [user?.id]);
+  const signOut = async () => {
+    await api("/auth/logout", { method: "POST" });
+    setUser(null);
+    try {
+      localStorage.removeItem("crysmona-user");
+    } catch {}
+  };
+  if (!orders && !error)
+    return (
+      <main className="page">
+        <Loader label="Loading your orders…" />
+      </main>
+    );
   return (
+    <>
+    <div className="account-strip">
+      <span>Signed in as +91 {user?.phone}</span>
+      <button onClick={signOut}>Sign out</button>
+    </div>
+    {error && <p className="form-error">{error}</p>}
     <main className="page orders-page">
       <section className="page-hero compact">
         <span>YOUR CRYSMONA</span>
         <h1>My Orders</h1>
         <p>Track and revisit the pieces you have chosen.</p>
       </section>
-      {orders.length ? (
+      {orders?.length ? (
         <section className="orders-list">
           {orders.map((o) => (
             <article className="order-card" key={o.id}>
@@ -64,5 +97,6 @@ export default function OrdersPage({ orders }: { orders: Order[] }) {
         </section>
       )}
     </main>
+    </>
   );
 }

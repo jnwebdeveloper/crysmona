@@ -13,11 +13,12 @@ import {
 } from "lucide-react";
 
 import { go as navTo, useStore } from "../lib/Store";
-import { Product } from "../lib/model";
+import { useCart } from "../lib/cart";
 
 import ProductCard from "../components/ProductCard";
-export default function Home({ add }: { add: (p: Product) => void }) {
+export default function Home() {
   const { catalog, store } = useStore();
+  const { add } = useCart();
   const products = catalog.filter((p) => p.kind !== "gemstone"),
     gems = catalog.filter((p) => p.kind === "gemstone");
   const block = (key: string) =>

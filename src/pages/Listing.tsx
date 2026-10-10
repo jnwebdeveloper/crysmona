@@ -1,16 +1,13 @@
+import { useSearchParams } from "react-router";
 import { useStore } from "../lib/Store";
-import { Product } from "../lib/model";
+import { useCart } from "../lib/cart";
 
 import ProductCard from "../components/ProductCard";
-export default function Listing({
-  kind,
-  add,
-}: {
-  kind: "Gemstones" | "Jewellery";
-  add: (p: Product) => void;
-}) {
+export default function Listing({ kind }: { kind: "Gemstones" | "Jewellery" }) {
   const { catalog, store } = useStore();
-  const selected = new URLSearchParams(location.search).get("category");
+  const { add } = useCart();
+  const [params] = useSearchParams();
+  const selected = params.get("category");
   const category = store.categories.find((c: any) => c.slug === selected);
   const products = catalog.filter(
     (p) =>

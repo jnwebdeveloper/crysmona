@@ -1,17 +1,13 @@
 import { ArrowRight, ShieldCheck, ShoppingBag } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { api, go, useStore } from "../lib/Store";
-import { CartItem, formatPrice } from "../lib/model";
-export default function Checkout({
-  items,
-  onLogin,
-  onComplete,
-}: {
-  items: CartItem[];
-  onLogin: () => void;
-  onComplete: () => void;
-}) {
+import { formatPrice } from "../lib/model";
+import { useCart } from "../lib/cart";
+import { useUi } from "../lib/ui";
+export default function Checkout() {
   const { user } = useStore();
+  const { items, clear: onComplete } = useCart();
+  const { openLogin: onLogin } = useUi();
   const [method, setMethod] = useState("cod"),
     [config, setConfig] = useState<any>(null),
     [quote, setQuote] = useState<any>(null),

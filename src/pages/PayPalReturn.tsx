@@ -1,17 +1,16 @@
 import { ArrowRight, CheckCircle } from "lucide-react";
 import React, { useState } from "react";
+import { useSearchParams } from "react-router";
 import { api, go, useStore } from "../lib/Store";
-export default function PayPalReturn({
-  onComplete,
-  onLogin,
-}: {
-  onComplete: () => void;
-  onLogin: () => void;
-}) {
+import { useCart } from "../lib/cart";
+import { useUi } from "../lib/ui";
+export default function PayPalReturn() {
   const { user } = useStore();
+  const { clear: onComplete } = useCart();
+  const { openLogin: onLogin } = useUi();
   const [status, setStatus] = useState("ready"),
     [error, setError] = useState("");
-  const params = new URLSearchParams(location.search);
+  const [params] = useSearchParams();
   const cancel = params.get("cancel") === "1";
   const finish = async () => {
     if (!user) {

@@ -19,10 +19,15 @@ export async function api(path: string, options: RequestInit = {}) {
     );
   return data;
 }
+// Imperative navigation for code outside React Router hooks. App registers React
+// Router's navigate() here; inside components, prefer <Link> or useNavigate().
+let navigator: ((path: string) => void) | null = null;
+export const setNavigator = (navigate: ((path: string) => void) | null) => {
+  navigator = navigate;
+};
 export const go = (path: string) => {
-  history.pushState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (navigator) navigator(path);
+  else window.location.assign(path);
 };
 const Context = createContext<any>(null);
 export function StoreProvider({ children }: { children: React.ReactNode }) {
@@ -64,22 +69,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     api("/auth/me")
       .then(setUser)
       .catch(() => {});
+    // Page changes also refresh the catalog (see StoreLayout) so stock stays current.
     const listener = () => refresh();
-    window.addEventListener("popstate", listener);
     window.addEventListener("focus", listener);
-    return () => {
-      window.removeEventListener("popstate", listener);
-      window.removeEventListener("focus", listener);
-    };
+    return () => window.removeEventListener("focus", listener);
   }, []);
+  // What the server already has, so loading the wishlist does not save it straight back.
+  const synced = useRef("");
   useEffect(() => {
     setReady(false);
     let valid = true;
-    api("/wishlist").then((remote) => { if(valid){ setWishlist(remote); setReady(true); } }).catch((e:Error)=>setMessage(e.message));
+    api("/wishlist").then((remote) => { if(valid){ synced.current = JSON.stringify(remote); setWishlist(remote); setReady(true); } }).catch((e:Error)=>setMessage(e.message));
     return () => { valid=false; };
   }, [user?.id]);
   useEffect(() => {
     if (!ready) return;
+    const body = JSON.stringify(wishlist);
+    if (body === synced.current) return;
+    synced.current = body;
     queue.current = queue.current.then(() => api("/wishlist", { method:"PUT", body:JSON.stringify({slugs:wishlist}) })).catch((e:Error)=>setMessage(e.message));
   }, [wishlist, ready]);
   const toggle = (slug: string) =>

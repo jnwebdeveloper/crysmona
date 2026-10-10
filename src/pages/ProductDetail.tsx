@@ -14,17 +14,13 @@ import {
 import { go as navTo, useStore } from "../lib/Store";
 import ProductGallery from "../components/ProductGallery";
 import { Product } from "../lib/model";
+import { useCart } from "../lib/cart";
 
 import SubscribeForm from "../components/SubscribeForm";
 import ProductCard from "../components/ProductCard";
-export default function ProductDetail({
-  product,
-  add,
-}: {
-  product: Product;
-  add: (p: Product, qty?: number) => void;
-}) {
+export default function ProductDetail({ product }: { product: Product }) {
   const { catalog: products, store } = useStore();
+  const { add } = useCart();
   const [q, setQ] = useState(1);
   return (
     <main className="page product-page">

@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 
+import { useLocation } from "react-router";
 import { go as navTo, useStore } from "../lib/Store";
 
 export default function Header({
@@ -51,12 +52,11 @@ export default function Header({
       }
     };
     window.addEventListener("keydown", dismiss);
-    window.addEventListener("popstate", close);
-    return () => {
-      window.removeEventListener("keydown", dismiss);
-      window.removeEventListener("popstate", close);
-    };
+    return () => window.removeEventListener("keydown", dismiss);
   }, []);
+  // Close menus whenever the route changes (links, search results, back/forward).
+  const { pathname } = useLocation();
+  useEffect(close, [pathname]);
   const link = (path: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();

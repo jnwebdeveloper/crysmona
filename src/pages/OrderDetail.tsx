@@ -1,12 +1,21 @@
 import { ArrowLeft, MapPin, CreditCard, PackageCheck } from "lucide-react";
+import { useParams } from "react-router";
+import Loader from "../components/Loader";
 import { api, go } from "../lib/Store";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Order, money } from "../lib/model";
-export default function OrderDetail({order}:{order:Order}){
- const address=order.shippingAddress||{};
+// /orders/:orderNumber — rendered inside RequireLogin.
+export default function OrderDetail(){
+ const { orderNumber = "" } = useParams();
+ const [order,setOrder]=useState<Order|null>(null),[loadError,setLoadError]=useState("");
+ const load=()=>api("/orders/"+encodeURIComponent(orderNumber)).then((o)=>{setOrder(o);setLoadError("")}).catch((e)=>setLoadError(e.message));
+ useEffect(()=>{setOrder(null);load()},[orderNumber]);
  const [busy,setBusy]=useState(false),[message,setMessage]=useState("");
+ if(loadError)return <main className="page wishlist-empty"><h1>{loadError}</h1><button onClick={()=>go("/orders")}>BACK TO MY ORDERS</button></main>;
+ if(!order)return <main className="page"><Loader label="Loading order…" /></main>;
+ const address=order.shippingAddress||{};
  const cancellable=["placed","processing"].includes(order.status);
- const cancel=async()=>{if(!confirm("Cancel this order? A completed PayPal payment will be refunded."))return;setBusy(true);setMessage("");try{const r=await api("/orders/"+encodeURIComponent(order.id)+"/cancel",{method:"POST"});setMessage(r.refunded?"Order cancelled and PayPal refund requested.":"Order cancelled.");setTimeout(()=>location.reload(),700)}catch(e:any){setMessage(e.message)}finally{setBusy(false)}};
+ const cancel=async()=>{if(!confirm("Cancel this order? A completed PayPal payment will be refunded."))return;setBusy(true);setMessage("");try{const r=await api("/orders/"+encodeURIComponent(order.id)+"/cancel",{method:"POST"});setMessage(r.refunded?"Order cancelled and PayPal refund requested.":"Order cancelled.");await load()}catch(e:any){setMessage(e.message)}finally{setBusy(false)}};
  return <main className="page order-detail-page">
   <button className="order-back" onClick={()=>go('/orders')}><ArrowLeft/> My Orders</button>
   <section className="order-detail-head"><div><span>ORDER DETAILS</span><h1>{order.id}</h1><p>Placed {new Date(order.createdAt).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'})}</p></div><em>{order.status}</em></section>
