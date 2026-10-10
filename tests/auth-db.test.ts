@@ -3,13 +3,13 @@ import { test } from "node:test";
 import { readFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import pg from "pg";
-import { createAdminRepository } from "../server/auth/repository.js";
+import { createAdminRepository } from "../server/auth/admin/repository.js";
 import {
   createLoginLimiter,
   accountAttemptKey,
-} from "../server/auth/rate-limit.js";
-import { hashPassword, verifyPassword } from "../server/services/password.js";
-import { hashToken } from "../server/auth/cookies.js";
+} from "../server/auth/admin/rate-limit.js";
+import { hashPassword, verifyPassword } from "../server/auth/admin/password.js";
+import { hashToken } from "../server/auth/admin/cookies.js";
 
 const connectionString = process.env.TEST_AUTH_DATABASE_URL;
 if (!connectionString)

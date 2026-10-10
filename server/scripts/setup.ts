@@ -1,9 +1,10 @@
 import "dotenv/config";
 import { readFile } from "node:fs/promises";
 import pg from "pg";
-import { seedProducts } from "../database/seedProducts.js";
-import { money } from "../src/lib/model.js";
-import { hashPassword } from "./services/password.js";
+import { seedProducts } from "../../database/seedProducts.js";
+import { money } from "../../shared/product.js";
+import { hashPassword } from "../auth/admin/password.js";
+import { STATE_SCHEMA_SQL } from "../lib/schema.js";
 const url = new URL(
   process.env.DATABASE_URL ||
     "postgresql://postgres:postgres@localhost:5436/crysmona",
@@ -16,16 +17,16 @@ try {
   await pool.query("BEGIN");
   await pool.query(
     await readFile(
-      new URL("../database/003-numeric-usd.sql", import.meta.url),
+      new URL("../../database/003-numeric-usd.sql", import.meta.url),
       "utf8",
     ),
   );
   await pool.query(
-    await readFile(new URL("../database/schema.sql", import.meta.url), "utf8"),
+    await readFile(new URL("../../database/schema.sql", import.meta.url), "utf8"),
   );
   await pool.query(
     await readFile(
-      new URL("../database/002-commerce.sql", import.meta.url),
+      new URL("../../database/002-commerce.sql", import.meta.url),
       "utf8",
     ),
   );
@@ -38,7 +39,7 @@ try {
   if (!seeded.rowCount) {
     await pool.query(
       await readFile(
-        new URL("../database/001-seed-catalog.sql", import.meta.url),
+        new URL("../../database/001-seed-catalog.sql", import.meta.url),
         "utf8",
       ),
     );
@@ -150,7 +151,7 @@ try {
     }
     await pool.query(
       await readFile(
-        new URL("../database/005-seed-content.sql", import.meta.url),
+        new URL("../../database/005-seed-content.sql", import.meta.url),
         "utf8",
       ),
     );
@@ -160,31 +161,31 @@ try {
   }
   await pool.query(
     await readFile(
-      new URL("../database/004-integrity.sql", import.meta.url),
+      new URL("../../database/004-integrity.sql", import.meta.url),
       "utf8",
     ),
   );
   await pool.query(
     await readFile(
-      new URL("../database/006-admin-auth.sql", import.meta.url),
+      new URL("../../database/006-admin-auth.sql", import.meta.url),
       "utf8",
     ),
   );
   await pool.query(
     await readFile(
-      new URL("../database/007-production-commerce.sql", import.meta.url),
+      new URL("../../database/007-production-commerce.sql", import.meta.url),
       "utf8",
     ),
   );
   await pool.query(
     await readFile(
-      new URL("../database/008-seo-defaults.sql", import.meta.url),
+      new URL("../../database/008-seo-defaults.sql", import.meta.url),
       "utf8",
     ),
   );
   await pool.query(
     await readFile(
-      new URL("../database/009-admin-security.sql", import.meta.url),
+      new URL("../../database/009-admin-security.sql", import.meta.url),
       "utf8",
     ),
   );
@@ -207,9 +208,7 @@ try {
     );
     console.log(`Development admin ready: ${bootstrapAdminEmail}`);
   }
-  await pool.query(
-    await readFile(new URL("../database/010-server-state.sql", import.meta.url), "utf8"),
-  );
+  await pool.query(STATE_SCHEMA_SQL);
   await pool.query("COMMIT");
   console.log(
     "Crysmona schema and seed data are ready. Existing records were preserved.",

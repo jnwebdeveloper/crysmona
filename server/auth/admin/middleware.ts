@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import { bad } from "../errors.js";
+import { bad } from "../../lib/errors.js";
 import { hashToken, readSessionToken } from "./cookies.js";
 import type { AdminRepository, SessionAccount } from "./repository.js";
 

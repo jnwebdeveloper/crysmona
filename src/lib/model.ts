@@ -1,20 +1,5 @@
-export type Product = {
-  id?: number;
-  categoryId?: number;
-  slug: string;
-  name: string;
-  image: string;
-  note: string;
-  price: string;
-  priceCents?: number;
-  stone: string;
-  description: string;
-  kind?: string;
-  metal?: string;
-  specifications?: Record<string, string>;
-  stockQty?: number;
-  images?: { image_url: string; alt_text: string }[];
-};
+import type { Product } from "../../shared/product";
+export { type Product, formatPrice, money } from "../../shared/product";
 export type CartItem = { product: Product; qty: number };
 export type Order = {
   id: string;
@@ -32,11 +17,3 @@ export type Order = {
   paypalCaptureId?: string;
   history?: {status:string;note?:string;actor?:string;created_at:string}[];
 };
-export const formatPrice = (cents: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(cents / 100);
-export const money = (value: string) => Number(value.replace(/[^\d.]/g, ""));

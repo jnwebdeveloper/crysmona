@@ -1,4 +1,4 @@
-import { bad } from "../errors.js";
+import { bad } from "../../lib/errors.js";
 
 export const MAX_PASSWORD_LENGTH = 1024;
 export const MIN_NEW_PASSWORD_LENGTH = 15;

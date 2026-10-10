@@ -1,7 +1,9 @@
 import express from "express";
-import { q, dto, bad } from "../core.js";
-import { owner } from "../state.js";
+import { pool, q } from "../lib/db.js";
+import { dto } from "../services/catalog.js";
+import { bad } from "../lib/errors.js";
+import { owner } from "../auth/customer/guest.js";
 const app=express.Router();
 app.get("/api/cart", async(req,res)=>{const key=await owner(req,res);const {rows}=await q("SELECT p.*,c.quantity FROM carts c JOIN products p ON p.id=c.product_id WHERE c.owner_key=$1 AND p.active=true ORDER BY c.updated_at",[key]);res.json(rows.map((r:any)=>({product:dto(r),qty:r.quantity})));});
-app.put("/api/cart", async(req,res)=>{const key=await owner(req,res);const items=req.body.items;if(!Array.isArray(items)||items.length>100)throw bad("Invalid bag.");const normalized=new Map<string,number>();for(const i of items){const qty=Number(i.qty);if(!i.slug||!Number.isInteger(qty)||qty<1||qty>99)throw bad("Invalid bag quantity.");normalized.set(String(i.slug),qty);}const client=(await import("../core.js")).pool;const c=await client.connect();try{await c.query("BEGIN");await c.query("DELETE FROM carts WHERE owner_key=$1",[key]);for(const [slug,qty] of normalized){const p=(await c.query("SELECT id,stock_qty FROM products WHERE slug=$1 AND active=true",[slug])).rows[0];if(!p||qty>p.stock_qty)throw bad("A bag item is unavailable in the requested quantity.");await c.query("INSERT INTO carts(owner_key,product_id,quantity) VALUES($1,$2,$3)",[key,p.id,qty]);}await c.query("COMMIT");res.json({ok:true});}catch(e){await c.query("ROLLBACK");throw e}finally{c.release()}});
+app.put("/api/cart", async(req,res)=>{const key=await owner(req,res);const items=req.body.items;if(!Array.isArray(items)||items.length>100)throw bad("Invalid bag.");const normalized=new Map<string,number>();for(const i of items){const qty=Number(i.qty);if(!i.slug||!Number.isInteger(qty)||qty<1||qty>99)throw bad("Invalid bag quantity.");normalized.set(String(i.slug),qty);}const c=await pool.connect();try{await c.query("BEGIN");await c.query("DELETE FROM carts WHERE owner_key=$1",[key]);for(const [slug,qty] of normalized){const p=(await c.query("SELECT id,stock_qty FROM products WHERE slug=$1 AND active=true",[slug])).rows[0];if(!p||qty>p.stock_qty)throw bad("A bag item is unavailable in the requested quantity.");await c.query("INSERT INTO carts(owner_key,product_id,quantity) VALUES($1,$2,$3)",[key,p.id,qty]);}await c.query("COMMIT");res.json({ok:true});}catch(e){await c.query("ROLLBACK");throw e}finally{c.release()}});
 export default app;

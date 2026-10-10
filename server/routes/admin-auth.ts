@@ -1,13 +1,13 @@
 import express from "express";
-import { admin, adminAuthService, adminRepository } from "../auth/index.js";
+import { admin, adminAuthService, adminRepository } from "../auth/admin/index.js";
 import {
   clearSessionCookie,
   readSessionToken,
   setSessionCookie,
-} from "../auth/cookies.js";
-import { clientIp, hash } from "../core.js";
-import { log } from "../logger.js";
-import { bad } from "../errors.js";
+} from "../auth/admin/cookies.js";
+import { clientIp, hash } from "../lib/http.js";
+import { log } from "../lib/logger.js";
+import { bad } from "../lib/errors.js";
 
 const router = express.Router();
 router.post("/api/admin/auth/login", async (req, res) => {

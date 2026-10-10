@@ -1,6 +1,6 @@
 import app from "./app.js";
-import { log } from "./logger.js";
-import { ensureStateSchema } from "./state.js";
+import { log } from "./lib/logger.js";
+import { ensureStateSchema } from "./lib/schema.js";
 const port = Number(process.env.API_PORT || 4000);
 ensureStateSchema()
   .then(() => {

@@ -2,8 +2,8 @@ import "dotenv/config";
 import { createInterface } from "node:readline/promises";
 import { StringDecoder } from "node:string_decoder";
 import { stdin, stdout, stderr } from "node:process";
-import { adminAuthService } from "../auth/index.js";
-import { pool } from "../db.js";
+import { adminAuthService } from "../auth/admin/index.js";
+import { pool } from "../lib/db.js";
 
 // Read directly in raw mode: no password echo and no shell-history entry.
 export function readSecret(label: string): Promise<string> {

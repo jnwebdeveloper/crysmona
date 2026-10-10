@@ -1,5 +1,5 @@
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
-import { MAX_PASSWORD_LENGTH } from "../auth/validation.js";
+import { MAX_PASSWORD_LENGTH } from "./validation.js";
 
 // OWASP scrypt baseline. Store parameters with new hashes for future upgrades.
 const CURRENT = { N: 131072, r: 8, p: 1, maxmem: 160 * 1024 * 1024 };

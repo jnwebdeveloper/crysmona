@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { bad } from "../errors.js";
+import { bad } from "../../lib/errors.js";
 import { hashToken } from "./cookies.js";
 
 const WINDOW_SECONDS = 15 * 60;

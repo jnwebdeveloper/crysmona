@@ -1,10 +1,10 @@
 import { randomBytes } from "node:crypto";
-import { bad } from "../errors.js";
+import { bad } from "../../lib/errors.js";
 import {
   hashPassword,
   needsPasswordUpgrade,
   verifyPassword,
-} from "../services/password.js";
+} from "./password.js";
 import { hashToken, newSessionToken } from "./cookies.js";
 import type { AdminRepository } from "./repository.js";
 import {

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import assert from "node:assert/strict";
 import pg from "pg";
-import { hashPassword } from "../server/services/password.js";
+import { hashPassword } from "../server/auth/admin/password.js";
 import { randomBytes } from "node:crypto";
 import { resources } from "../shared/adminSchema.js";
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });

@@ -1,6 +1,6 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { randomUUID } from "node:crypto";
-import { bad } from "../core.js";
+import { bad } from "../lib/errors.js";
 export const r2Ready = () =>
   [
     "R2_ACCOUNT_ID",

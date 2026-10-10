@@ -1,6 +1,7 @@
 import express from "express";
-import { bad, pool, q } from "../core.js";
-import { owner } from "../state.js";
+import { bad } from "../lib/errors.js";
+import { pool, q } from "../lib/db.js";
+import { owner } from "../auth/customer/guest.js";
 const app = express.Router();
 app.get("/api/wishlist", async (req:any,res) => {const key=await owner(req,res);if(key.startsWith("user:")){const {rows}=await q("SELECT p.slug FROM wishlists w JOIN products p ON p.id=w.product_id WHERE user_id=$1",[Number(key.slice(5))]);return res.json(rows.map(r=>r.slug));}const {rows}=await q("SELECT p.slug FROM guest_wishlists w JOIN products p ON p.id=w.product_id WHERE owner_key=$1",[key]);res.json(rows.map(r=>r.slug));});
 app.put("/api/wishlist", async(req:any,res)=>{if(!Array.isArray(req.body.slugs)||req.body.slugs.length>500)throw bad("Invalid wishlist.");const key=await owner(req,res);const c=await pool.connect();try{await c.query("BEGIN");if(key.startsWith("user:")){const uid=Number(key.slice(5));await c.query("DELETE FROM wishlists WHERE user_id=$1",[uid]);await c.query("INSERT INTO wishlists(user_id,product_id) SELECT $1,id FROM products WHERE slug=ANY($2::text[]) AND active=true ON CONFLICT DO NOTHING",[uid,req.body.slugs]);}else{await c.query("DELETE FROM guest_wishlists WHERE owner_key=$1",[key]);await c.query("INSERT INTO guest_wishlists(owner_key,product_id) SELECT $1,id FROM products WHERE slug=ANY($2::text[]) AND active=true ON CONFLICT DO NOTHING",[key,req.body.slugs]);}await c.query("COMMIT");res.json({ok:true});}catch(e){await c.query("ROLLBACK");throw e}finally{c.release()}});

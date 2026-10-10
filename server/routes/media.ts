@@ -1,6 +1,6 @@
-import { admin } from "../auth/index.js";
+import { admin } from "../auth/admin/index.js";
 import express from "express";
-import { bad } from "../core.js";
+import { bad } from "../lib/errors.js";
 import { r2Ready, uploadImage } from "../services/r2.js";
 const router = express.Router();
 router.get("/api/admin/media/config", admin, (_req, res) =>

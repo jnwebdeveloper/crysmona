@@ -23,11 +23,14 @@ The database is named `crysmona` (lowercase). An older local database named `"Cr
 - `src/lib`: non-UI state and helpers — `Store.tsx` (API client, `go()` navigation, catalog/user/wishlist), `cart.tsx` (bag context and server sync), `ui.tsx` (toast and login dialog), `model.ts` (types and price formatting).
 - `src/hooks`: `useSeo` (per-route meta tags) and `useAnalytics` (Meta Pixel / GA4 with validated IDs).
 - `src/styles`: global stylesheets.
-- `server/services/twilio.ts`: SMS OTP via Twilio Verify.
-- `server/logger.ts`: structured request and event logging.
-- `server/routes`: catalog, authentication, wishlist, contact, commerce, admin and media APIs.
-- `server/services/r2.ts`: Cloudflare image storage.
-- `shared/adminSchema.ts`: model fields and admin forms.
+- `server/index.ts` / `server/app.ts`: local entry (`listen`) and the Express app (middleware, routes, error handler); `api/index.ts` exports the same app for Vercel.
+- `server/lib`: infrastructure — `db.ts` (PostgreSQL pool), `errors.ts`, `logger.ts` (structured logs), `http.ts` (client IP, hashing, cookie reading), `schema.ts` (the single definition of runtime tables, used by the API and `db:setup`).
+- `server/auth/admin`: admin email/password sign-in (see the module map below).
+- `server/auth/customer`: customer phone sign-in — `otp.ts` (Twilio/demo codes, send throttling), `session.ts` (session cookie, `customer` middleware), `guest.ts` (guest bag/wishlist identity and merge on sign-in).
+- `server/routes`: thin HTTP handlers — catalog, cart, wishlist, contact, checkout (quote, place order, PayPal return), orders (history, detail, cancel), customer-auth, admin-auth, admin and media.
+- `server/services`: business logic and providers — `orders.ts` (pricing, stock reservation, PayPal capture, cancellation and refunds), `paypal.ts`, `twilio.ts`, `r2.ts`, `catalog.ts` (product API shape). PayPal calls run outside database transactions and use per-order request ids, so retries never charge or refund twice.
+- `server/scripts`: command-line tools behind the `npm run db:setup`, `admin:create`, `admin:reset`, `media:migrate` and `db:migrate:admin` scripts.
+- `shared/`: code used by both the storefront and the server — `adminSchema.ts`/`adminValidation.ts` (admin model fields and forms), `product.ts` (product type and price helpers).
 - `database`: schema, transactional migrations and development seed records.
 
 The browser fetches the catalog, inventory, pricing, navigation, page content and settings from PostgreSQL. An unavailable database shows an explicit retry state, never a fabricated preview catalog. Guest and authenticated bag/wishlist state is stored in PostgreSQL. Anonymous continuity uses an HttpOnly guest-session cookie; product data and final order totals are always checked against the database.
@@ -130,17 +133,17 @@ Resetting a password updates its hash and revokes all of that admin's sessions i
 
 ### Module map
 
-- `server/db.ts` — shared PostgreSQL connection; production requires explicit `DATABASE_URL`.
-- `server/auth/validation.ts` — email normalization and separate login/new-password policies.
-- `server/services/password.ts` — bounded scrypt work, encoded parameters, legacy verification.
-- `server/auth/repository.ts` — parameterized account/session queries and reset transactions.
-- `server/auth/rate-limit.ts` — atomic, database-backed login throttling.
-- `server/auth/service.ts` — login, legacy hash upgrade, creation and reset workflows.
-- `server/auth/cookies.ts` — token generation/hashing and cookie options.
-- `server/auth/middleware.ts` — typed session authentication and browser request protections.
-- `server/auth/index.ts` — wires the database, repository, limiter and service together.
+- `server/lib/db.ts` — shared PostgreSQL connection; production requires explicit `DATABASE_URL`.
+- `server/auth/admin/validation.ts` — email normalization and separate login/new-password policies.
+- `server/auth/admin/password.ts` — bounded scrypt work, encoded parameters, legacy verification.
+- `server/auth/admin/repository.ts` — parameterized account/session queries and reset transactions.
+- `server/auth/admin/rate-limit.ts` — atomic, database-backed login throttling.
+- `server/auth/admin/service.ts` — login, legacy hash upgrade, creation and reset workflows.
+- `server/auth/admin/cookies.ts` — token generation/hashing and cookie options.
+- `server/auth/admin/middleware.ts` — typed session authentication and browser request protections.
+- `server/auth/admin/index.ts` — wires the database, repository, limiter and service together.
 - `server/routes/admin-auth.ts` — HTTP request/response handling only.
-- `server/cli/admin-account.ts` — shared command-line prompts and error handling.
+- `server/scripts/admin-account.ts` — shared command-line prompts and error handling.
 
 New password hashes have the format `scrypt:v1:131072:8:1:<salt>:<digest>` (N=2^17, r=8, p=1, random 16-byte salt, 64-byte digest). Existing `scrypt:<salt>:<digest>` hashes continue to work and upgrade on successful login. Only known parameter sets and valid encodings are accepted; verification uses timing-safe comparison. Each API process permits at most two concurrent derivations plus sixteen queued jobs to bound memory use. Benchmark on your deployment hardware before changing these limits.
 

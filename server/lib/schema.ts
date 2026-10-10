@@ -1,3 +1,9 @@
+import { q } from "./db.js";
+
+// Tables the API needs at runtime (guest identity, bags, guest wishlists, OTP send
+// log). This is the single definition: the API runs it on startup / Vercel cold
+// start, and `npm run db:setup` runs the same SQL. Every statement is idempotent.
+export const STATE_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS guest_sessions (
   token_hash TEXT PRIMARY KEY,
   expires_at TIMESTAMPTZ NOT NULL,
@@ -27,3 +33,8 @@ CREATE TABLE IF NOT EXISTS otp_sends (
 );
 CREATE INDEX IF NOT EXISTS otp_sends_phone_idx ON otp_sends(phone, sent_at);
 CREATE INDEX IF NOT EXISTS otp_sends_ip_idx ON otp_sends(ip_hash, sent_at);
+`;
+
+export async function ensureStateSchema() {
+  await q(STATE_SCHEMA_SQL);
+}

@@ -1,4 +1,4 @@
-import { pool } from "../db.js";
+import { pool } from "../../lib/db.js";
 import { requireAdmin } from "./middleware.js";
 import { createAdminRepository } from "./repository.js";
 import { createLoginLimiter } from "./rate-limit.js";

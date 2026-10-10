@@ -7,20 +7,20 @@ import {
   hashPassword,
   verifyPassword,
   needsPasswordUpgrade,
-} from "../server/services/password.js";
-import { parseLogin, validateNewPassword } from "../server/auth/validation.js";
+} from "../server/auth/admin/password.js";
+import { parseLogin, validateNewPassword } from "../server/auth/admin/validation.js";
 import {
   readSessionToken,
   setSessionCookie,
   clearSessionCookie,
   hashToken,
-} from "../server/auth/cookies.js";
+} from "../server/auth/admin/cookies.js";
 import {
   adminRequestSecurity,
   requireAdmin,
-} from "../server/auth/middleware.js";
-import { createAdminAuthService } from "../server/auth/service.js";
-import type { AdminRepository } from "../server/auth/repository.js";
+} from "../server/auth/admin/middleware.js";
+import { createAdminAuthService } from "../server/auth/admin/service.js";
+import type { AdminRepository } from "../server/auth/admin/repository.js";
 
 const password = "a sufficiently long passphrase";
 

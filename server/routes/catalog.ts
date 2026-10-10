@@ -1,5 +1,7 @@
 import express from "express";
-import { bad, dto, q } from "../core.js";
+import { bad } from "../lib/errors.js";
+import { dto } from "../services/catalog.js";
+import { q } from "../lib/db.js";
 const app = express.Router();
 app.get("/api/products", async (_req, res) => {
   const { rows } = await q(

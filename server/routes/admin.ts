@@ -1,9 +1,10 @@
-import { admin } from "../auth/index.js";
+import { admin } from "../auth/admin/index.js";
 import express from "express";
 import { resources } from "../../shared/adminSchema.js";
 import { adminValidation } from "../../shared/adminValidation.js";
-import { bad, q } from "../core.js";
-import { paypalReady } from "./commerce.js";
+import { bad } from "../lib/errors.js";
+import { q } from "../lib/db.js";
+import { paypalReady } from "../services/paypal.js";
 const app = express.Router();
 app.get("/api/admin/dashboard", admin, async (_req, res) => {
   const [p, o, u, e] = await Promise.all([

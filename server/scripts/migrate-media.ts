@@ -1,8 +1,8 @@
 import "dotenv/config";
 import { readFile } from "node:fs/promises";
 import { resolve, sep } from "node:path";
-import { pool } from "./core.js";
-import { r2Ready, uploadImage } from "./services/r2.js";
+import { pool } from "../lib/db.js";
+import { r2Ready, uploadImage } from "../services/r2.js";
 const tables = ["products", "product_images", "categories", "content_blocks"];
 const root = resolve("public");
 try {

@@ -1,5 +1,5 @@
-import { bad } from "../errors.js";
-import { log, maskPhone } from "../logger.js";
+import { bad } from "../lib/errors.js";
+import { log, maskPhone } from "../lib/logger.js";
 
 // Twilio Verify generates, delivers, stores and checks the code, so no OTP state
 // lives on this server (required for serverless instances that share nothing).
