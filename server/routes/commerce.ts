@@ -1,6 +1,7 @@
 import express from "express";
 import crypto from "node:crypto";
 import { bad, customer, pool, q } from "../core.js";
+import { log } from "../logger.js";
 const app = express.Router();
 async function quote(items: any[], coupon: string, client: any = pool) {
   if (!Array.isArray(items) || !items.length || items.length > 100)
@@ -81,38 +82,81 @@ async function paypal(path: string, body: any, requestId?: string) {
     process.env.PAYPAL_ENV === "live"
       ? "https://api-m.paypal.com"
       : "https://api-m.sandbox.paypal.com";
-  const tokenResponse = await fetch(base + "/v1/oauth2/token", {
-    method: "POST",
-    headers: {
-      Authorization:
-        "Basic " +
-        Buffer.from(
-          process.env.PAYPAL_CLIENT_ID + ":" + process.env.PAYPAL_CLIENT_SECRET,
-        ).toString("base64"),
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: "grant_type=client_credentials",
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!tokenResponse.ok)
+  // PayPal-Request-Id is logged so a failure can be traced in PayPal's dashboard;
+  // debug_id is what PayPal support asks for.
+  const paypalRequestId = requestId || crypto.randomUUID();
+  const started = Date.now();
+  let tokenResponse: Response, response: Response;
+  try {
+    tokenResponse = await fetch(base + "/v1/oauth2/token", {
+      method: "POST",
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from(
+            process.env.PAYPAL_CLIENT_ID + ":" + process.env.PAYPAL_CLIENT_SECRET,
+          ).toString("base64"),
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: "grant_type=client_credentials",
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch (error) {
+    log.error("paypal token request failed", { path, paypalRequestId, error });
     throw bad("PayPal could not connect. Please try again later.", 502);
+  }
+  if (!tokenResponse.ok) {
+    const failure: any = await tokenResponse.json().catch(() => ({}));
+    log.error("paypal token rejected", {
+      path,
+      paypalRequestId,
+      status: tokenResponse.status,
+      paypalError: failure.error,
+    });
+    throw bad("PayPal could not connect. Please try again later.", 502);
+  }
   const token: any = await tokenResponse.json();
-  const response = await fetch(base + path, {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + token.access_token,
-      "Content-Type": "application/json",
-      "PayPal-Request-Id": requestId || crypto.randomUUID(),
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(20000),
-  });
-  const data: any = await response.json();
-  if (!response.ok)
+  try {
+    response = await fetch(base + path, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token.access_token,
+        "Content-Type": "application/json",
+        "PayPal-Request-Id": paypalRequestId,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(20000),
+    });
+  } catch (error) {
+    log.error("paypal request failed", { path, paypalRequestId, error });
     throw bad(
       "PayPal could not complete this request. Please retry or choose another payment method.",
       502,
     );
+  }
+  const data: any = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    log.error("paypal request rejected", {
+      path,
+      paypalRequestId,
+      status: response.status,
+      ms: Date.now() - started,
+      paypalError: data.name,
+      debugId: data.debug_id,
+      issue: data.details?.[0]?.issue,
+    });
+    throw bad(
+      "PayPal could not complete this request. Please retry or choose another payment method.",
+      502,
+    );
+  }
+  log.info("paypal request ok", {
+    path,
+    paypalRequestId,
+    status: response.status,
+    ms: Date.now() - started,
+    paypalStatus: data.status,
+  });
   return data;
 }
 async function releaseOrder(id: string, userId: string) {
@@ -217,6 +261,14 @@ app.post("/api/orders", customer, async (req: any, res) => {
   } finally {
     c.release();
   }
+  log.info("order created", {
+    requestId: req.id,
+    orderId: order.id,
+    orderNumber: order.order_number,
+    userId: req.customer.id,
+    paymentMethod,
+    totalCents: order.total_cents,
+  });
   if (paymentMethod === "paypal") {
     try {
       const origin = process.env.WEB_ORIGIN || "http://localhost:5173";
@@ -255,6 +307,10 @@ app.post("/api/orders", customer, async (req: any, res) => {
       ]);
       return res.status(201).json({ redirect, reference: order.id });
     } catch (e) {
+      log.warn("paypal order creation failed; releasing stock", {
+        requestId: req.id,
+        orderId: order.id,
+      });
       await releaseOrder(order.id, req.customer.id);
       throw e;
     }
@@ -301,11 +357,20 @@ app.post("/api/paypal/capture", customer, async (req: any, res) => {
       capture?.status !== "COMPLETED" ||
       capture.amount?.currency_code !== "USD" ||
       capture.amount?.value !== o.paypal_amount
-    )
+    ) {
+      log.warn("paypal capture not confirmed", {
+        requestId: req.id,
+        orderId: o.id,
+        paypalStatus: result.status,
+        captureStatus: capture?.status,
+        capturedAmount: capture?.amount?.value,
+        expectedAmount: o.paypal_amount,
+      });
       throw bad(
         "Payment is not yet confirmed. Please retry confirmation.",
         409,
       );
+    }
     await c.query(
       "UPDATE orders SET payment_status='paid',status='placed',paypal_capture_id=$1,updated_at=now() WHERE id=$2",
       [capture.id, o.id],
@@ -315,6 +380,13 @@ app.post("/api/paypal/capture", customer, async (req: any, res) => {
     const recipient=user?.email||user?.phone; if(recipient) await c.query("INSERT INTO notification_outbox(user_id,order_id,channel,template,recipient,payload) VALUES($1,$2,$3,'order_confirmed',$4,$5)",[o.user_id,o.id,user.email?'email':'sms',recipient,JSON.stringify({orderNumber:o.order_number})]);
     if(o.coupon_code){const cp=(await c.query("SELECT id FROM coupons WHERE upper(code)=upper($1)",[o.coupon_code])).rows[0];if(cp){await c.query("INSERT INTO coupon_redemptions(coupon_id,user_id,order_id) VALUES($1,$2,$3) ON CONFLICT(order_id) DO NOTHING",[cp.id,o.user_id,o.id]);await c.query("UPDATE coupons SET used_count=(SELECT count(*) FROM coupon_redemptions WHERE coupon_id=$1) WHERE id=$1",[cp.id])}}
     await c.query("COMMIT");
+    log.info("order paid", {
+      requestId: req.id,
+      orderId: o.id,
+      orderNumber: o.order_number,
+      captureId: capture.id,
+      amount: capture.amount.value,
+    });
     res.json({ ok: true, orderNumber: o.order_number });
   } catch (e) {
     await c.query("ROLLBACK");
@@ -396,7 +468,9 @@ app.post("/api/orders/:orderNumber/cancel", customer, async (req:any,res) => {
     await c.query("UPDATE orders SET status='cancelled',cancelled_at=now(),updated_at=now() WHERE id=$1",[o.id]);
     await c.query("INSERT INTO order_status_history(order_id,status,note,actor) VALUES($1,'cancelled',$2,'customer')",[o.id,refund?.id?"PayPal refund "+refund.id:"Customer cancellation"]);
     await c.query("INSERT INTO audit_logs(actor_type,actor_id,action,entity_type,entity_id) VALUES('customer',$1,'cancel_order','order',$2)",[String(req.customer.id),String(o.id)]);
-    await c.query("COMMIT"); res.json({ok:true,refunded:Boolean(refund)});
+    await c.query("COMMIT");
+    log.info("order cancelled by customer", { requestId: req.id, orderId: o.id, orderNumber: o.order_number, refundId: refund?.id });
+    res.json({ok:true,refunded:Boolean(refund)});
   } catch(e){await c.query("ROLLBACK");throw e} finally{c.release()}
 });
 

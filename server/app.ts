@@ -1,7 +1,9 @@
 import cors from "cors";
 import "dotenv/config";
 import express from "express";
+import crypto from "node:crypto";
 import { q } from "./core.js";
+import { log } from "./logger.js";
 import admin from "./routes/admin.js";
 import auth from "./routes/auth.js";
 import catalog from "./routes/catalog.js";
@@ -22,9 +24,32 @@ if (
     "Set WEB_ORIGIN to the HTTPS storefront origin in production.",
   );
 }
-if (process.env.PAYPAL_ENV !== "live" && (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET)) console.warn("PayPal sandbox is disabled until PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET are configured.");
+if (process.env.PAYPAL_ENV !== "live" && (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET)) log.warn("PayPal sandbox is disabled until PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET are configured.");
 const app = express();
 app.disable("x-powered-by");
+// One log line per request, tagged with a request ID that is also returned to the
+// client (X-Request-Id) so a customer-reported error can be matched to its log.
+// Only the path is logged: query strings and bodies may carry personal data.
+app.use((req: any, res, next) => {
+  const started = process.hrtime.bigint();
+  const vercelId = req.headers["x-vercel-id"];
+  req.id = (typeof vercelId === "string" && vercelId) || crypto.randomUUID();
+  res.setHeader("X-Request-Id", req.id);
+  res.on("finish", () => {
+    const status = res.statusCode;
+    const fields = {
+      requestId: req.id,
+      method: req.method,
+      path: req.path,
+      status,
+      ms: Number((process.hrtime.bigint() - started) / 1_000_000n),
+    };
+    if (status >= 500) log.error("request failed", fields);
+    else if (status >= 400) log.warn("request rejected", fields);
+    else log.info("request", fields);
+  });
+  next();
+});
 // Only explicitly configured proxy addresses may supply the client IP.
 if (process.env.TRUST_PROXY) {
   const proxies = process.env.TRUST_PROXY.split(",").map((value) =>
@@ -71,7 +96,7 @@ app.use("/api/admin", adminRequestSecurity(webOrigin));
 app.use(adminAuth);
 app.use(admin);
 app.use(media);
-app.use((err: any, _req: any, res: any, _next: any) => {
+app.use((err: any, req: any, res: any, _next: any) => {
   const message =
     err.code === "23505"
       ? "A record with this value already exists."
@@ -84,12 +109,17 @@ app.use((err: any, _req: any, res: any, _next: any) => {
             : err.status
               ? err.message
               : "The service is unavailable. Please try again.";
-  if (!err.status) console.error(err.message);
+  const status =
+    err.status ||
+    (["23505", "23503", "22P02", "23514"].includes(err.code) ? 400 : 500);
+  // Expected rejections (validation, auth) are already covered by the request line;
+  // only unexpected failures need the stack. The client sees a generic message.
+  if (status >= 500)
+    log.error("unhandled error", { requestId: req.id, path: req.path, error: err });
+  else
+    log.debug("client error", { requestId: req.id, path: req.path, status, reason: message });
   res
-    .status(
-      err.status ||
-        (["23505", "23503", "22P02", "23514"].includes(err.code) ? 400 : 500),
-    )
-    .json({ error: message });
+    .status(status)
+    .json(status >= 500 ? { error: message, requestId: req.id } : { error: message });
 });
 export default app;

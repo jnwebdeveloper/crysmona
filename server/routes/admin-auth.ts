@@ -5,7 +5,8 @@ import {
   readSessionToken,
   setSessionCookie,
 } from "../auth/cookies.js";
-import { clientIp } from "../core.js";
+import { clientIp, hash } from "../core.js";
+import { log } from "../logger.js";
 import { bad } from "../errors.js";
 
 const router = express.Router();
@@ -19,8 +20,15 @@ router.post("/api/admin/auth/login", async (req, res) => {
       readSessionToken(req.headers.cookie),
     );
     setSessionCookie(res, session.token);
+    log.info("admin signed in", { requestId: (req as any).id, admin: session.email });
     res.json({ email: session.email });
   } catch (error) {
+    // Failed admin logins are a security signal; the attempted password is never logged.
+    log.warn("admin sign-in failed", {
+      requestId: (req as any).id,
+      ipHash: hash("ip:" + clientIp(req)).slice(0, 12),
+      reason: error instanceof Error ? error.message : undefined,
+    });
     if (error && typeof error === "object" && "retryAfter" in error)
       res.setHeader("Retry-After", String(error.retryAfter));
     throw error;

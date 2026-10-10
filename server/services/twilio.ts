@@ -1,4 +1,5 @@
 import { bad } from "../errors.js";
+import { log, maskPhone } from "../logger.js";
 
 // Twilio Verify generates, delivers, stores and checks the code, so no OTP state
 // lives on this server (required for serverless instances that share nothing).
@@ -36,6 +37,8 @@ async function verify(path: string, form: Record<string, string>) {
     process.env.TWILIO_ACCOUNT_SID + ":" + process.env.TWILIO_AUTH_TOKEN,
   ).toString("base64");
   let response: Response;
+  const started = Date.now();
+  const to = maskPhone(form.To);
   try {
     response = await fetch(
       "https://verify.twilio.com/v2/Services/" +
@@ -51,16 +54,32 @@ async function verify(path: string, form: Record<string, string>) {
         signal: AbortSignal.timeout(10_000),
       },
     );
-  } catch {
+  } catch (error) {
+    log.error("twilio request failed", { path, to, error });
     throw bad("We could not reach the SMS service. Please try again.", 502);
   }
   const body: any = await response.json().catch(() => ({}));
   if (!response.ok) {
     const known = messages[body.code];
+    // Known codes are customer-side problems (bad number, too many tries); anything
+    // else points at configuration or an outage and needs attention.
+    (known ? log.warn : log.error)("twilio request rejected", {
+      path,
+      to,
+      status: response.status,
+      twilioCode: body.code,
+      twilioMessage: body.message,
+      ms: Date.now() - started,
+    });
     if (known) throw bad(known[0], known[1]);
-    console.error("Twilio Verify error", response.status, body.code, body.message);
     throw bad("We could not send or check the code. Please try again.", 502);
   }
+  log.info("twilio request ok", {
+    path,
+    to,
+    verifyStatus: body.status,
+    ms: Date.now() - started,
+  });
   return body;
 }
 

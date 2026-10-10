@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { bad, clientIp, customer, hash, pool, q } from "../core.js";
 import { claimGuestState } from "../state.js";
 import { checkCode, sendCode, twilioReady } from "../services/twilio.js";
+import { log, maskPhone } from "../logger.js";
 const app = express.Router();
 // Without Twilio, development falls back to a fixed code and no SMS is sent;
 // production refuses phone sign-in rather than accept a guessable code.
@@ -55,6 +56,11 @@ app.post("/api/auth/request-otp", async (req, res) => {
       503,
     );
   const sendId = await recordSend(phone, hash("ip:" + clientIp(req)));
+  log.info("otp requested", {
+    requestId: (req as any).id,
+    phone: maskPhone(phone),
+    mode: demoMode() ? "demo" : "twilio",
+  });
   if (demoMode()) return res.json({ ok: true, demoCode: DEMO_CODE });
   try {
     await sendCode(phone);
@@ -95,6 +101,11 @@ app.post("/api/auth/verify-otp", async (req, res) => {
     [hash(token), rows[0].id],
   );
   await claimGuestState(req, rows[0].id);
+  log.info("customer signed in", {
+    requestId: (req as any).id,
+    userId: rows[0].id,
+    phone: maskPhone(phone),
+  });
   res.cookie("crysmona_session", token, {
     httpOnly: true,
     sameSite: "lax",
