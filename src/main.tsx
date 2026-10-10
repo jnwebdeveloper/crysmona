@@ -1,8 +1,8 @@
 import { createRoot } from "react-dom/client";
-import App from "./app/App";
-import { StoreProvider } from "./app/Store";
-import "./styles.css";
-import "./commerce.css";
+import App from "./App";
+import { StoreProvider } from "./lib/Store";
+import "./styles/styles.css";
+import "./styles/commerce.css";
 const root = document.getElementById("root");
 if (!root) throw new Error("Root missing");
 createRoot(root).render(

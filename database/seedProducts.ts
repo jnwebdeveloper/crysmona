@@ -1,4 +1,4 @@
-import { type Product, formatPrice } from "../src/features/products/model.js";
+import { type Product, formatPrice } from "../src/lib/model.js";
 export const seedProducts: Product[] = [
   {
     slug: "amethyst-pendant",

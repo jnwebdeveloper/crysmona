@@ -2,7 +2,7 @@ import "dotenv/config";
 import { readFile } from "node:fs/promises";
 import pg from "pg";
 import { seedProducts } from "../database/seedProducts.js";
-import { money } from "../src/features/products/model.js";
+import { money } from "../src/lib/model.js";
 import { hashPassword } from "./services/password.js";
 const url = new URL(
   process.env.DATABASE_URL ||

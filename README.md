@@ -17,9 +17,13 @@ The database is named `crysmona` (lowercase). An older local database named `"Cr
 ## Structure
 
 - `src/main.tsx`: application entry point only.
-- `src/app`: route selection and storefront state.
-- `src/components/layout`: header and footer.
-- `src/features`: home, products (model/pages/components), account, admin, cart, checkout, orders, contact and content.
+- `src/App.tsx`: route selection and bag state.
+- `src/pages`: one file per route (home, listings, product and gemstone detail, cart, checkout, PayPal return, orders, wishlist, contact, content pages, admin).
+- `src/components`: reusable UI shared by pages (header, footer, login modal, product card and gallery, wishlist button, hero carousel, subscribe form, loader).
+- `src/lib`: non-UI code — `Store.tsx` (API client, navigation, global storefront state) and `model.ts` (types and price formatting).
+- `src/styles`: global stylesheets.
+- `server/services/twilio.ts`: SMS OTP via Twilio Verify.
+- `server/logger.ts`: structured request and event logging.
 - `server/routes`: catalog, authentication, wishlist, contact, commerce, admin and media APIs.
 - `server/services/r2.ts`: Cloudflare image storage.
 - `shared/adminSchema.ts`: model fields and admin forms.
