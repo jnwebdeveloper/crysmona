@@ -7,6 +7,9 @@ export async function ensureStateSchema() {
   await q(`CREATE TABLE IF NOT EXISTS guest_wishlists (owner_key TEXT NOT NULL, product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY(owner_key, product_id))`);
   await q(`CREATE INDEX IF NOT EXISTS carts_owner_idx ON carts(owner_key)`);
   await q(`CREATE INDEX IF NOT EXISTS guest_wishlists_owner_idx ON guest_wishlists(owner_key)`);
+  await q(`CREATE TABLE IF NOT EXISTS otp_sends (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, phone TEXT NOT NULL, ip_hash TEXT NOT NULL, sent_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
+  await q(`CREATE INDEX IF NOT EXISTS otp_sends_phone_idx ON otp_sends(phone, sent_at)`);
+  await q(`CREATE INDEX IF NOT EXISTS otp_sends_ip_idx ON otp_sends(ip_hash, sent_at)`);
 }
 
 function cookie(req: any, name: string) {

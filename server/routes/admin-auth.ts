@@ -5,15 +5,10 @@ import {
   readSessionToken,
   setSessionCookie,
 } from "../auth/cookies.js";
+import { clientIp } from "../core.js";
 import { bad } from "../errors.js";
 
 const router = express.Router();
-// Vercel's edge overwrites x-real-ip with the connecting client's address, so it is
-// only trusted there; elsewhere req.ip honours the explicit TRUST_PROXY allowlist.
-const clientIp = (req: express.Request) => {
-  const vercelIp = process.env.VERCEL && req.headers["x-real-ip"];
-  return (typeof vercelIp === "string" && vercelIp) || req.ip || "unknown";
-};
 router.post("/api/admin/auth/login", async (req, res) => {
   if (!req.is("application/json"))
     throw bad("Send login credentials as JSON.", 415);

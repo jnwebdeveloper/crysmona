@@ -132,7 +132,8 @@ export function LoginModal({
     [step, setStep] = useState<"phone" | "otp">("phone"),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [demo, setDemo] = useState("");
+    [demo, setDemo] = useState(""),
+    [notice, setNotice] = useState("");
   const dialog = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const old = document.body.style.overflow;
@@ -163,17 +164,35 @@ export function LoginModal({
       previous?.focus();
     };
   }, []);
+  const requestCode = async () => {
+    const response = await api("/auth/request-otp", {
+      method: "POST",
+      body: JSON.stringify({ phone }),
+    });
+    setDemo(response.demoCode || "");
+  };
+  const resend = async () => {
+    setError("");
+    setNotice("");
+    setBusy(true);
+    try {
+      await requestCode();
+      setOtp("");
+      setNotice("A new code is on its way.");
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setNotice("");
     setBusy(true);
     try {
       if (step === "phone") {
-        const response = await api("/auth/request-otp", {
-          method: "POST",
-          body: JSON.stringify({ phone }),
-        });
-        setDemo(response.demoCode || "");
+        await requestCode();
         setStep("otp");
       } else {
         const user = await api("/auth/verify-otp", {
@@ -284,6 +303,11 @@ export function LoginModal({
                 {error}
               </p>
             )}
+            {notice && (
+              <p className="demo-notice" role="status">
+                {notice}
+              </p>
+            )}
             <button className="account-submit" disabled={busy}>
               {busy
                 ? "PLEASE WAIT…"
@@ -301,9 +325,18 @@ export function LoginModal({
                   setStep("phone");
                   setOtp("");
                   setError("");
+                  setNotice("");
                 }}
               >
                 <ArrowLeft /> Change phone number
+              </button>
+              <button
+                type="button"
+                className="account-back"
+                disabled={busy}
+                onClick={resend}
+              >
+                Resend code
               </button>
               {demo && (
                 <p className="demo-notice">

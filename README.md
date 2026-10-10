@@ -58,7 +58,7 @@ Server-proxied uploads do not require browser-to-bucket CORS. See [Cloudflare’
 
 Set `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_ENV=sandbox` and the exact `WEB_ORIGIN` for PayPal. Store and PayPal amounts are both USD; the old INR exchange-rate setting is removed. Without credentials, PayPal is explicitly unavailable and development COD checkout remains usable.
 
-The existing OTP login remains a development preview (123456). Production rejects OTP requests until an SMS provider is implemented. Admin access uses email/password sign-in with a salted scrypt password hash and an 8-hour HttpOnly session stored in PostgreSQL. Create an account after database setup with `npm run admin:create`; it prompts for email and a hidden, confirmed password. See the admin authentication guide below for upgrades and resets. No access key is accepted. Before public launch, merchant decisions and integrations are still needed for production authentication, payment webhooks/reconciliation, refund processing, delivery policies and tax requirements. Live payments were not executed.
+Customer phone login sends real SMS codes through Twilio Verify when `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_VERIFY_SERVICE_SID` are set (`OTP_COUNTRY_CODE`, default `+91`, is prefixed to the 10-digit number). Twilio stores and checks the code (10-minute expiry, 5 attempts), and sends are throttled in the `otp_sends` table: 30 seconds between codes, 5 per number and 10 per IP per hour. Trial accounts only deliver to Verified Caller IDs. Without Twilio, development uses the fixed demo code 123456 and production rejects phone sign-in. Admin access uses email/password sign-in with a salted scrypt password hash and an 8-hour HttpOnly session stored in PostgreSQL. Create an account after database setup with `npm run admin:create`; it prompts for email and a hidden, confirmed password. See the admin authentication guide below for upgrades and resets. No access key is accepted. Before public launch, merchant decisions and integrations are still needed for production authentication, payment webhooks/reconciliation, refund processing, delivery policies and tax requirements. Live payments were not executed.
 
 ## Deploy to Vercel + Neon
 
@@ -66,7 +66,7 @@ The storefront and API deploy as one Vercel project on one origin. `vercel.json`
 
 1. In Neon, create a database named **crysmona** and copy the **pooled** connection string (host contains `-pooler`, keep `?sslmode=require`).
 2. From your machine, point `DATABASE_URL` at Neon and run `npm run db:setup`, then `npm run admin:create`.
-3. Import the GitHub repository in Vercel and set these environment variables: `DATABASE_URL`, `WEB_ORIGIN` (the exact `https://` production domain), `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_ENV`, and the `R2_*` values for admin uploads. Do not set `DEFAULT_ADMIN_PASSWORD` or `TRUST_PROXY` on Vercel.
+3. Import the GitHub repository in Vercel and set these environment variables: `DATABASE_URL`, `WEB_ORIGIN` (the exact `https://` production domain), `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_ENV`, the `TWILIO_*` values and `OTP_COUNTRY_CODE` for phone login, and the `R2_*` values for admin uploads. Do not set `DEFAULT_ADMIN_PASSWORD` or `TRUST_PROXY` on Vercel.
 4. Deploy, then open `/api/health`; it should report `database: connected`.
 
 On Vercel (`VERCEL` is set by the platform) the database pool is capped at 3 connections per instance, state tables are ensured once per cold start, and admin login rate limiting keys on Vercel's `x-real-ip` header. Admin writes and PayPal returns only work on the domain in `WEB_ORIGIN`, so test those on production rather than preview URLs.
@@ -99,7 +99,7 @@ For an existing database, run `npm run db:setup` once after updating so the new 
 - Admin dashboard API now reports revenue, average order value, low stock, top products and recent orders.
 - SEO adds canonical tags, JSON-LD, dynamic `/sitemap.xml` and `/robots.txt` endpoints.
 - Meta Pixel and GA4 are consent-aware. Configure `meta_pixel_id`, `ga4_measurement_id`, `analytics_consent_required`, and `site_url` in admin tracking settings.
-- Production OTP/SMS and transactional email still require provider credentials. The app deliberately does not fabricate provider accounts or secrets.
+- Production OTP/SMS requires Twilio Verify credentials; transactional email still requires a provider. The app deliberately does not fabricate provider accounts or secrets.
 
 Apply the new schema with `npm run db:setup` before starting the updated app.
 
