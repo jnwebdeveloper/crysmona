@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n web,api \"vite --config vite.config.ts\" \"tsx watch server/index.ts\"",
+    "dev": "concurrently -n web,api \"vite --config vite.config.ts\" \"tsx watch --include .env server/index.ts\"",
     "dev:web": "vite --config vite.config.ts",
-    "dev:api": "tsx watch server/index.ts",
+    "dev:api": "tsx watch --include .env server/index.ts",
     "build": "tsc -b && vite build --config vite.config.ts",
     "preview": "vite preview --config vite.config.ts",
     "db:up": "docker compose up -d",
