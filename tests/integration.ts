@@ -172,7 +172,7 @@ try {
   const media = await call("/admin/media/config", "GET", undefined, true);
   check(
     media.status === 200 && media.data.available === false,
-    "Unconfigured R2 reported honestly",
+    "Unconfigured media storage reported honestly",
   );
   const upload = await fetch(base + "/admin/media/upload", {
     method: "POST",
@@ -182,7 +182,7 @@ try {
     },
     body: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
   });
-  check(upload.status === 503, "No local upload fallback when R2 unavailable");
+  check(upload.status === 503, "No local upload fallback when storage unavailable");
   const phone = "9" + String(Date.now()).slice(-9);
   check(
     (await call("/auth/request-otp", "POST", { phone })).status === 200,

@@ -16,6 +16,7 @@ import cart from "./routes/cart.js";
 import adminAuth from "./routes/admin-auth.js";
 import { adminRequestSecurity } from "./auth/admin/middleware.js";
 import { ensureStateSchema } from "./lib/schema.js";
+import { storageConfig } from "./services/storage.js";
 const webOrigin = process.env.WEB_ORIGIN || "http://localhost:5173";
 if (
   process.env.NODE_ENV === "production" &&
@@ -26,6 +27,9 @@ if (
   );
 }
 if (process.env.PAYPAL_ENV !== "live" && (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET)) log.warn("PayPal sandbox is disabled until PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET are configured.");
+const { active: mediaStorage } = storageConfig();
+if (mediaStorage) log.info(`Media uploads go to storage ${mediaStorage.id}: ${mediaStorage.name}.`);
+else log.warn("Image uploads are disabled until media storage (STORAGE_1_*) is configured.");
 const app = express();
 app.disable("x-powered-by");
 // One log line per request, tagged with a request ID that is also returned to the

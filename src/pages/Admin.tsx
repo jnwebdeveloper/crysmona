@@ -51,7 +51,8 @@ export default function AdminPage() {
     [query, setQuery] = useState(""),
     [lookups, setLookups] = useState<Record<string, any[]>>({}),
     [orderDetail, setOrderDetail] = useState<any>(null),
-    [fieldErrors,setFieldErrors]=useState<Record<string,string>>({});
+    [fieldErrors,setFieldErrors]=useState<Record<string,string>>({}),
+    [maxImageBytes, setMaxImageBytes] = useState(8 * 1024 * 1024);
   const { refresh } = useStore();
   const request = async (path: string, options: RequestInit = {}) => {
     try {
@@ -99,6 +100,13 @@ export default function AdminPage() {
       setBusy(false);
     }
   };
+  useEffect(() => {
+    // The deployed API accepts smaller uploads (Vercel caps request bodies).
+    if (connected)
+      request("media/config")
+        .then((config) => setMaxImageBytes(config.maxBytes))
+        .catch(() => {});
+  }, [connected]);
   useEffect(() => {
     if (connected) {
       setRows([]);
@@ -199,12 +207,12 @@ export default function AdminPage() {
             type="file"
             accept="image/jpeg,image/png,image/webp"
             disabled={busy}
-            aria-label="Upload image to Cloudflare R2"
+            aria-label="Upload image"
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
-              if (file.size > 8 * 1024 * 1024) {
-                setError("Choose an image smaller than 8 MB.");
+              if (file.size > maxImageBytes) {
+                setError(`Choose an image smaller than ${+(maxImageBytes / 1048576).toFixed(1)} MB.`);
                 return;
               }
               setBusy(true);
@@ -223,7 +231,7 @@ export default function AdminPage() {
               }
             }}
           />
-          <small>JPEG, PNG or WebP · up to 8 MB · saved to Cloudflare R2</small>
+          <small>JPEG, PNG or WebP · up to {+(maxImageBytes / 1048576).toFixed(1)} MB · saved to cloud storage</small>
           {value && (
             <img
               className="admin-image-preview"

@@ -2,7 +2,7 @@ import "dotenv/config";
 import { readFile } from "node:fs/promises";
 import { resolve, sep } from "node:path";
 import { pool } from "../lib/db.js";
-import { r2Ready, uploadImage } from "../services/r2.js";
+import { storageConfig, uploadImage } from "../services/storage.js";
 const tables = ["products", "product_images", "categories", "content_blocks"];
 const root = resolve("public");
 try {
@@ -15,13 +15,15 @@ try {
   }
   if (!process.argv.includes("--apply")) {
     console.log(
-      `${urls.size} local image references can be moved to Cloudflare R2. Run npm run media:migrate -- --apply after configuring R2.`,
+      `${urls.size} local image references can be moved to media storage. Run npm run media:migrate -- --apply after configuring storage.`,
     );
   } else {
-    if (!r2Ready())
+    const { active } = storageConfig();
+    if (!active)
       throw new Error(
-        "Configure all R2 environment variables before migrating images.",
+        "Configure media storage (STORAGE_1_*) before migrating images.",
       );
+    console.log(`Uploading to storage ${active.id}: ${active.name}`);
     for (const url of urls) {
       const path = resolve(root, "." + url);
       if (!path.startsWith(root + sep)) throw new Error("Invalid image path");
