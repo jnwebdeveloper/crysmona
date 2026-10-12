@@ -10,7 +10,8 @@ export const paypalReady = () =>
 
 export const paypalSandbox = () => process.env.PAYPAL_ENV !== "live";
 
-async function call(path: string, body: unknown, requestId?: string) {
+// GET requests send no body.
+async function call(path: string, body: unknown, requestId?: string, method = "POST") {
   if (!paypalReady())
     throw bad("PayPal is not configured. Please choose cash on delivery.", 503);
   const base = paypalSandbox()
@@ -52,13 +53,13 @@ async function call(path: string, body: unknown, requestId?: string) {
   const token: any = await tokenResponse.json();
   try {
     response = await fetch(base + path, {
-      method: "POST",
+      method,
       headers: {
         Authorization: "Bearer " + token.access_token,
         "Content-Type": "application/json",
         "PayPal-Request-Id": paypalRequestId,
       },
-      body: JSON.stringify(body),
+      body: method === "GET" ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(20000),
     });
   } catch (error) {
@@ -127,8 +128,32 @@ export async function createPayPalOrder(orderId: string, amount: string, origin:
   return { paypalOrderId: result.id as string, approveUrl };
 }
 
-// Captures an approved PayPal order. Returns the capture only when PayPal reports it
-// COMPLETED for exactly the expected USD amount; otherwise null.
+// What a PayPal capture means for the order:
+// - completed: money received for exactly the expected USD amount
+// - pending: PayPal is holding the expected amount (review, receiving preferences,
+//   eCheck); re-reading the capture later shows whether it completed or was denied
+// - declined: PayPal refused the payment; the order can be released
+// - unconfirmed: anything else (wrong amount or currency, unknown status)
+export type CaptureOutcome =
+  | { state: "completed" | "pending"; captureId: string; amount: string; reason?: string }
+  | { state: "declined" | "unconfirmed"; captureId?: string; status?: string };
+
+export function classifyCapture(capture: any, expectedAmount: string): CaptureOutcome {
+  const amountOk =
+    capture?.amount?.currency_code === "USD" && capture?.amount?.value === expectedAmount;
+  if (amountOk && (capture.status === "COMPLETED" || capture.status === "PENDING"))
+    return {
+      state: capture.status === "COMPLETED" ? "completed" : "pending",
+      captureId: capture.id,
+      amount: capture.amount.value,
+      reason: capture.status_details?.reason,
+    };
+  if (capture?.status === "DECLINED" || capture?.status === "FAILED")
+    return { state: "declined", captureId: capture.id, status: capture.status };
+  return { state: "unconfirmed", captureId: capture?.id, status: capture?.status };
+}
+
+// Captures an approved PayPal order and classifies the resulting capture.
 export async function capturePayPalOrder(
   paypalOrderId: string,
   expectedAmount: string,
@@ -140,22 +165,29 @@ export async function capturePayPalOrder(
     requestId,
   );
   const capture = result.purchase_units?.[0]?.payments?.captures?.[0];
-  const confirmed =
-    result.status === "COMPLETED" &&
-    capture?.status === "COMPLETED" &&
-    capture.amount?.currency_code === "USD" &&
-    capture.amount?.value === expectedAmount;
-  if (!confirmed) {
-    log.warn("paypal capture not confirmed", {
+  const outcome = classifyCapture(capture, expectedAmount);
+  if (outcome.state !== "completed")
+    log.warn("paypal capture not completed", {
       paypalOrderId,
       paypalStatus: result.status,
       captureStatus: capture?.status,
+      reason: capture?.status_details?.reason,
       capturedAmount: capture?.amount?.value,
       expectedAmount,
     });
-    return null;
-  }
-  return { captureId: capture.id as string, amount: capture.amount.value as string };
+  return outcome;
+}
+
+// Reads a capture's current state; used to re-check a pending capture when the
+// customer presses Confirm payment again.
+export async function getPayPalCapture(captureId: string, expectedAmount: string) {
+  const capture = await call(
+    "/v2/payments/captures/" + encodeURIComponent(captureId),
+    undefined,
+    undefined,
+    "GET",
+  );
+  return classifyCapture(capture, expectedAmount);
 }
 
 export async function refundPayPalCapture(captureId: string, amount: string, requestId: string) {

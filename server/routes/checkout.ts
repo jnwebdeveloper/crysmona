@@ -34,13 +34,13 @@ router.post("/api/orders", customer, async (req: any, res) => {
 });
 
 router.post("/api/paypal/capture", customer, async (req: any, res) => {
-  const { orderNumber } = await capturePayment({
+  const { orderNumber, pending } = await capturePayment({
     orderId: String(req.body.reference),
     userId: req.customer.id,
     paypalToken: req.body.token,
     requestId: req.id,
   });
-  res.json({ ok: true, orderNumber });
+  res.json({ ok: true, orderNumber, pending: Boolean(pending) });
 });
 
 router.post("/api/paypal/cancel", customer, async (req: any, res) => {

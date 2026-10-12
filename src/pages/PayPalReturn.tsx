@@ -20,13 +20,19 @@ export default function PayPalReturn() {
     setStatus("busy");
     setError("");
     try {
-      await api(cancel ? "/paypal/cancel" : "/paypal/capture", {
+      const result = await api(cancel ? "/paypal/cancel" : "/paypal/capture", {
         method: "POST",
         body: JSON.stringify({
           reference: params.get("reference"),
           token: params.get("token"),
         }),
       });
+      // PayPal can hold a payment for review; the order is kept and confirmed later.
+      if (!cancel && result?.pending) {
+        setStatus("pending");
+        onComplete();
+        return;
+      }
       setStatus(cancel ? "cancelled" : "complete");
       if (!cancel) {
         onComplete();
@@ -45,7 +51,9 @@ export default function PayPalReturn() {
         <h1>
           {status === "complete"
             ? "Payment confirmed"
-            : status === "cancelled"
+            : status === "pending"
+              ? "Payment under review"
+              : status === "cancelled"
               ? "Payment cancelled"
               : cancel
                 ? "Cancel this payment"
@@ -54,7 +62,9 @@ export default function PayPalReturn() {
         <p>
           {status === "complete"
             ? "Thank you. Your order is now saved in your account."
-            : status === "cancelled"
+            : status === "pending"
+              ? "PayPal is reviewing this payment. Your pieces are reserved and your order will be confirmed once PayPal completes it."
+              : status === "cancelled"
               ? "Your bag is saved. You can choose another payment method."
               : cancel
                 ? "Release the pending order and return to your bag."
@@ -65,11 +75,11 @@ export default function PayPalReturn() {
             {error}
           </p>
         )}
-        {["complete", "cancelled"].includes(status) ? (
+        {["complete", "pending", "cancelled"].includes(status) ? (
           <button
-            onClick={() => go(status === "complete" ? "/orders" : "/checkout")}
+            onClick={() => go(status === "cancelled" ? "/checkout" : "/orders")}
           >
-            {status === "complete" ? "VIEW MY ORDERS" : "RETURN TO CHECKOUT"}
+            {status === "cancelled" ? "RETURN TO CHECKOUT" : "VIEW MY ORDERS"}
             <ArrowRight />
           </button>
         ) : (

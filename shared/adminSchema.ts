@@ -120,6 +120,7 @@ export const resources: Record<string, { label: string; fields: Field[] }> = {
       ]),
       f("payment_status", "Payment status", "select", true, [
         "pending",
+        "under_review",
         "paid",
         "failed",
         "refunded",

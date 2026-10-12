@@ -6,6 +6,7 @@ import { log } from "../lib/logger.js";
 import {
   capturePayPalOrder,
   createPayPalOrder,
+  getPayPalCapture,
   paypalReady,
   refundPayPalCapture,
 } from "./paypal.js";
@@ -203,16 +204,22 @@ export async function placeOrder(input: {
 }
 
 // Cancels an order that is still awaiting PayPal payment and returns its stock.
-// Orders in any other state are left untouched.
-export async function releaseUnpaidOrder(orderId: string, userId: number, note: string) {
+// Orders in any other state are left untouched. A customer cannot release an order
+// whose capture PayPal is still reviewing (payment_status 'under_review'): money may
+// still arrive. Internal callers pass no userId to release an order PayPal declined.
+export async function releaseUnpaidOrder(orderId: string, userId: number | null, note: string) {
   const released = await transaction(async (c) => {
     const { rows } = await c.query(
-      "SELECT id,status FROM orders WHERE id=$1 AND user_id=$2 FOR UPDATE",
-      [orderId, userId],
+      userId === null
+        ? "SELECT id,status,payment_status FROM orders WHERE id=$1 FOR UPDATE"
+        : "SELECT id,status,payment_status FROM orders WHERE id=$1 AND user_id=$2 FOR UPDATE",
+      userId === null ? [orderId] : [orderId, userId],
     );
     const order = rows[0];
     if (!order) throw bad("Order not found.", 404);
     if (order.status !== "awaiting_payment") return false;
+    if (userId !== null && order.payment_status === "under_review")
+      throw bad("PayPal is still reviewing this payment, so it can no longer be cancelled here.", 409);
     await restoreStock(c, order.id);
     await c.query(
       "UPDATE orders SET status='cancelled',payment_status='failed',cancelled_at=now(),updated_at=now() WHERE id=$1",
@@ -227,55 +234,40 @@ export async function releaseUnpaidOrder(orderId: string, userId: number, note: 
 
 // ---- PayPal capture ---------------------------------------------------------
 
-export async function capturePayment(input: {
-  orderId: string;
-  userId: number;
-  paypalToken: string;
-  requestId?: string;
-}) {
-  const { orderId, userId, paypalToken, requestId } = input;
-  const { rows } = await q(
-    "SELECT id,order_number,status,payment_status,paypal_order_id,paypal_amount FROM orders WHERE id=$1 AND user_id=$2",
-    [orderId, userId],
-  );
-  const o = rows[0];
-  if (!o || o.paypal_order_id !== paypalToken)
-    throw bad("This payment does not belong to your order.", 403);
-  if (o.payment_status === "paid") return { orderNumber: o.order_number };
-  if (o.status !== "awaiting_payment") throw bad("This order is no longer awaiting payment.");
-
-  // Outside any transaction; the request id makes a retried capture return the
-  // original result instead of charging again.
-  const capture = await capturePayPalOrder(o.paypal_order_id, o.paypal_amount, o.id + "-capture");
-  if (!capture) throw bad("Payment is not yet confirmed. Please retry confirmation.", 409);
-
+// Records a completed capture: the order becomes placed and paid, the confirmation is
+// queued and the coupon redeemed. Safe to call more than once (concurrent
+// confirmations). Returns null when the order is no longer awaiting payment, which
+// means money arrived for a cancelled order and needs a manual refund.
+async function markOrderPaid(
+  orderId: string,
+  capture: { captureId: string; amount: string },
+  requestId?: string,
+) {
   return transaction(async (c) => {
     const current = (
-      await c.query("SELECT * FROM orders WHERE id=$1 FOR UPDATE", [o.id])
+      await c.query("SELECT * FROM orders WHERE id=$1 FOR UPDATE", [orderId])
     ).rows[0];
-    // A concurrent confirmation already recorded it.
-    if (current.payment_status === "paid") return { orderNumber: current.order_number };
+    if (current.payment_status === "paid") return { orderNumber: current.order_number as string };
     if (current.status !== "awaiting_payment") {
-      // Money was captured but the order was released meanwhile: needs a manual refund.
       log.error("paypal captured for an order no longer awaiting payment", {
         requestId,
-        orderId: o.id,
+        orderId,
         status: current.status,
         captureId: capture.captureId,
       });
-      throw bad("This order was cancelled before payment completed. Please contact us for a refund.", 409);
+      return null;
     }
     await c.query(
       "UPDATE orders SET payment_status='paid',status='placed',paypal_capture_id=$1,updated_at=now() WHERE id=$2",
-      [capture.captureId, o.id],
+      [capture.captureId, orderId],
     );
-    await addHistory(c, o.id, "placed", "PayPal payment captured", "system");
+    await addHistory(c, orderId, "placed", "PayPal payment captured", "system");
     const user = (await c.query("SELECT email,phone FROM users WHERE id=$1", [current.user_id])).rows[0];
     const recipient = user?.email || user?.phone;
     if (recipient)
       await c.query(
         "INSERT INTO notification_outbox(user_id,order_id,channel,template,recipient,payload) VALUES($1,$2,$3,'order_confirmed',$4,$5)",
-        [current.user_id, o.id, user.email ? "email" : "sms", recipient, JSON.stringify({ orderNumber: current.order_number })],
+        [current.user_id, orderId, user.email ? "email" : "sms", recipient, JSON.stringify({ orderNumber: current.order_number })],
       );
     if (current.coupon_code) {
       const cp = (
@@ -284,7 +276,7 @@ export async function capturePayment(input: {
       if (cp) {
         await c.query(
           "INSERT INTO coupon_redemptions(coupon_id,user_id,order_id) VALUES($1,$2,$3) ON CONFLICT(order_id) DO NOTHING",
-          [cp.id, current.user_id, o.id],
+          [cp.id, current.user_id, orderId],
         );
         await c.query(
           "UPDATE coupons SET used_count=(SELECT count(*) FROM coupon_redemptions WHERE coupon_id=$1) WHERE id=$1",
@@ -294,13 +286,73 @@ export async function capturePayment(input: {
     }
     log.info("order paid", {
       requestId,
-      orderId: o.id,
+      orderId,
       orderNumber: current.order_number,
       captureId: capture.captureId,
       amount: capture.amount,
     });
-    return { orderNumber: current.order_number };
+    return { orderNumber: current.order_number as string };
   });
+}
+
+// Records that PayPal is holding the payment. Stock stays reserved and the order
+// stays awaiting payment until a later Confirm payment finds the capture completed
+// or denied.
+async function markCaptureUnderReview(orderId: string, captureId: string, reason?: string) {
+  const r = await q(
+    "UPDATE orders SET payment_status='under_review',paypal_capture_id=$1,updated_at=now() WHERE id=$2 AND status='awaiting_payment' AND payment_status='pending'",
+    [captureId, orderId],
+  );
+  if (r.rowCount)
+    await q(
+      "INSERT INTO order_status_history(order_id,status,note,actor) VALUES($1,'awaiting_payment',$2,'system')",
+      [orderId, "PayPal is reviewing the payment" + (reason ? " (" + reason + ")" : "")],
+    );
+  log.warn("paypal capture pending", { orderId, captureId, reason });
+}
+
+export type CaptureResponse = { orderNumber: string; pending?: boolean };
+
+export async function capturePayment(input: {
+  orderId: string;
+  userId: number;
+  paypalToken: string;
+  requestId?: string;
+}): Promise<CaptureResponse> {
+  const { orderId, userId, paypalToken, requestId } = input;
+  const { rows } = await q(
+    "SELECT id,order_number,status,payment_status,paypal_order_id,paypal_amount,paypal_capture_id FROM orders WHERE id=$1 AND user_id=$2",
+    [orderId, userId],
+  );
+  const o = rows[0];
+  if (!o || o.paypal_order_id !== paypalToken)
+    throw bad("This payment does not belong to your order.", 403);
+  if (o.payment_status === "paid") return { orderNumber: o.order_number };
+  if (o.status !== "awaiting_payment") throw bad("This order is no longer awaiting payment.");
+
+  // Outside any transaction. A capture already under review is re-read rather than
+  // re-captured: the capture request id would only replay PayPal's original PENDING
+  // response. Otherwise the request id makes a retried capture return the original
+  // result instead of charging again.
+  const outcome =
+    o.payment_status === "under_review" && o.paypal_capture_id
+      ? await getPayPalCapture(o.paypal_capture_id, o.paypal_amount)
+      : await capturePayPalOrder(o.paypal_order_id, o.paypal_amount, o.id + "-capture");
+
+  if (outcome.state === "pending") {
+    await markCaptureUnderReview(o.id, outcome.captureId, outcome.reason);
+    return { orderNumber: o.order_number, pending: true };
+  }
+  if (outcome.state === "declined") {
+    await releaseUnpaidOrder(o.id, null, "PayPal declined the payment");
+    throw bad("PayPal declined this payment. Your bag is saved; please try another payment method.", 402);
+  }
+  if (outcome.state !== "completed")
+    throw bad("Payment is not yet confirmed. Please retry confirmation.", 409);
+  const paid = await markOrderPaid(o.id, outcome, requestId);
+  if (!paid)
+    throw bad("This order was cancelled before payment completed. Please contact us for a refund.", 409);
+  return paid;
 }
 
 // ---- customer cancellation --------------------------------------------------
@@ -369,7 +421,10 @@ function toOrder(o: any, items: any[]) {
     id: o.order_number,
     createdAt: o.created_at,
     total: o.total_cents / 100,
-    status: o.status.replace(/_/g, " "),
+    status:
+      o.status === "awaiting_payment" && o.payment_status === "under_review"
+        ? "payment under review"
+        : o.status.replace(/_/g, " "),
     subtotal: o.subtotal_cents / 100,
     shipping: o.shipping_cents / 100,
     discount: o.discount_cents / 100,
