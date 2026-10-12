@@ -10,7 +10,8 @@ export const paypalReady = () =>
 
 export const paypalSandbox = () => process.env.PAYPAL_ENV !== "live";
 
-// GET requests send no body.
+// A string body is sent as-is (webhook verification must embed the event exactly as
+// PayPal sent it); anything else is JSON-encoded. GET requests send no body.
 async function call(path: string, body: unknown, requestId?: string, method = "POST") {
   if (!paypalReady())
     throw bad("PayPal is not configured. Please choose cash on delivery.", 503);
@@ -59,7 +60,7 @@ async function call(path: string, body: unknown, requestId?: string, method = "P
         "Content-Type": "application/json",
         "PayPal-Request-Id": paypalRequestId,
       },
-      body: method === "GET" ? undefined : JSON.stringify(body),
+      body: method === "GET" ? undefined : typeof body === "string" ? body : JSON.stringify(body),
       signal: AbortSignal.timeout(20000),
     });
   } catch (error) {
@@ -131,7 +132,8 @@ export async function createPayPalOrder(orderId: string, amount: string, origin:
 // What a PayPal capture means for the order:
 // - completed: money received for exactly the expected USD amount
 // - pending: PayPal is holding the expected amount (review, receiving preferences,
-//   eCheck); re-reading the capture later shows whether it completed or was denied
+//   eCheck); a PAYMENT.CAPTURE.COMPLETED or .DENIED webhook settles it later, or the
+//   customer's next Confirm payment re-reads it
 // - declined: PayPal refused the payment; the order can be released
 // - unconfirmed: anything else (wrong amount or currency, unknown status)
 export type CaptureOutcome =
@@ -179,7 +181,8 @@ export async function capturePayPalOrder(
 }
 
 // Reads a capture's current state; used to re-check a pending capture when the
-// customer presses Confirm payment again.
+// customer presses Confirm payment again (the fallback where webhooks cannot reach
+// the API, e.g. local development without a tunnel).
 export async function getPayPalCapture(captureId: string, expectedAmount: string) {
   const capture = await call(
     "/v2/payments/captures/" + encodeURIComponent(captureId),
@@ -188,6 +191,25 @@ export async function getPayPalCapture(captureId: string, expectedAmount: string
     "GET",
   );
   return classifyCapture(capture, expectedAmount);
+}
+
+export const webhookConfigured = () => Boolean(process.env.PAYPAL_WEBHOOK_ID);
+
+// Asks PayPal whether a webhook delivery is genuine. rawBody must be the request body
+// exactly as received: PayPal verifies the signature over those bytes.
+export async function verifyPayPalWebhook(headers: Record<string, any>, rawBody: string) {
+  const fields = {
+    auth_algo: headers["paypal-auth-algo"],
+    cert_url: headers["paypal-cert-url"],
+    transmission_id: headers["paypal-transmission-id"],
+    transmission_sig: headers["paypal-transmission-sig"],
+    transmission_time: headers["paypal-transmission-time"],
+    webhook_id: process.env.PAYPAL_WEBHOOK_ID,
+  };
+  if (Object.values(fields).some((v) => typeof v !== "string" || !v)) return false;
+  const body = JSON.stringify(fields).slice(0, -1) + ',"webhook_event":' + rawBody + "}";
+  const result = await call("/v1/notifications/verify-webhook-signature", body);
+  return result.verification_status === "SUCCESS";
 }
 
 export async function refundPayPalCapture(captureId: string, amount: string, requestId: string) {

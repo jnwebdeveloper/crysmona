@@ -27,6 +27,7 @@ if (
   );
 }
 if (process.env.PAYPAL_ENV !== "live" && (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET)) log.warn("PayPal sandbox is disabled until PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET are configured.");
+if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET && !process.env.PAYPAL_WEBHOOK_ID) log.warn("PayPal webhooks are disabled until PAYPAL_WEBHOOK_ID is configured; held payments settle only when the customer confirms again.");
 const { active: mediaStorage } = storageConfig();
 if (mediaStorage) log.info(`Media uploads go to storage ${mediaStorage.id}: ${mediaStorage.name}.`);
 else log.warn("Image uploads are disabled until media storage (STORAGE_1_*) is configured.");
@@ -75,7 +76,15 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json({ limit: "2mb" }));
+app.use(
+  express.json({
+    limit: "2mb",
+    // PayPal webhook signatures are verified against the exact bytes received.
+    verify: (req: any, _res, buf) => {
+      if (req.url?.startsWith("/api/paypal/webhook")) req.rawBody = buf.toString("utf8");
+    },
+  }),
+);
 // Serverless instances have no startup hook, so ensure state tables once per cold start.
 let stateReady: Promise<void> | undefined;
 if (process.env.VERCEL) {

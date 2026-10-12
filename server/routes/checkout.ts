@@ -1,14 +1,22 @@
 import express from "express";
 import { customer } from "../auth/customer/session.js";
+import { log } from "../lib/logger.js";
 import {
   capturePayment,
+  handlePayPalWebhook,
   placeOrder,
   quote,
   releaseUnpaidOrder,
 } from "../services/orders.js";
-import { paypalReady, paypalSandbox } from "../services/paypal.js";
+import {
+  paypalReady,
+  paypalSandbox,
+  verifyPayPalWebhook,
+  webhookConfigured,
+} from "../services/paypal.js";
 
-// Checkout: pricing, placing an order, and the PayPal approve/cancel return.
+// Checkout: pricing, placing an order, the PayPal approve/cancel return, and the
+// PayPal webhook that settles captures PayPal left pending.
 const router = express.Router();
 
 router.post("/api/checkout/quote", async (req, res) => {
@@ -41,6 +49,28 @@ router.post("/api/paypal/capture", customer, async (req: any, res) => {
     requestId: req.id,
   });
   res.json({ ok: true, orderNumber, pending: Boolean(pending) });
+});
+
+// PayPal → us. Unauthenticated by design: authenticity comes from PayPal's signature
+// check. Any non-2xx response makes PayPal redeliver the event later (up to 3 days).
+router.post("/api/paypal/webhook", async (req: any, res) => {
+  if (!webhookConfigured()) {
+    log.warn("paypal webhook received but PAYPAL_WEBHOOK_ID is not set", { requestId: req.id });
+    res.status(503).json({ error: "Webhook not configured." });
+    return;
+  }
+  if (typeof req.rawBody !== "string" || !(await verifyPayPalWebhook(req.headers, req.rawBody))) {
+    log.warn("paypal webhook signature rejected", { requestId: req.id, eventId: req.body?.id });
+    res.status(400).json({ error: "Invalid signature." });
+    return;
+  }
+  log.info("paypal webhook received", {
+    requestId: req.id,
+    eventId: req.body.id,
+    type: req.body.event_type,
+  });
+  await handlePayPalWebhook(req.body, req.id);
+  res.json({ ok: true });
 });
 
 router.post("/api/paypal/cancel", customer, async (req: any, res) => {

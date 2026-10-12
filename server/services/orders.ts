@@ -5,6 +5,7 @@ import { bad } from "../lib/errors.js";
 import { log } from "../lib/logger.js";
 import {
   capturePayPalOrder,
+  classifyCapture,
   createPayPalOrder,
   getPayPalCapture,
   paypalReady,
@@ -206,7 +207,8 @@ export async function placeOrder(input: {
 // Cancels an order that is still awaiting PayPal payment and returns its stock.
 // Orders in any other state are left untouched. A customer cannot release an order
 // whose capture PayPal is still reviewing (payment_status 'under_review'): money may
-// still arrive. Internal callers pass no userId to release an order PayPal declined.
+// still arrive. Internal callers (capture, webhook) pass no userId to release an
+// order PayPal declined.
 export async function releaseUnpaidOrder(orderId: string, userId: number | null, note: string) {
   const released = await transaction(async (c) => {
     const { rows } = await c.query(
@@ -235,8 +237,8 @@ export async function releaseUnpaidOrder(orderId: string, userId: number | null,
 // ---- PayPal capture ---------------------------------------------------------
 
 // Records a completed capture: the order becomes placed and paid, the confirmation is
-// queued and the coupon redeemed. Safe to call more than once (concurrent
-// confirmations). Returns null when the order is no longer awaiting payment, which
+// queued and the coupon redeemed. Safe to call more than once (the customer's
+// confirmation and the webhook can race). Returns null when the order is no longer awaiting payment, which
 // means money arrived for a cancelled order and needs a manual refund.
 async function markOrderPaid(
   orderId: string,
@@ -296,8 +298,8 @@ async function markOrderPaid(
 }
 
 // Records that PayPal is holding the payment. Stock stays reserved and the order
-// stays awaiting payment until a later Confirm payment finds the capture completed
-// or denied.
+// stays awaiting payment until a webhook or a later Confirm payment finds the
+// capture completed or denied.
 async function markCaptureUnderReview(orderId: string, captureId: string, reason?: string) {
   const r = await q(
     "UPDATE orders SET payment_status='under_review',paypal_capture_id=$1,updated_at=now() WHERE id=$2 AND status='awaiting_payment' AND payment_status='pending'",
@@ -353,6 +355,59 @@ export async function capturePayment(input: {
   if (!paid)
     throw bad("This order was cancelled before payment completed. Please contact us for a refund.", 409);
   return paid;
+}
+
+// ---- PayPal webhooks --------------------------------------------------------
+
+const SETTLING_EVENTS = [
+  "PAYMENT.CAPTURE.COMPLETED",
+  "PAYMENT.CAPTURE.DENIED",
+  "PAYMENT.CAPTURE.DECLINED",
+];
+
+// Settles captures without waiting for the customer: COMPLETED marks the order paid,
+// DENIED/DECLINED releases it. Every branch is idempotent because PayPal redelivers
+// events and the customer's own confirmation can race the webhook.
+export async function handlePayPalWebhook(event: any, requestId?: string) {
+  if (!SETTLING_EVENTS.includes(event?.event_type)) {
+    log.info("paypal webhook ignored", { requestId, eventId: event?.id, type: event?.event_type });
+    return;
+  }
+  const resource = event.resource || {};
+  const paypalOrderId = resource.supplementary_data?.related_ids?.order_id;
+  const o = (
+    await q(
+      "SELECT id,status,payment_status,paypal_amount FROM orders WHERE paypal_order_id=$1 OR paypal_capture_id=$2",
+      [paypalOrderId || null, resource.id || null],
+    )
+  ).rows[0];
+  if (!o) {
+    log.warn("paypal webhook for unknown order", {
+      requestId,
+      eventId: event.id,
+      type: event.event_type,
+      paypalOrderId,
+    });
+    return;
+  }
+  if (event.event_type === "PAYMENT.CAPTURE.COMPLETED") {
+    const outcome = classifyCapture(resource, o.paypal_amount);
+    if (outcome.state !== "completed") {
+      log.error("paypal webhook capture does not match order", {
+        requestId,
+        eventId: event.id,
+        orderId: o.id,
+        captureStatus: resource.status,
+        capturedAmount: resource.amount?.value,
+        currency: resource.amount?.currency_code,
+        expectedAmount: o.paypal_amount,
+      });
+      return;
+    }
+    await markOrderPaid(o.id, outcome, requestId);
+    return;
+  }
+  if (o.payment_status !== "paid") await releaseUnpaidOrder(o.id, null, "PayPal denied the payment");
 }
 
 // ---- customer cancellation --------------------------------------------------
