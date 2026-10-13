@@ -18,7 +18,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import Loader from "../components/Loader";
 import { Field, resources } from "../../shared/adminSchema";
@@ -82,6 +82,14 @@ export default function AdminPage() {
   const { section = DEFAULT_SECTION } = useParams();
   const navigate = useNavigate();
   const tab = SECTION_TO_TAB[section] || SECTION_TO_TAB[DEFAULT_SECTION];
+  const [statusFilter, setStatusFilter] = useState(""),
+    [categoryFilter, setCategoryFilter] = useState(""),
+    [categories, setCategories] = useState<any[]>([]),
+    [reordering, setReordering] = useState(false);
+  const reorderLock = useRef(false);
+  const currentTab = useRef(tab);
+  currentTab.current = tab;
+  const collectionList = tab === "products" || tab === "categories";
   const [filterField, setFilterField] = useState(""),
     [filterValue, setFilterValue] = useState(""),
     [sortField, setSortField] = useState("list_priority"),
@@ -146,15 +154,17 @@ export default function AdminPage() {
     setBusy(true);
     setError("");
     try {
-      const [data, summary] = await Promise.all([
+      const [data, summary, categoryRows] = await Promise.all([
         request(resource),
         request("dashboard"),
+        tab === "products" ? request("categories") : Promise.resolve([]),
       ]);
       setRows(
         tab === "discover"
           ? data.filter((r: any) => isDiscoverBlock(r.block_key))
           : data,
       );
+      setCategories(categoryRows);
       setStats(summary);
       setConnected(true);
     } catch (e: any) {
@@ -174,6 +184,8 @@ export default function AdminPage() {
     if (connected) {
       setRows([]);
       setQuery("");
+      setStatusFilter("");
+      setCategoryFilter("");
       setFilterField("");
       setFilterValue("");
       setSortField("list_priority");
@@ -423,8 +435,46 @@ export default function AdminPage() {
       </>
     );
   };
+  const preparedRows = rows.map((row) => ({
+    ...row,
+    category_name:
+      categories.find(
+        (category) => Number(category.id) === Number(row.category_id),
+      )?.name || "Uncategorized",
+  }));
+  const filteredRows = collectionList
+    ? preparedRows.filter(
+        (row) =>
+          (!statusFilter || String(row.active !== false) === statusFilter) &&
+          (!categoryFilter ||
+            (tab === "products"
+              ? String(row.category_id ?? "none")
+              : row.type) === categoryFilter),
+      )
+    : rows;
+  const toggleSort = (key: string) => {
+    setSortDirection(
+      sortField === key && sortDirection === "asc" ? "desc" : "asc",
+    );
+    setSortField(key);
+  };
+  const sortHeading = (key: string, title: string) => (
+    <button
+      type="button"
+      className="admin-column-sort"
+      onClick={() => toggleSort(key)}
+    >
+      {title} {sortField === key ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
+    </button>
+  );
+  const ariaSort = (key: string): "ascending" | "descending" | "none" =>
+    sortField === key
+      ? sortDirection === "asc"
+        ? "ascending"
+        : "descending"
+      : "none";
   const visibleRows = listRecords(
-    rows,
+    filteredRows,
     query,
     filterField,
     filterValue,
@@ -436,28 +486,38 @@ export default function AdminPage() {
   );
   const canReorder =
     !busy &&
+    !reordering &&
+    !statusFilter &&
+    !categoryFilter &&
     !query &&
     !filterValue &&
     sortField === "list_priority" &&
     sortDirection === "asc" &&
     tab !== "discover";
   const reorder = async (from: number, to: number) => {
-    if (!canReorder || from === to) return;
+    if (!canReorder || reorderLock.current || from === to) return;
+    const previous = rows,
+      sourceTab = tab;
     const next = moveRecord(visibleRows, from, to);
-    setBusy(true);
+    reorderLock.current = true;
+    setReordering(true);
+    setRows(next.map((row, list_priority) => ({ ...row, list_priority })));
     setError("");
     try {
       await request(resource + "/reorder", {
         method: "PUT",
         body: JSON.stringify({ ids: next.map((row) => row.id) }),
       });
-      setRows(next.map((row, list_priority) => ({ ...row, list_priority })));
-      await refresh();
-      setNotice("Listing priority saved.");
+      if (currentTab.current === sourceTab)
+        setNotice("Listing priority saved.");
     } catch (error: any) {
-      setError(error.message);
+      if (currentTab.current === sourceTab) {
+        setRows(previous);
+        setError(error.message);
+      }
     } finally {
-      setBusy(false);
+      reorderLock.current = false;
+      setReordering(false);
       setDragId(null);
     }
   };
@@ -614,75 +674,134 @@ export default function AdminPage() {
             {error}
           </p>
         )}
-        <div className="admin-list-controls">
-          <label>
-            Filter by
-            <select
-              value={filterField}
-              onChange={(e) => {
-                setFilterField(e.target.value);
-                setFilterValue("");
-              }}
-            >
-              <option value="">All records</option>
-              {filterFields.map((f) => (
-                <option key={f.key} value={f.key}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {filterField && (
+        {collectionList ? (
+          <div className="admin-list-controls">
             <label>
-              Value
+              Status
               <select
-                value={filterValue}
-                onChange={(e) => setFilterValue(e.target.value)}
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <option value="">All values</option>
-                {Array.from(
-                  new Set(rows.map((row) => String(row[filterField] ?? ""))),
-                )
-                  .filter(Boolean)
-                  .sort()
-                  .map((value) => (
-                    <option key={value} value={value}>
-                      {value === "true"
-                        ? "Yes"
-                        : value === "false"
-                          ? "No"
-                          : value}
-                    </option>
-                  ))}
+                <option value="">All statuses</option>
+                <option value="true">Active</option>
+                <option value="false">Hidden</option>
               </select>
             </label>
-          )}
-          <label>
-            Sort by
-            <select
-              value={sortField}
-              onChange={(e) => setSortField(e.target.value)}
-            >
-              <option value="list_priority">Listing priority</option>
-              <option value="id">Date added</option>
-              {filterFields.map((f) => (
-                <option key={f.key} value={f.key}>
-                  {f.label}
+            <label>
+              {tab === "products" ? "Category" : "Collection"}
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="">
+                  {tab === "products" ? "All categories" : "All collections"}
                 </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Direction
-            <select
-              value={sortDirection}
-              onChange={(e) => setSortDirection(e.target.value)}
+                {tab === "products" ? (
+                  <>
+                    <option value="none">Uncategorized</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <option value="gemstone">Gemstones</option>
+                    <option value="jewellery">Jewellery</option>
+                  </>
+                )}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setSortField("list_priority");
+                setSortDirection("asc");
+                setStatusFilter("");
+                setCategoryFilter("");
+                setQuery("");
+              }}
             >
-              <option value="asc">Ascending</option>
-              <option value="desc">Descending</option>
-            </select>
-          </label>
-        </div>
+              Listing priority / reorder
+            </button>
+            {reordering && <span role="status">Saving order…</span>}
+          </div>
+        ) : (
+          <>
+            <div className="admin-list-controls">
+              <label>
+                Filter by
+                <select
+                  value={filterField}
+                  onChange={(e) => {
+                    setFilterField(e.target.value);
+                    setFilterValue("");
+                  }}
+                >
+                  <option value="">All records</option>
+                  {filterFields.map((f) => (
+                    <option key={f.key} value={f.key}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {filterField && (
+                <label>
+                  Value
+                  <select
+                    value={filterValue}
+                    onChange={(e) => setFilterValue(e.target.value)}
+                  >
+                    <option value="">All values</option>
+                    {Array.from(
+                      new Set(
+                        rows.map((row) => String(row[filterField] ?? "")),
+                      ),
+                    )
+                      .filter(Boolean)
+                      .sort()
+                      .map((value) => (
+                        <option key={value} value={value}>
+                          {value === "true"
+                            ? "Yes"
+                            : value === "false"
+                              ? "No"
+                              : value}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              )}
+              <label>
+                Sort by
+                <select
+                  value={sortField}
+                  onChange={(e) => setSortField(e.target.value)}
+                >
+                  <option value="list_priority">Listing priority</option>
+                  <option value="id">Date added</option>
+                  {filterFields.map((f) => (
+                    <option key={f.key} value={f.key}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Direction
+                <select
+                  value={sortDirection}
+                  onChange={(e) => setSortDirection(e.target.value)}
+                >
+                  <option value="asc">Ascending</option>
+                  <option value="desc">Descending</option>
+                </select>
+              </label>
+            </div>
+          </>
+        )}
         <p className="admin-note">
           Drag a row or use the arrow buttons to save listing priority. Clear
           filters and search, and sort by listing priority ascending first.
@@ -724,9 +843,28 @@ export default function AdminPage() {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Record</th>
+                <th aria-sort={ariaSort("name")}>
+                  {collectionList
+                    ? sortHeading(
+                        "name",
+                        tab === "products" ? "Product" : "Category",
+                      )
+                    : "Record"}
+                </th>
+                {tab === "products" && (
+                  <th aria-sort={ariaSort("category_name")}>
+                    {sortHeading("category_name", "Category")}
+                  </th>
+                )}
+                {tab === "categories" && (
+                  <th aria-sort={ariaSort("type")}>
+                    {sortHeading("type", "Collection")}
+                  </th>
+                )}
                 <th>Details</th>
-                <th>Status</th>
+                <th aria-sort={ariaSort("active")}>
+                  {collectionList ? sortHeading("active", "Status") : "Status"}
+                </th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -758,6 +896,10 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </td>
+                  {tab === "products" && <td>{r.category_name}</td>}
+                  {tab === "categories" && (
+                    <td>{r.type === "gemstone" ? "Gemstones" : "Jewellery"}</td>
+                  )}
                   <td>
                     {r.price_cents !== undefined
                       ? "$" +
