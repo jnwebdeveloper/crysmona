@@ -901,7 +901,7 @@ export default function AdminPage() {
                     <td>{r.type === "gemstone" ? "Gemstones" : "Jewellery"}</td>
                   )}
                   <td>
-                    {r.price_cents !== undefined
+                    {tab === "site_settings" && r.setting_key === "meta_pixel_id" ? (r.setting_value || "Pixel ID not configured") : r.price_cents !== undefined
                       ? "$" +
                         (r.price_cents / 100).toLocaleString("en-US") +
                         " · " +
@@ -916,6 +916,7 @@ export default function AdminPage() {
                         r.phone ||
                         r.product_id ||
                         "—"}
+                    {tab === "site_settings" && r.setting_key === "meta_pixel_id" && <PixelEvents />}
                   </td>
                   <td>
                     <span className="admin-pill">
@@ -1033,6 +1034,7 @@ export default function AdminPage() {
                     {f.label}
                     {f.required ? " *" : ""}
                     {field(f)}
+                    {tab === "site_settings" && editing.setting_key === "meta_pixel_id" && f.key === "setting_value" && <PixelEvents />}
                     {fieldErrors[f.key] && (
                       <small className="field-error" role="alert">
                         {fieldErrors[f.key]}
@@ -1328,4 +1330,19 @@ function ProductImages({
       {!images.length && <small>Add at least one product image.</small>}
     </div>
   );
+}
+
+function PixelEvents() {
+  return <div className="admin-pixel-events" style={{ marginTop: 16, whiteSpace: "normal", textTransform: "none", letterSpacing: "normal" }}>
+    <strong>Implemented Meta Pixel events</strong>
+    <ul style={{ paddingLeft: 20, lineHeight: 1.7 }}>
+      <li><b>PageView</b> — Storefront page loads and navigation.</li>
+      <li><b>ViewContent</b> — Product detail page opens.</li>
+      <li><b>AddToCart</b> — A signed-in customer adds a product to the bag.</li>
+      <li><b>InitiateCheckout</b> — Checkout opens.</li>
+      <li><b>Purchase</b> — An order is placed or PayPal capture completes.</li>
+    </ul>
+    <small>Events run after consent when required. This lists implemented events; it does not confirm delivery to Meta. Verify receipt in Meta Events Manager.</small>
+    <br /><small>PayPal Purchase currently includes currency but not order value.</small>
+  </div>;
 }
