@@ -46,8 +46,11 @@ function NavigationEffects() {
       window.scrollTo({ top: 0, behavior: "smooth" });
   }, [pathname]);
   useSeo();
-  useAnalytics();
-  return null;
+  const { showConsent, chooseConsent } = useAnalytics();
+  return showConsent ? <section className="consent-banner" role="region" aria-label="Analytics and advertising preferences">
+    <p>May we use analytics and advertising cookies to measure visits and improve our advertising? You can use the store without accepting. <a href="/privacy">Privacy policy</a></p>
+    <div><button type="button" onClick={() => chooseConsent("denied")}>Decline</button><button type="button" onClick={() => chooseConsent("granted")}>Accept</button></div>
+  </section> : null;
 }
 
 export default function App() {
