@@ -5,9 +5,11 @@ import { resources } from "../../shared/adminSchema.js";
 import { adminValidation } from "../../shared/adminValidation.js";
 import { bad } from "../lib/errors.js";
 import { pool, q } from "../lib/db.js";
+import { expireUnpaidOrders } from "../services/orders.js";
 import { paypalReady } from "../services/paypal.js";
 const app = express.Router();
 app.get("/api/admin/dashboard", admin, async (_req, res) => {
+  await expireUnpaidOrders();
   const [p, o, u, e] = await Promise.all([
     q("SELECT count(*)::int count FROM products"),
     q("SELECT count(*)::int count FROM orders"),

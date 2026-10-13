@@ -8,6 +8,8 @@ import {
   classifyCapture,
   createPayPalOrder,
   getPayPalCapture,
+  getPayPalOrder,
+  type CaptureOutcome,
   paypalReady,
   refundPayPalCapture,
 } from "./paypal.js";
@@ -128,6 +130,8 @@ export async function placeOrder(input: {
   for (const field of REQUIRED_ADDRESS)
     if (!String(address?.[field] || "").trim())
       throw bad("Complete your contact and delivery address.");
+  // Free stock held by abandoned PayPal checkouts before reserving it again.
+  await expireUnpaidOrders();
 
   // Price, reserve stock and record the order atomically.
   const order = await transaction(async (c) => {
@@ -338,16 +342,22 @@ export async function capturePayment(input: {
 // Captures (or re-checks) an approved PayPal order and records the result. Shared by
 // the customer's return and the CHECKOUT.ORDER.APPROVED webhook, which may run at the
 // same time: both send the same capture request id, so PayPal charges only once and
-// markOrderPaid records it only once.
-async function settlePayment(o: any, requestId?: string): Promise<CaptureResponse> {
+// markOrderPaid records it only once. `known` is a capture outcome the caller already
+// read from PayPal (expiry check), which skips the capture call.
+async function settlePayment(
+  o: any,
+  requestId?: string,
+  known?: CaptureOutcome,
+): Promise<CaptureResponse> {
   // Outside any transaction. A capture already under review is re-read rather than
   // re-captured: the capture request id would only replay PayPal's original PENDING
   // response. Otherwise the request id makes a retried capture return the original
   // result instead of charging again.
   const outcome =
-    o.payment_status === "under_review" && o.paypal_capture_id
+    known ??
+    (o.payment_status === "under_review" && o.paypal_capture_id
       ? await getPayPalCapture(o.paypal_capture_id, o.paypal_amount)
-      : await capturePayPalOrder(o.paypal_order_id, o.paypal_amount, o.order_number + "-capture");
+      : await capturePayPalOrder(o.paypal_order_id, o.paypal_amount, o.order_number + "-capture"));
 
   if (outcome.state === "pending") {
     await markCaptureUnderReview(o.id, outcome.captureId, outcome.reason);
@@ -363,6 +373,87 @@ async function settlePayment(o: any, requestId?: string): Promise<CaptureRespons
   if (!paid)
     throw bad("This order was cancelled before payment completed. Please contact us for a refund.", 409);
   return paid;
+}
+
+// ---- expiring unpaid PayPal orders ------------------------------------------
+
+// A PayPal order reserves stock the moment the customer is sent to PayPal. Customers
+// who never approve would otherwise hold that stock forever, so after this long each
+// unpaid order is checked with PayPal: paid or approved ones are completed, the rest
+// are cancelled and their stock returned.
+const UNPAID_ORDER_MINUTES = 60;
+const SWEEP_INTERVAL_MS = 60_000;
+const SWEEP_BATCH = 10;
+let lastSweep = 0;
+
+// Runs when stock matters (catalog reads, placing an order, the admin dashboard)
+// rather than on a timer, so it needs no scheduler on Vercel. At most once a minute
+// per instance; concurrent runs on other instances are safe because every step
+// re-checks the order under a row lock. Never throws: a failure only delays release.
+export async function expireUnpaidOrders() {
+  if (!paypalReady() || Date.now() - lastSweep < SWEEP_INTERVAL_MS) return;
+  lastSweep = Date.now();
+  try {
+    const { rows } = await q(
+      CAPTURE_SELECT +
+        " WHERE payment_method='paypal' AND status='awaiting_payment' AND payment_status='pending' AND created_at < now() - make_interval(mins => $1) ORDER BY created_at LIMIT $2",
+      [UNPAID_ORDER_MINUTES, SWEEP_BATCH],
+    );
+    await Promise.all(rows.map(expireUnpaidOrder));
+  } catch (error) {
+    log.error("unpaid order sweep failed", { error });
+  }
+}
+
+async function expireUnpaidOrder(o: any) {
+  try {
+    const paypal = o.paypal_order_id ? await getPayPalOrder(o.paypal_order_id) : null;
+    // The customer approved (or PayPal already captured) but neither the return page
+    // nor the webhook finished: complete the order instead of losing the sale.
+    if (paypal?.status === "APPROVED") {
+      await settlePayment(o, "expiry");
+      return;
+    }
+    if (paypal?.status === "COMPLETED" && paypal.capture) {
+      const outcome = classifyCapture(paypal.capture, o.paypal_amount);
+      if (outcome.state !== "unconfirmed") {
+        await settlePayment(o, "expiry", outcome);
+        return;
+      }
+      // Captured, but not for this order's amount: release the stock and leave the
+      // money for a person to reconcile in PayPal.
+      log.error("paypal capture does not match expired order; reconcile manually", {
+        orderId: o.id,
+        orderNumber: o.order_number,
+        captureId: paypal.capture.id,
+        capturedAmount: paypal.capture.amount?.value,
+        expectedAmount: o.paypal_amount,
+      });
+      await releaseUnpaidOrder(o.id, null, "PayPal payment did not match the order");
+      return;
+    }
+    // Never approved, voided or expired at PayPal: nothing was charged.
+    await expire(o, paypal?.status ?? "not found");
+  } catch (error: any) {
+    // PayPal refused the capture outright (e.g. the approval expired): final, release.
+    const status = error.paypalStatus;
+    if (status >= 400 && status < 500 && status !== 429) {
+      await expire(o, "capture refused (" + status + ")").catch(() => {});
+      return;
+    }
+    // Refusals from settlePayment (declined: order already released) are final.
+    if (!status && error.status && error.status < 500) {
+      log.info("unpaid order settled by expiry check", { orderId: o.id, reason: error.message });
+      return;
+    }
+    // PayPal or database outages: retried on a later sweep.
+    log.warn("unpaid order not expired", { orderId: o.id, reason: error.message });
+  }
+}
+
+async function expire(o: any, paypalStatus: string) {
+  await releaseUnpaidOrder(o.id, null, "PayPal payment not completed in time");
+  log.info("unpaid paypal order expired", { orderId: o.id, orderNumber: o.order_number, paypalStatus });
 }
 
 // ---- PayPal webhooks --------------------------------------------------------

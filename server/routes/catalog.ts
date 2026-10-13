@@ -2,14 +2,19 @@ import express from "express";
 import { bad } from "../lib/errors.js";
 import { dto } from "../services/catalog.js";
 import { q } from "../lib/db.js";
+import { expireUnpaidOrders } from "../services/orders.js";
 const app = express.Router();
+// Product reads release stock held by abandoned PayPal checkouts first, so shoppers
+// do not see items as sold out that nobody paid for (at most one check a minute).
 app.get("/api/products", async (_req, res) => {
+  await expireUnpaidOrders();
   const { rows } = await q(
     "SELECT * FROM products WHERE active=true ORDER BY created_at, name",
   );
   res.json(rows.map(dto));
 });
 app.get("/api/products/:slug", async (req, res) => {
+  await expireUnpaidOrders();
   const { rows } = await q(
     "SELECT * FROM products WHERE slug=$1 AND active=true",
     [req.params.slug],

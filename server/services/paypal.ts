@@ -83,9 +83,13 @@ async function call(path: string, body: unknown, requestId?: string, method = "P
       debugId: data.debug_id,
       issue: data.details?.[0]?.issue,
     });
-    throw bad(
-      "PayPal could not complete this request. Please retry or choose another payment method.",
-      502,
+    // paypalStatus lets callers tell "PayPal has no such order" (404) from an outage.
+    throw Object.assign(
+      bad(
+        "PayPal could not complete this request. Please retry or choose another payment method.",
+        502,
+      ),
+      { paypalStatus: response.status },
     );
   }
   log.info("paypal request ok", {
@@ -202,7 +206,28 @@ export async function getPayPalCapture(captureId: string, expectedAmount: string
   return classifyCapture(capture, expectedAmount);
 }
 
-export const webhookConfigured = () => Boolean(process.env.PAYPAL_WEBHOOK_ID);
+// Reads a PayPal order: its status (CREATED, PAYER_ACTION_REQUIRED, APPROVED,
+// COMPLETED, VOIDED, ...) and its first capture, if any. Returns null when PayPal no
+// longer has the order (unapproved orders expire after a few hours).
+export async function getPayPalOrder(paypalOrderId: string) {
+  try {
+    const order = await call(
+      "/v2/checkout/orders/" + encodeURIComponent(paypalOrderId),
+      undefined,
+      undefined,
+      "GET",
+    );
+    return {
+      status: order.status as string,
+      capture: order.purchase_units?.[0]?.payments?.captures?.[0],
+    };
+  } catch (error: any) {
+    if (error.paypalStatus === 404) return null;
+    throw error;
+  }
+}
+
+export const webhookConfigured =() => Boolean(process.env.PAYPAL_WEBHOOK_ID);
 
 // Asks PayPal whether a webhook delivery is genuine. rawBody must be the request body
 // exactly as received: PayPal verifies the signature over those bytes.
