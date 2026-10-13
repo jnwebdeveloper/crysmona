@@ -299,8 +299,8 @@ async function markOrderPaid(
 }
 
 // Records that PayPal is holding the payment. Stock stays reserved and the order
-// stays awaiting payment until a webhook or a later Confirm payment finds the
-// capture completed or denied.
+// stays awaiting payment until a webhook, or the customer reopening the PayPal return
+// page, finds the capture completed or denied.
 async function markCaptureUnderReview(orderId: string, captureId: string, reason?: string) {
   const r = await q(
     "UPDATE orders SET payment_status='under_review',paypal_capture_id=$1,updated_at=now() WHERE id=$2 AND status='awaiting_payment' AND payment_status='pending'",
@@ -316,6 +316,10 @@ async function markCaptureUnderReview(orderId: string, captureId: string, reason
 
 export type CaptureResponse = { orderNumber: string; pending?: boolean };
 
+const CAPTURE_SELECT =
+  "SELECT id,order_number,status,payment_status,paypal_order_id,paypal_amount,paypal_capture_id FROM orders";
+
+// Customer path: the PayPal return page calls this as soon as the customer is back.
 export async function capturePayment(input: {
   orderId: string;
   userId: number;
@@ -323,16 +327,19 @@ export async function capturePayment(input: {
   requestId?: string;
 }): Promise<CaptureResponse> {
   const { orderId, userId, paypalToken, requestId } = input;
-  const { rows } = await q(
-    "SELECT id,order_number,status,payment_status,paypal_order_id,paypal_amount,paypal_capture_id FROM orders WHERE id=$1 AND user_id=$2",
-    [orderId, userId],
-  );
-  const o = rows[0];
+  const o = (await q(CAPTURE_SELECT + " WHERE id=$1 AND user_id=$2", [orderId, userId])).rows[0];
   if (!o || o.paypal_order_id !== paypalToken)
     throw bad("This payment does not belong to your order.", 403);
   if (o.payment_status === "paid") return { orderNumber: o.order_number };
   if (o.status !== "awaiting_payment") throw bad("This order is no longer awaiting payment.");
+  return settlePayment(o, requestId);
+}
 
+// Captures (or re-checks) an approved PayPal order and records the result. Shared by
+// the customer's return and the CHECKOUT.ORDER.APPROVED webhook, which may run at the
+// same time: both send the same capture request id, so PayPal charges only once and
+// markOrderPaid records it only once.
+async function settlePayment(o: any, requestId?: string): Promise<CaptureResponse> {
   // Outside any transaction. A capture already under review is re-read rather than
   // re-captured: the capture request id would only replay PayPal's original PENDING
   // response. Otherwise the request id makes a retried capture return the original
@@ -351,7 +358,7 @@ export async function capturePayment(input: {
     throw bad("PayPal declined this payment. Your bag is saved; please try another payment method.", 402);
   }
   if (outcome.state !== "completed")
-    throw bad("Payment is not yet confirmed. Please retry confirmation.", 409);
+    throw bad("Payment is not yet confirmed. Please try again.", 409);
   const paid = await markOrderPaid(o.id, outcome, requestId);
   if (!paid)
     throw bad("This order was cancelled before payment completed. Please contact us for a refund.", 409);
@@ -361,17 +368,40 @@ export async function capturePayment(input: {
 // ---- PayPal webhooks --------------------------------------------------------
 
 const SETTLING_EVENTS = [
+  "CHECKOUT.ORDER.APPROVED",
   "PAYMENT.CAPTURE.COMPLETED",
   "PAYMENT.CAPTURE.DENIED",
   "PAYMENT.CAPTURE.DECLINED",
 ];
 
-// Settles captures without waiting for the customer: COMPLETED marks the order paid,
-// DENIED/DECLINED releases it. Every branch is idempotent because PayPal redelivers
-// events and the customer's own confirmation can race the webhook.
+// Collects and settles payments without waiting for the customer:
+// - CHECKOUT.ORDER.APPROVED captures the order, so a customer who approved on PayPal
+//   but never came back to the store is still charged and their order placed
+// - PAYMENT.CAPTURE.COMPLETED marks the order paid (settles held captures)
+// - PAYMENT.CAPTURE.DENIED/DECLINED releases the order and its stock
+// Every branch is idempotent because PayPal redelivers events and the customer's
+// return page can race the webhook.
 export async function handlePayPalWebhook(event: any, requestId?: string) {
   if (!SETTLING_EVENTS.includes(event?.event_type)) {
     log.info("paypal webhook ignored", { requestId, eventId: event?.id, type: event?.event_type });
+    return;
+  }
+  if (event.event_type === "CHECKOUT.ORDER.APPROVED") {
+    const o = (await q(CAPTURE_SELECT + " WHERE paypal_order_id=$1", [event.resource?.id || null]))
+      .rows[0];
+    if (!o || o.status !== "awaiting_payment" || o.payment_status !== "pending") {
+      log.info("paypal approval needs no capture", { requestId, eventId: event.id, found: Boolean(o) });
+      return;
+    }
+    try {
+      await settlePayment(o, requestId);
+    } catch (error: any) {
+      // A refusal (declined, not confirmed) is final for this event; settlePayment has
+      // already released a declined order. Only PayPal or database outages (5xx) are
+      // rethrown so PayPal redelivers the event.
+      if (!error.status || error.status >= 500) throw error;
+      log.warn("paypal approval capture refused", { requestId, eventId: event.id, orderId: o.id, reason: error.message });
+    }
     return;
   }
   const resource = event.resource || {};

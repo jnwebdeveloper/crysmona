@@ -142,7 +142,7 @@ export async function createPayPalOrder(
 // - completed: money received for exactly the expected USD amount
 // - pending: PayPal is holding the expected amount (review, receiving preferences,
 //   eCheck); a PAYMENT.CAPTURE.COMPLETED or .DENIED webhook settles it later, or the
-//   customer's next Confirm payment re-reads it
+//   customer reopening the return page re-reads it
 // - declined: PayPal refused the payment; the order can be released
 // - unconfirmed: anything else (wrong amount or currency, unknown status)
 export type CaptureOutcome =
@@ -190,7 +190,7 @@ export async function capturePayPalOrder(
 }
 
 // Reads a capture's current state; used to re-check a pending capture when the
-// customer presses Confirm payment again (the fallback where webhooks cannot reach
+// customer reopens the PayPal return page (the fallback where webhooks cannot reach
 // the API, e.g. local development without a tunnel).
 export async function getPayPalCapture(captureId: string, expectedAmount: string) {
   const capture = await call(
