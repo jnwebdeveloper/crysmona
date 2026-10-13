@@ -521,6 +521,13 @@ export default function AdminPage() {
             ))}
           </div>
         )}
+        {["navigation", "categories"].includes(tab) && (
+          <p className="admin-note">
+            Gemstones and Jewellery mega menus automatically show published
+            categories in display order. Manage these links in Categories.
+            Discover and Footer links are managed in Header menu &amp; submenus.
+          </p>
+        )}
         {tab === "settings" && (
           <p className="admin-note">
             PayPal: {stats?.paypalConfigured ? "configured" : "not configured"}.

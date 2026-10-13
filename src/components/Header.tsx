@@ -1,3 +1,4 @@
+import { megaMenuLinks } from "../lib/navigation";
 import React, { useEffect, useState } from "react";
 
 import {
@@ -151,18 +152,16 @@ export default function Header({
                           ? "SHOP THE COLLECTION"
                           : "GET TO KNOW US"}
                     </span>
-                    {store.navigation
-                      .filter(
-                        (n: any) =>
-                          n.group_name === label && n.url !== "/shipping",
-                      )
-                      .map((n: any) => [n.label, n.url])
-                      .map(([name, path]: string[]) => (
-                        <a key={name} href={path} onClick={link(path)}>
-                          {name}
-                          <ArrowRight />
-                        </a>
-                      ))}
+                    {megaMenuLinks(
+                      label,
+                      store.categories,
+                      store.navigation,
+                    ).map(({ label: name, url: path }) => (
+                      <a key={path} href={path} onClick={link(path)}>
+                        {name}
+                        <ArrowRight />
+                      </a>
+                    ))}
                   </div>
                   <a
                     className="mega-feature"
