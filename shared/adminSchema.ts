@@ -17,7 +17,7 @@ export const resources: Record<string, { label: string; fields: Field[] }> = {
     label: "Products & gemstones",
     fields: [
       f("name", "Product name", "text", true),
-      f("slug", "URL slug", "text", true),
+      f("slug", "URL slug"),
       f("kind", "Collection", "select", true, ["jewellery", "gemstone"]),
       f("sku", "SKU"),
       f("category_id", "Category ID"),

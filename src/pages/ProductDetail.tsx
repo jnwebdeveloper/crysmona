@@ -19,7 +19,7 @@ import { useCart } from "../lib/cart";
 import SubscribeForm from "../components/SubscribeForm";
 import ProductCard from "../components/ProductCard";
 export default function ProductDetail({ product }: { product: Product }) {
-  const { catalog: products, store } = useStore();
+  const { catalog: products, store, user } = useStore();
   const { add } = useCart();
   const [q, setQ] = useState(1);
   return (
@@ -52,7 +52,7 @@ export default function ProductDetail({ product }: { product: Product }) {
           <span>CRYSMONA SIGNATURE</span>
           <h1>{product.name}</h1>
           <strong>{product.price}</strong>
-          <p>{product.description}</p>
+          <p className="product-description">{product.description}</p>
           <div className="pdp-meta">
             <b>Stone</b>
             <span>{product.stone}</span>
@@ -103,19 +103,12 @@ export default function ProductDetail({ product }: { product: Product }) {
             disabled={(product.stockQty ?? 0) <= 0}
             onClick={() => {
               add(product, q);
-              navTo("/checkout");
+              if (user) navTo("/checkout");
             }}
           >
             BUY IT NOW
           </button>
           <div className="pdp-perks">
-            <span>
-              <Truck />
-              Free shipping over $
-              {(
-                Number(store.settings.free_shipping_threshold_cents || 0) / 100
-              ).toLocaleString("en-US")}
-            </span>
             <span>
               <RotateCcw />
               7-day easy returns
@@ -127,6 +120,23 @@ export default function ProductDetail({ product }: { product: Product }) {
           </div>
         </article>
       </section>
+      {Object.keys(product.specifications || {}).length > 0 && (
+        <section className="gem-specs">
+          <div>
+            <h2>Gemstone specifications</h2>
+          </div>
+          <dl>
+            {Object.entries(product.specifications || {}).map(
+              ([key, value]) => (
+                <div key={key}>
+                  <dt>{key}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ),
+            )}
+          </dl>
+        </section>
+      )}
       <section className="recommend">
         <span>CURATED FOR YOU</span>
         <h2>You may also like</h2>

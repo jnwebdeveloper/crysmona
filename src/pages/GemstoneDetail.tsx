@@ -42,7 +42,7 @@ export default function GemstoneDetail({ product }: { product: Product }) {
             · {product.specifications?.["Gemstone Type"] || "Cabochon"}
           </p>
           <strong className="gem-detail-price">{product.price}</strong>
-          <p>{product.description}</p>
+          <p className="product-description">{product.description}</p>
           {product.specifications?.["Number Of Pieces"] && (
             <div className="gem-lot">
               <Gem />

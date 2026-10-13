@@ -1,9 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { admin } from "../auth/admin/index.js";
 import express from "express";
 import { resources } from "../../shared/adminSchema.js";
 import { adminValidation } from "../../shared/adminValidation.js";
 import { bad } from "../lib/errors.js";
-import { q } from "../lib/db.js";
+import { pool, q } from "../lib/db.js";
 import { paypalReady } from "../services/paypal.js";
 const app = express.Router();
 app.get("/api/admin/dashboard", admin, async (_req, res) => {
@@ -13,20 +14,55 @@ app.get("/api/admin/dashboard", admin, async (_req, res) => {
     q("SELECT count(*)::int count FROM users"),
     q("SELECT count(*)::int count FROM enquiries WHERE status='new'"),
   ]);
-  const [revenue,aov,low,top,recent]=await Promise.all([
-    q("SELECT COALESCE(sum(total_cents),0)::bigint total FROM orders WHERE payment_status='paid'"),
-    q("SELECT COALESCE(round(avg(total_cents)),0)::bigint total FROM orders WHERE status NOT IN ('cancelled','draft')"),
-    q("SELECT count(*)::int count FROM products WHERE active=true AND stock_qty<=5"),
-    q("SELECT i.product_name,sum(i.quantity)::int units FROM order_items i JOIN orders o ON o.id=i.order_id WHERE o.status<>'cancelled' GROUP BY i.product_name ORDER BY units DESC LIMIT 5"),
-    q("SELECT order_number,status,total_cents,created_at FROM orders ORDER BY created_at DESC LIMIT 5")
+  const [revenue, aov, low, top, recent] = await Promise.all([
+    q(
+      "SELECT COALESCE(sum(total_cents),0)::bigint total FROM orders WHERE payment_status='paid'",
+    ),
+    q(
+      "SELECT COALESCE(round(avg(total_cents)),0)::bigint total FROM orders WHERE status NOT IN ('cancelled','draft')",
+    ),
+    q(
+      "SELECT count(*)::int count FROM products WHERE active=true AND stock_qty<=5",
+    ),
+    q(
+      "SELECT i.product_name,sum(i.quantity)::int units FROM order_items i JOIN orders o ON o.id=i.order_id WHERE o.status<>'cancelled' GROUP BY i.product_name ORDER BY units DESC LIMIT 5",
+    ),
+    q(
+      "SELECT order_number,status,total_cents,created_at FROM orders ORDER BY created_at DESC LIMIT 5",
+    ),
   ]);
-  res.json({products:p.rows[0].count,orders:o.rows[0].count,users:u.rows[0].count,enquiries:e.rows[0].count,paypalConfigured:paypalReady(),revenueCents:Number(revenue.rows[0].total),averageOrderCents:Number(aov.rows[0].total),lowStock:low.rows[0].count,topProducts:top.rows,recentOrders:recent.rows});
+  res.json({
+    products: p.rows[0].count,
+    orders: o.rows[0].count,
+    users: u.rows[0].count,
+    enquiries: e.rows[0].count,
+    paypalConfigured: paypalReady(),
+    revenueCents: Number(revenue.rows[0].total),
+    averageOrderCents: Number(aov.rows[0].total),
+    lowStock: low.rows[0].count,
+    topProducts: top.rows,
+    recentOrders: recent.rows,
+  });
 });
 app.get("/api/admin/orders/:id/detail", admin, async (req, res) => {
-  const order = (await q("SELECT o.*,u.phone,u.name AS customer_name,u.email AS customer_email FROM orders o LEFT JOIN users u ON u.id=o.user_id WHERE o.id=$1", [req.params.id])).rows[0];
+  const order = (
+    await q(
+      "SELECT o.*,u.phone,u.name AS customer_name,u.email AS customer_email FROM orders o LEFT JOIN users u ON u.id=o.user_id WHERE o.id=$1",
+      [req.params.id],
+    )
+  ).rows[0];
   if (!order) throw bad("Order not found.", 404);
-  const items = (await q("SELECT * FROM order_items WHERE order_id=$1 ORDER BY id", [order.id])).rows;
-  const history = (await q("SELECT status,note,actor,created_at FROM order_status_history WHERE order_id=$1 ORDER BY created_at",[order.id])).rows;
+  const items = (
+    await q("SELECT * FROM order_items WHERE order_id=$1 ORDER BY id", [
+      order.id,
+    ])
+  ).rows;
+  const history = (
+    await q(
+      "SELECT status,note,actor,created_at FROM order_status_history WHERE order_id=$1 ORDER BY created_at",
+      [order.id],
+    )
+  ).rows;
   res.json({ ...order, items, history });
 });
 function validUrl(value: any) {
@@ -37,6 +73,94 @@ function validUrl(value: any) {
         /^https:\/\//.test(value)))
   );
 }
+app.get("/api/admin/products/:id/images", admin, async (req, res) => {
+  res.json(
+    (
+      await q(
+        "SELECT image_url, alt_text FROM product_images WHERE product_id=$1 ORDER BY sort_order,id",
+        [req.params.id],
+      )
+    ).rows,
+  );
+});
+
+// Product details and gallery changes are committed together. Failed validation
+// or database writes leave the existing product and images intact.
+export async function saveProduct(
+  values: Record<string, any>,
+  images: unknown,
+  id?: string,
+) {
+  if (
+    images !== undefined &&
+    (!Array.isArray(images) ||
+      images.length > 100 ||
+      images.some(
+        (image) =>
+          !image ||
+          typeof image.image_url !== "string" ||
+          !image.image_url.trim() ||
+          !validUrl(image.image_url) ||
+          (image.alt_text != null &&
+            (typeof image.alt_text !== "string" ||
+              image.alt_text.length > 5000)),
+      ))
+  )
+    throw bad("Provide up to 100 valid product images.");
+  if (!id && !values.slug) {
+    const base =
+      String(values.name)
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 150) || "product";
+    values.slug = base + "-" + randomUUID().slice(0, 8);
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const keys = Object.keys(values);
+    const result = id
+      ? await client.query(
+          `UPDATE products SET ${keys.map((key, i) => key + "=$" + (i + 1)).join(",")} WHERE id=$${keys.length + 1} RETURNING *`,
+          [...Object.values(values), id],
+        )
+      : await client.query(
+          `INSERT INTO products(${keys.join(",")}) VALUES(${keys.map((_, i) => "$" + (i + 1)).join(",")}) RETURNING *`,
+          Object.values(values),
+        );
+    const product = result.rows[0];
+    if (!product) throw bad("Product not found.", 404);
+    if (Array.isArray(images)) {
+      await client.query("DELETE FROM product_images WHERE product_id=$1", [
+        product.id,
+      ]);
+      const gallery = [
+        { image_url: product.image_url, alt_text: product.name },
+        ...images,
+      ];
+      const seen = new Set<string>();
+      for (const image of gallery) {
+        if (seen.has(image.image_url)) continue;
+        seen.add(image.image_url);
+        await client.query(
+          "INSERT INTO product_images(product_id,image_url,alt_text,sort_order) VALUES($1,$2,$3,$4)",
+          [product.id, image.image_url, image.alt_text || "", seen.size - 1],
+        );
+      }
+    }
+    await client.query("COMMIT");
+    return product;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 for (const [table, definition] of Object.entries(resources)) {
   const validate = (body: any, create: boolean) => {
     const preliminary = adminValidation(table, body);
@@ -49,7 +173,8 @@ for (const [table, definition] of Object.entries(resources)) {
         if (create && field.required) throw bad(field.label + " is required.");
         continue;
       }
-      if (value === "" && !field.required) value = null;
+      if (value === "" && !field.required)
+        value = field.key === "sort_order" ? 0 : null;
       if (field.required && (value === null || value === ""))
         throw bad(field.label + " is required.");
       if (field.type === "number" && value !== null) {
@@ -119,6 +244,11 @@ for (const [table, definition] of Object.entries(resources)) {
   );
   app.post("/api/admin/" + table, admin, async (req, res) => {
     const values = validate(req.body, true);
+    if (table === "products") {
+      if (!values.slug) delete values.slug;
+      res.status(201).json(await saveProduct(values, req.body.images));
+      return;
+    }
     const keys = Object.keys(values);
     if (table === "order_items") {
       const order = await q("SELECT status FROM orders WHERE id=$1", [
@@ -140,6 +270,14 @@ for (const [table, definition] of Object.entries(resources)) {
     if (!existing) throw bad("Record not found.", 404);
     const values = validate(req.body, false);
     validate({ ...existing, ...values }, false);
+    if (table === "products") {
+      // Existing product links remain stable when the product name changes.
+      values.slug = existing.slug;
+      res.json(
+        await saveProduct(values, req.body.images, String(req.params.id)),
+      );
+      return;
+    }
     if (table === "orders" && existing.status !== "draft") {
       for (const key of Object.keys(values))
         if (
@@ -189,7 +327,24 @@ for (const [table, definition] of Object.entries(resources)) {
       `UPDATE ${table} SET ${keys.map((k, i) => k + "=$" + (i + 1)).join(",")} WHERE id=$${keys.length + 1} RETURNING *`,
       [...keys.map((k) => values[k]), req.params.id],
     );
-    if(table==="orders" && values.status && values.status!==existing.status){await q("INSERT INTO order_status_history(order_id,status,note,actor) VALUES($1,$2,'Status updated in admin','admin')",[req.params.id,values.status]);await q("INSERT INTO audit_logs(actor_type,actor_id,action,entity_type,entity_id,metadata) VALUES('admin',$1,'order_status_update','order',$2,$3)",[String((req as any).adminAccount?.id||''),String(req.params.id),JSON.stringify({from:existing.status,to:values.status})])}
+    if (
+      table === "orders" &&
+      values.status &&
+      values.status !== existing.status
+    ) {
+      await q(
+        "INSERT INTO order_status_history(order_id,status,note,actor) VALUES($1,$2,'Status updated in admin','admin')",
+        [req.params.id, values.status],
+      );
+      await q(
+        "INSERT INTO audit_logs(actor_type,actor_id,action,entity_type,entity_id,metadata) VALUES('admin',$1,'order_status_update','order',$2,$3)",
+        [
+          String((req as any).adminAccount?.id || ""),
+          String(req.params.id),
+          JSON.stringify({ from: existing.status, to: values.status }),
+        ],
+      );
+    }
     res.json(rows[0]);
   });
   app.delete("/api/admin/" + table + "/:id", admin, async (req, res) => {

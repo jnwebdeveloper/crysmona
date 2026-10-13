@@ -71,15 +71,12 @@ export default function CartPage() {
               <p>
                 Subtotal <b>{formatPrice(subtotal * 100)}</b>
               </p>
-              <p>
-                Shipping <b>Calculated at checkout</b>
-              </p>
             </div>
             <strong>{formatPrice(subtotal * 100)}</strong>
             <button onClick={() => navTo("/checkout")}>
               PROCEED TO CHECKOUT <ArrowRight />
             </button>
-            <small>Taxes and shipping calculated at checkout.</small>
+            <small>Final total confirmed at checkout.</small>
           </aside>
         </section>
       ) : (

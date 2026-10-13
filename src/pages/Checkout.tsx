@@ -75,7 +75,11 @@ export default function Checkout() {
         return;
       }
       onComplete();
-      if ((window as any).fbq) (window as any).fbq("track", "Purchase", {value: result.total, currency: "USD"});
+      if ((window as any).fbq)
+        (window as any).fbq("track", "Purchase", {
+          value: result.total,
+          currency: "USD",
+        });
       go("/orders");
     } catch (e: any) {
       setError(e.message);
@@ -273,10 +277,11 @@ export default function Checkout() {
                 <p>
                   Subtotal <b>{formatPrice(quote.subtotal)}</b>
                 </p>
-                <p>
-                  Shipping{" "}
-                  <b>{quote.shipping ? formatPrice(quote.shipping) : "Free"}</b>
-                </p>
+                {quote.shipping > 0 && (
+                  <p>
+                    Shipping <b>{formatPrice(quote.shipping)}</b>
+                  </p>
+                )}
                 {quote.discount > 0 && (
                   <p>
                     Discount <b>−{formatPrice(quote.discount)}</b>

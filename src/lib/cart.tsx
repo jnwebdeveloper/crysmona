@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { api, go, useStore } from "./Store";
 import { CartItem, Product } from "./model";
 import { useUi } from "./ui";
@@ -22,21 +28,33 @@ const serialize = (items: CartItem[]) =>
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { catalog, user, loading, catalogError } = useStore();
-  const { showToast } = useUi();
+  const { showToast, openLogin } = useUi();
   const [items, setItems] = useState<CartItem[]>([]),
     [ready, setReady] = useState(false),
     [error, setError] = useState("");
   const queue = useRef(Promise.resolve());
+  const currentUser = useRef(user?.id);
+  currentUser.current = user?.id;
+  const loadedFor = useRef<number | undefined>(undefined);
   // What the server already has; saves are skipped when nothing changed, so
   // loading the bag or refreshing the catalog does not write it straight back.
   const synced = useRef("");
 
   useEffect(() => {
     let live = true;
+    loadedFor.current = undefined;
+    setItems([]);
+    synced.current = "[]";
+    if (!user) {
+      setReady(true);
+      setError("");
+      return;
+    }
     setReady(false);
     api("/cart")
       .then((data: CartItem[]) => {
         if (!live) return;
+        loadedFor.current = user.id;
         synced.current = serialize(data);
         setItems(data);
         setError("");
@@ -70,28 +88,49 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [catalog, loading, catalogError]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !user || loadedFor.current !== user.id) return;
     const body = serialize(items);
     if (body === synced.current) return;
     synced.current = body;
+    const ownerId = user.id;
     queue.current = queue.current
-      .then(() => api("/cart", { method: "PUT", body: JSON.stringify({ items: JSON.parse(body) }) }))
+      .then(() =>
+        currentUser.current === ownerId
+          ? api("/cart", {
+              method: "PUT",
+              body: JSON.stringify({ items: JSON.parse(body) }),
+            })
+          : undefined,
+      )
       .catch((e) => showToast(e.message));
   }, [items, ready]);
 
   const add = (product: Product, qty = 1) => {
+    if (!user) {
+      openLogin();
+      return;
+    }
+    if (!ready || loadedFor.current !== user.id) {
+      showToast("Your bag is still loading. Please try again.");
+      return;
+    }
     if ((product.stockQty ?? 0) <= 0) {
       showToast("This piece is currently out of stock.");
       return;
     }
     const existing = items.find((i) => i.product.slug === product.slug);
-    if (product.stockQty !== undefined && (existing?.qty || 0) + qty > product.stockQty) {
+    if (
+      product.stockQty !== undefined &&
+      (existing?.qty || 0) + qty > product.stockQty
+    ) {
       showToast("The requested quantity exceeds available stock.");
       return;
     }
     setItems((c) =>
       c.some((i) => i.product.slug === product.slug)
-        ? c.map((i) => (i.product.slug === product.slug ? { ...i, qty: i.qty + qty } : i))
+        ? c.map((i) =>
+            i.product.slug === product.slug ? { ...i, qty: i.qty + qty } : i,
+          )
         : [...c, { product, qty }],
     );
     showToast(`${product.name} added to your bag`);
@@ -125,8 +164,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   return (
     <CartContext.Provider
       value={{
-        items,
-        count: items.reduce((n, i) => n + i.qty, 0),
+        items: user ? items : [],
+        count: (user ? items : []).reduce((n, i) => n + i.qty, 0),
         ready,
         error,
         add,

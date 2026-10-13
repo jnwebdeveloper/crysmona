@@ -51,9 +51,14 @@ export default function AdminPage() {
     [query, setQuery] = useState(""),
     [lookups, setLookups] = useState<Record<string, any[]>>({}),
     [orderDetail, setOrderDetail] = useState<any>(null),
-    [fieldErrors,setFieldErrors]=useState<Record<string,string>>({}),
+    [fieldErrors, setFieldErrors] = useState<Record<string, string>>({}),
     [maxImageBytes, setMaxImageBytes] = useState(8 * 1024 * 1024);
   const { refresh } = useStore();
+  const resource = tab === "discover" ? "content_blocks" : tab;
+  const definition =
+    tab === "discover"
+      ? { ...resources.content_blocks, label: "Discover pages" }
+      : resources[resource];
   const request = async (path: string, options: RequestInit = {}) => {
     try {
       return await api("/admin/" + path, options);
@@ -88,10 +93,14 @@ export default function AdminPage() {
     setError("");
     try {
       const [data, summary] = await Promise.all([
-        request(tab),
+        request(resource),
         request("dashboard"),
       ]);
-      setRows(data);
+      setRows(
+        tab === "discover"
+          ? data.filter((r: any) => ["about", "craft"].includes(r.block_key))
+          : data,
+      );
       setStats(summary);
       setConnected(true);
     } catch (e: any) {
@@ -117,8 +126,9 @@ export default function AdminPage() {
   }, [tab]);
   const open = async (record?: any) => {
     setError("");
+    setFieldErrors({});
     const defaults: any = {};
-    for (const f of resources[tab].fields)
+    for (const f of definition.fields)
       defaults[f.key] =
         f.type === "boolean"
           ? true
@@ -136,8 +146,17 @@ export default function AdminPage() {
       defaults.stock_qty = 0;
       defaults.featured = false;
     }
-    setEditing(record ? { ...record } : defaults);
+    if (tab === "discover") defaults.block_key = "about";
+    setEditing(
+      record ? { ...record, images: undefined } : { ...defaults, images: [] },
+    );
     try {
+      if (tab === "products" && record) {
+        const gallery = await request("products/" + record.id + "/images");
+        setEditing((current: any) =>
+          current?.id === record.id ? { ...current, images: gallery } : current,
+        );
+      }
       const refs: Record<string, string> = {
         product_id: "products",
         category_id: "categories",
@@ -145,7 +164,7 @@ export default function AdminPage() {
         order_id: "orders",
       };
       const data: Record<string, any[]> = {};
-      for (const f of resources[tab].fields)
+      for (const f of definition.fields)
         if (refs[f.key]) data[f.key] = await request(refs[f.key]);
       setLookups(data);
     } catch (e: any) {
@@ -155,14 +174,19 @@ export default function AdminPage() {
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const validation=adminValidation(tab,editing); setFieldErrors(validation);
-    if(Object.keys(validation).length){setError("Please correct the highlighted fields.");return;}
+    const validation = adminValidation(resource, editing);
+    setFieldErrors(validation);
+    if (Object.keys(validation).length) {
+      setError("Please correct the highlighted fields.");
+      return;
+    }
     setBusy(true);
     try {
       const body: any = {};
-      for (const f of resources[tab].fields)
+      for (const f of definition.fields)
         body[f.key] = editing[f.key] ?? (f.type === "specs" ? {} : null);
-      await request(tab + (editing.id ? "/" + editing.id : ""), {
+      if (tab === "products") body.images = editing.images;
+      await request(resource + (editing.id ? "/" + editing.id : ""), {
         method: editing.id ? "PUT" : "POST",
         body: JSON.stringify(body),
       });
@@ -180,7 +204,7 @@ export default function AdminPage() {
     setBusy(true);
     setError("");
     try {
-      await request(tab + "/" + removing.id, { method: "DELETE" });
+      await request(resource + "/" + removing.id, { method: "DELETE" });
       setRemoving(null);
       await load();
       await refresh();
@@ -193,7 +217,27 @@ export default function AdminPage() {
   };
   const field = (f: Field) => {
     const value = editing[f.key];
-    const change = (v: any) => setEditing({ ...editing, [f.key]: v });
+    const change = (v: any) =>
+      setEditing((current: any) => ({ ...current, [f.key]: v }));
+    if (tab === "discover" && f.key === "block_key")
+      return (
+        <select value={value} onChange={(e) => change(e.target.value)}>
+          <option value="about">About Crysmona</option>
+          <option value="craft">Our Craft</option>
+        </select>
+      );
+    if (tab === "products" && f.key === "image_url")
+      return (
+        <ProductImages
+          editing={editing}
+          setEditing={setEditing}
+          request={request}
+          busy={busy}
+          setBusy={setBusy}
+          setError={setError}
+          maxBytes={maxImageBytes}
+        />
+      );
     if (f.key === "image_url")
       return (
         <div className="image-upload">
@@ -212,7 +256,9 @@ export default function AdminPage() {
               const file = e.target.files?.[0];
               if (!file) return;
               if (file.size > maxImageBytes) {
-                setError(`Choose an image smaller than ${+(maxImageBytes / 1048576).toFixed(1)} MB.`);
+                setError(
+                  `Choose an image smaller than ${+(maxImageBytes / 1048576).toFixed(1)} MB.`,
+                );
                 return;
               }
               setBusy(true);
@@ -231,7 +277,10 @@ export default function AdminPage() {
               }
             }}
           />
-          <small>JPEG, PNG or WebP · up to {+(maxImageBytes / 1048576).toFixed(1)} MB · saved to cloud storage</small>
+          <small>
+            JPEG, PNG or WebP · up to {+(maxImageBytes / 1048576).toFixed(1)} MB
+            · saved to cloud storage
+          </small>
           {value && (
             <img
               className="admin-image-preview"
@@ -297,7 +346,9 @@ export default function AdminPage() {
           value={value ?? ""}
           onChange={(e) =>
             change(
-              f.type === "number" ? Number(e.target.value) : e.target.value,
+              f.type === "number" && e.target.value !== ""
+                ? Number(e.target.value)
+                : e.target.value,
             )
           }
         />
@@ -377,23 +428,35 @@ export default function AdminPage() {
         <b>STOREFRONT STUDIO</b>
         <nav className="admin-nav" aria-label="Admin navigation">
           {[
-            { title: "STORE", items: [
-              ["products", "Products", Package],
-              ["categories", "Categories", Tags],
-              ["content_blocks", "Storefront", PanelsTopLeft],
-            ]},
-            { title: "COMMERCE", items: [
-              ["orders", "Orders", ShoppingBag],
-              ["users", "Customers", Users],
-              ["coupons", "Discounts", BadgePercent],
-            ]},
-            { title: "MARKETING", items: [
-              ["seo_pages", "SEO", Search],
-              ["site_settings", "Pixel & tracking", Settings],
-            ]},
-            { title: "SETTINGS", items: [
-              ["settings", "Store settings", Settings],
-            ]},
+            {
+              title: "STORE",
+              items: [
+                ["products", "Products", Package],
+                ["categories", "Categories", Tags],
+                ["content_blocks", "Storefront", PanelsTopLeft],
+                ["navigation", "Header menu & submenus", PanelsTopLeft],
+                ["discover", "Discover pages", PanelsTopLeft],
+              ],
+            },
+            {
+              title: "COMMERCE",
+              items: [
+                ["orders", "Orders", ShoppingBag],
+                ["users", "Customers", Users],
+                ["coupons", "Discounts", BadgePercent],
+              ],
+            },
+            {
+              title: "MARKETING",
+              items: [
+                ["seo_pages", "SEO", Search],
+                ["site_settings", "Pixel & tracking", Settings],
+              ],
+            },
+            {
+              title: "SETTINGS",
+              items: [["settings", "Store settings", Settings]],
+            },
           ].map((group) => (
             <section className="admin-nav-group" key={group.title}>
               <span>{group.title}</span>
@@ -401,7 +464,10 @@ export default function AdminPage() {
                 <button
                   key={id}
                   className={tab === id ? "active" : ""}
-                  onClick={() => { setTab(id); setEditing(null); }}
+                  onClick={() => {
+                    setTab(id);
+                    setEditing(null);
+                  }}
                 >
                   <Icon /> <em>{name}</em>
                 </button>
@@ -434,7 +500,7 @@ export default function AdminPage() {
         <header>
           <div>
             <span>CRYSMONA / STORE MANAGEMENT</span>
-            <h1>{resources[tab].label}</h1>
+            <h1>{definition.label}</h1>
           </div>
           <button className="studio-refresh" disabled={busy} onClick={load}>
             <RefreshCw /> Refresh
@@ -482,7 +548,24 @@ export default function AdminPage() {
           </label>
           {!["orders", "users"].includes(tab) && (
             <button className="admin-new" onClick={() => open()}>
-              <Plus /> {tab === "products" ? "Add product" : tab === "categories" ? "Add category" : tab === "coupons" ? "Add discount" : tab === "content_blocks" ? "Add content" : tab === "seo_pages" ? "Add SEO page" : tab === "site_settings" ? "Add tracking setting" : "Add setting"}
+              <Plus />{" "}
+              {tab === "products"
+                ? "Add product"
+                : tab === "categories"
+                  ? "Add category"
+                  : tab === "coupons"
+                    ? "Add discount"
+                    : tab === "content_blocks"
+                      ? "Add content"
+                      : tab === "seo_pages"
+                        ? "Add SEO page"
+                        : tab === "site_settings"
+                          ? "Add tracking setting"
+                          : tab === "navigation"
+                            ? "Add menu link"
+                            : tab === "discover"
+                              ? "Add Discover page"
+                              : "Add setting"}
             </button>
           )}
         </div>
@@ -538,7 +621,22 @@ export default function AdminPage() {
                     </td>
                     <td>
                       <div className="admin-actions">
-                        {tab === "orders" && <button onClick={async()=>{setError("");try{setOrderDetail(await request("orders/"+r.id+"/detail"))}catch(e:any){setError(e.message)}}}>View details</button>}
+                        {tab === "orders" && (
+                          <button
+                            onClick={async () => {
+                              setError("");
+                              try {
+                                setOrderDetail(
+                                  await request("orders/" + r.id + "/detail"),
+                                );
+                              } catch (e: any) {
+                                setError(e.message);
+                              }
+                            }}
+                          >
+                            View details
+                          </button>
+                        )}
                         <button
                           aria-label={"Edit " + label(r)}
                           onClick={() => open(r)}
@@ -584,29 +682,43 @@ export default function AdminPage() {
               type="button"
               className="login-close"
               aria-label="Close editor"
-              onClick={() => {setEditing(null);setFieldErrors({});}}
+              onClick={() => {
+                setEditing(null);
+                setFieldErrors({});
+              }}
             >
               <X />
             </button>
             <span>{editing.id ? "EDIT RECORD" : "NEW RECORD"}</span>
-            <h2>{resources[tab].label}</h2>
+            <h2>{definition.label}</h2>
             {error && (
               <p className="form-error" role="alert">
                 {error}
               </p>
             )}
             <div className="admin-form-grid">
-              {resources[tab].fields.map((f) => (
-                <label
-                  key={f.key}
-                  className={f.type === "specs" ? "full-width" : ""}
-                >
-                  {f.label}
-                  {f.required ? " *" : ""}
-                  {field(f)}
-                  {fieldErrors[f.key] && <small className="field-error" role="alert">{fieldErrors[f.key]}</small>}
-                </label>
-              ))}
+              {definition.fields
+                .filter((f) => !(tab === "products" && f.key === "slug"))
+                .map((f) => (
+                  <label
+                    key={f.key}
+                    className={
+                      f.type === "specs" ||
+                      (tab === "products" && f.key === "image_url")
+                        ? "full-width"
+                        : ""
+                    }
+                  >
+                    {f.label}
+                    {f.required ? " *" : ""}
+                    {field(f)}
+                    {fieldErrors[f.key] && (
+                      <small className="field-error" role="alert">
+                        {fieldErrors[f.key]}
+                      </small>
+                    )}
+                  </label>
+                ))}
             </div>
             <button className="login-submit" disabled={busy}>
               {busy ? "SAVING…" : "SAVE CHANGES"}
@@ -616,12 +728,59 @@ export default function AdminPage() {
       )}
       {orderDetail && (
         <div className="admin-modal">
-          <section className="admin-order-detail" role="dialog" aria-modal="true">
-            <button className="login-close" onClick={()=>setOrderDetail(null)}><X /></button>
-            <span>ORDER DETAIL</span><h2>{orderDetail.order_number}</h2>
-            <div className="admin-order-meta"><p>Customer <b>{orderDetail.customer_name || orderDetail.phone || "—"}</b></p><p>Status <b>{orderDetail.status}</b></p><p>Payment <b>{orderDetail.payment_method} · {orderDetail.payment_status}</b></p><p>Total <b>${(orderDetail.total_cents/100).toFixed(2)}</b></p></div>
-            {(orderDetail.items||[]).map((i:any)=><div className="order-item" key={i.id}><img src={i.image_url} alt=""/><div><h3>{i.product_name}</h3><p>{i.sku||""} · Qty {i.quantity}</p></div><strong>${(i.unit_price_cents*i.quantity/100).toFixed(2)}</strong></div>)}
-            <div className="admin-order-address"><b>Delivery address</b><p>{Object.values(orderDetail.shipping_address||{}).filter(Boolean).join(", ")}</p></div>
+          <section
+            className="admin-order-detail"
+            role="dialog"
+            aria-modal="true"
+          >
+            <button
+              className="login-close"
+              onClick={() => setOrderDetail(null)}
+            >
+              <X />
+            </button>
+            <span>ORDER DETAIL</span>
+            <h2>{orderDetail.order_number}</h2>
+            <div className="admin-order-meta">
+              <p>
+                Customer{" "}
+                <b>{orderDetail.customer_name || orderDetail.phone || "—"}</b>
+              </p>
+              <p>
+                Status <b>{orderDetail.status}</b>
+              </p>
+              <p>
+                Payment{" "}
+                <b>
+                  {orderDetail.payment_method} · {orderDetail.payment_status}
+                </b>
+              </p>
+              <p>
+                Total <b>${(orderDetail.total_cents / 100).toFixed(2)}</b>
+              </p>
+            </div>
+            {(orderDetail.items || []).map((i: any) => (
+              <div className="order-item" key={i.id}>
+                <img src={i.image_url} alt="" />
+                <div>
+                  <h3>{i.product_name}</h3>
+                  <p>
+                    {i.sku || ""} · Qty {i.quantity}
+                  </p>
+                </div>
+                <strong>
+                  ${((i.unit_price_cents * i.quantity) / 100).toFixed(2)}
+                </strong>
+              </div>
+            ))}
+            <div className="admin-order-address">
+              <b>Delivery address</b>
+              <p>
+                {Object.values(orderDetail.shipping_address || {})
+                  .filter(Boolean)
+                  .join(", ")}
+              </p>
+            </div>
           </section>
         </div>
       )}
@@ -706,6 +865,146 @@ function SpecEditor({
       >
         + Add specification
       </button>
+    </div>
+  );
+}
+
+function ProductImages({
+  editing,
+  setEditing,
+  request,
+  busy,
+  setBusy,
+  setError,
+  maxBytes,
+}: any) {
+  const [url, setUrl] = useState("");
+  const images: { image_url: string; alt_text: string }[] = [
+    ...(editing.image_url
+      ? [{ image_url: editing.image_url, alt_text: editing.name || "" }]
+      : []),
+    ...(editing.images || []),
+  ].filter(
+    (image, i, all) =>
+      all.findIndex((x) => x.image_url === image.image_url) === i,
+  );
+  const append = (image_url: string) =>
+    setEditing((current: any) => ({
+      ...current,
+      image_url: current.image_url || image_url,
+      images: [
+        ...(current.images || []),
+        { image_url, alt_text: current.name || "" },
+      ],
+    }));
+  return (
+    <div className="image-upload">
+      <input
+        type="file"
+        multiple
+        accept="image/jpeg,image/png,image/webp"
+        disabled={busy || editing.images === undefined}
+        aria-label="Upload product images"
+        onChange={async (e) => {
+          const files = Array.from(e.target.files || []);
+          e.target.value = "";
+          if (
+            files.some(
+              (file) =>
+                file.size > maxBytes ||
+                !["image/jpeg", "image/png", "image/webp"].includes(file.type),
+            )
+          ) {
+            setError(
+              `Choose JPEG, PNG or WebP images smaller than ${(maxBytes / 1048576).toFixed(1)} MB each.`,
+            );
+            return;
+          }
+          setBusy(true);
+          setError("");
+          try {
+            for (const file of files) {
+              const result = await request("media/upload", {
+                method: "POST",
+                headers: { "Content-Type": file.type },
+                body: file,
+              });
+              append(result.url);
+            }
+          } catch (error: any) {
+            setError(error.message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+      <small>
+        Select multiple images. Choose a default image for the product listing.
+      </small>
+      <div>
+        <input
+          aria-label="Product image URL"
+          placeholder="Image URL or /assets/image.jpg"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+        />
+        <button
+          type="button"
+          disabled={busy || !url.trim() || editing.images === undefined}
+          onClick={() => {
+            append(url.trim());
+            setUrl("");
+          }}
+        >
+          Add image URL
+        </button>
+      </div>
+      <div className="admin-gallery">
+        {images.map((image) => (
+          <div key={image.image_url}>
+            <img
+              src={image.image_url}
+              alt={image.alt_text || "Product image"}
+            />
+            <button
+              type="button"
+              disabled={busy || editing.images === undefined}
+              aria-pressed={editing.image_url === image.image_url}
+              onClick={() =>
+                setEditing((current: any) => ({
+                  ...current,
+                  images,
+                  image_url: image.image_url,
+                }))
+              }
+            >
+              {editing.image_url === image.image_url
+                ? "Default image"
+                : "Set as default"}
+            </button>
+            <button
+              type="button"
+              disabled={busy || editing.images === undefined}
+              onClick={() => {
+                const remaining = images.filter(
+                  (x) => x.image_url !== image.image_url,
+                );
+                setEditing((current: any) => ({
+                  ...current,
+                  images: remaining,
+                  image_url:
+                    current.image_url === image.image_url
+                      ? remaining[0]?.image_url || ""
+                      : current.image_url,
+                }));
+              }}
+            >
+              Remove image
+            </button>
+          </div>
+        ))}
+      </div>
+      {!images.length && <small>Add at least one product image.</small>}
     </div>
   );
 }

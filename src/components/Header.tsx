@@ -152,7 +152,10 @@ export default function Header({
                           : "GET TO KNOW US"}
                     </span>
                     {store.navigation
-                      .filter((n: any) => n.group_name === label)
+                      .filter(
+                        (n: any) =>
+                          n.group_name === label && n.url !== "/shipping",
+                      )
                       .map((n: any) => [n.label, n.url])
                       .map(([name, path]: string[]) => (
                         <a key={name} href={path} onClick={link(path)}>
@@ -247,7 +250,7 @@ export default function Header({
             }}
           >
             <ShoppingBag />
-            <i>{cart}</i>
+            {user && cart > 0 && <i>{cart}</i>}
           </button>
           <button
             className="hamb"

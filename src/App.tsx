@@ -1,5 +1,11 @@
 import React, { lazy, Suspense, useEffect } from "react";
-import { Route, Routes, useLocation, useNavigate, useNavigationType } from "react-router";
+import {
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useNavigationType,
+} from "react-router";
 import Loader from "./components/Loader";
 import RequireLogin from "./components/RequireLogin";
 import RequireStore from "./components/RequireStore";
@@ -23,7 +29,7 @@ import { WishlistPage } from "./pages/WishlistPage";
 
 // Admin is only for staff, so it is split into its own bundle and loaded on demand.
 const AdminPage = lazy(() => import("./pages/Admin"));
-const SUPPORT_PAGES = ["faq", "shipping", "returns", "care", "privacy", "terms"];
+const SUPPORT_PAGES = ["faq", "returns", "care", "privacy", "terms"];
 
 // Lets go() navigate through React Router, and scrolls to the top on new pages
 // (back/forward keeps the browser's scroll position).
@@ -36,7 +42,8 @@ function NavigationEffects() {
     return () => setNavigator(null);
   }, [navigate]);
   useEffect(() => {
-    if (navigationType !== "POP") window.scrollTo({ top: 0, behavior: "smooth" });
+    if (navigationType !== "POP")
+      window.scrollTo({ top: 0, behavior: "smooth" });
   }, [pathname]);
   useSeo();
   useAnalytics();
@@ -51,7 +58,13 @@ export default function App() {
         <Route
           path="admin"
           element={
-            <Suspense fallback={<main className="page"><Loader label="Loading admin…" /></main>}>
+            <Suspense
+              fallback={
+                <main className="page">
+                  <Loader label="Loading admin…" />
+                </main>
+              }
+            >
               <AdminPage />
             </Suspense>
           }
@@ -64,21 +77,50 @@ export default function App() {
             <Route path="jewellery" element={<Listing kind="Jewellery" />} />
             <Route path="product/:slug" element={<ProductPage />} />
             <Route path="wishlist" element={<WishlistPage />} />
-            <Route path="cart" element={<CartPage />} />
-            <Route path="checkout" element={<Checkout />} />
+            <Route
+              path="cart"
+              element={
+                <RequireLogin>
+                  <CartPage />
+                </RequireLogin>
+              }
+            />
+            <Route
+              path="checkout"
+              element={
+                <RequireLogin>
+                  <Checkout />
+                </RequireLogin>
+              }
+            />
             <Route path="checkout/paypal" element={<PayPalReturn />} />
             <Route path="our-craft" element={<InfoPage title="Our Craft" />} />
             <Route path="about" element={<InfoPage title="About Crysmona" />} />
             {SUPPORT_PAGES.map((page) => (
-              <Route key={page} path={page} element={<SupportPage page={page} />} />
+              <Route
+                key={page}
+                path={page}
+                element={<SupportPage page={page} />}
+              />
             ))}
           </Route>
           {/* Pages that work even when the catalog is unavailable. */}
           <Route path="contact" element={<Contact />} />
-          <Route path="orders" element={<RequireLogin><OrdersPage /></RequireLogin>} />
+          <Route
+            path="orders"
+            element={
+              <RequireLogin>
+                <OrdersPage />
+              </RequireLogin>
+            }
+          />
           <Route
             path="orders/:orderNumber"
-            element={<RequireLogin><OrderDetail /></RequireLogin>}
+            element={
+              <RequireLogin>
+                <OrderDetail />
+              </RequireLogin>
+            }
           />
           <Route path="*" element={<NotFound />} />
         </Route>

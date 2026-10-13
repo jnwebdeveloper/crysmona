@@ -3,7 +3,6 @@ import { Facebook, Instagram } from "lucide-react";
 import { Link } from "react-router";
 import { go as navTo, useStore } from "../lib/Store";
 
-import SubscribeForm from "./SubscribeForm";
 export default function Footer() {
   const { store } = useStore();
   return (
@@ -30,7 +29,9 @@ export default function Footer() {
       <div>
         <b>Quick Links</b>
         {store.navigation
-          .filter((n: any) => n.group_name === "Footer")
+          .filter(
+            (n: any) => n.group_name === "Footer" && n.url !== "/shipping",
+          )
           .map((n: any) => (
             <a
               key={n.id}
@@ -101,17 +102,9 @@ export default function Footer() {
       <div>
         <b>Customer Care</b>
         <Link to="/faq">FAQs</Link>
-        <Link to="/shipping">Shipping & Delivery</Link>
         <Link to="/returns">Returns & Exchanges</Link>
         <Link to="/care">Care Instructions</Link>
         <Link to="/orders">Track Order</Link>
-      </div>
-      <div>
-        <b>Join Our Journey</b>
-        <p>
-          Subscribe for exclusive offers, new arrivals and gemstone stories.
-        </p>
-        <SubscribeForm />
       </div>
       <section>
         © 2026 Crysmona. All rights reserved.
