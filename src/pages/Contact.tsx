@@ -2,21 +2,34 @@ import { useState } from "react";
 
 import { ArrowRight } from "lucide-react";
 
-import { api } from "../lib/Store";
+import { api, useStore } from "../lib/Store";
 
 export default function Contact() {
+  const { store } = useStore();
+  const block = store.content.find((b: any) => b.block_key === "contact");
   const [notice, setNotice] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  if (block?.active === false)
+    return (
+      <main className="page wishlist-empty">
+        <h1>Contact</h1>
+        <p>This page is being updated. Please check back soon.</p>
+      </main>
+    );
   return (
     <main className="page info-page">
       <section className="page-hero">
-        <span>WE'RE HERE TO HELP</span>
-        <h1>Contact</h1>
-        <p>
-          Questions about a stone, an order or a piece of jewellery? Send us a
-          note.
-        </p>
+        <span>{block?.subtitle}</span>
+        <h1>{block?.title || "Contact"}</h1>
+        <p className="product-description">{block?.body}</p>
+        {block?.image_url && (
+          <img
+            className="contact-hero-image"
+            src={block.image_url}
+            alt={block.title || "Contact"}
+          />
+        )}
       </section>
       <form
         className="contact-form"
@@ -58,7 +71,8 @@ export default function Contact() {
         {error && <p role="alert">{error}</p>}
         {notice && <p role="status">{notice}</p>}
         <button disabled={busy}>
-          {busy ? "SENDING…" : "SEND MESSAGE"} <ArrowRight />
+          {busy ? "SENDING…" : block?.cta_label || "SEND MESSAGE"}{" "}
+          <ArrowRight />
         </button>
       </form>
     </main>

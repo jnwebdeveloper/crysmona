@@ -1,3 +1,4 @@
+import { validOrder } from "../../shared/adminLists.js";
 import { randomUUID } from "node:crypto";
 import { admin } from "../auth/admin/index.js";
 import express from "express";
@@ -163,6 +164,42 @@ export async function saveProduct(
   }
 }
 
+app.put("/api/admin/:resource/reorder", admin, async (req, res) => {
+  const resource = String(req.params.resource),
+    ids = req.body.ids;
+  if (!resources[resource] || !validOrder(ids))
+    throw bad("Provide a complete ordered list of record IDs.");
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
+      "admin-order:" + resource,
+    ]);
+    const existing = (
+      await client.query(`SELECT id FROM ${resource} ORDER BY id FOR UPDATE`)
+    ).rows;
+    if (
+      existing.length !== ids.length ||
+      existing.some((row) => !ids.includes(row.id))
+    )
+      throw bad("The list changed. Refresh it before reordering.", 409);
+    await client.query("DELETE FROM admin_record_order WHERE resource=$1", [
+      resource,
+    ]);
+    await client.query(
+      "INSERT INTO admin_record_order(resource,record_id,position) SELECT $1,id,(ordinality-1)::int FROM unnest($2::int[]) WITH ORDINALITY AS t(id,ordinality)",
+      [resource, ids],
+    );
+    await client.query("COMMIT");
+    res.json({ ok: true });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+});
+
 for (const [table, definition] of Object.entries(resources)) {
   const validate = (body: any, create: boolean) => {
     const preliminary = adminValidation(table, body);
@@ -242,7 +279,14 @@ for (const [table, definition] of Object.entries(resources)) {
     return clean;
   };
   app.get("/api/admin/" + table, admin, async (_req, res) =>
-    res.json((await q(`SELECT * FROM ${table} ORDER BY id`)).rows),
+    res.json(
+      (
+        await q(
+          `SELECT t.*, COALESCE(o.position, ${definition.fields.some((f) => f.key === "sort_order") ? "t.sort_order" : "t.id"}) AS list_priority FROM ${table} t LEFT JOIN admin_record_order o ON o.resource=$1 AND o.record_id=t.id ORDER BY list_priority,t.id`,
+          [table],
+        )
+      ).rows,
+    ),
   );
   app.post("/api/admin/" + table, admin, async (req, res) => {
     const values = validate(req.body, true);

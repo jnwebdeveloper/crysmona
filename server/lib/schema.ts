@@ -1,9 +1,11 @@
+import { pageContent } from "../../shared/pageContent.js";
 import { q } from "./db.js";
 
 // Tables the API needs at runtime (guest identity, bags, guest wishlists, OTP send
 // log). This is the single definition: the API runs it on startup / Vercel cold
 // start, and `npm run db:setup` runs the same SQL. Every statement is idempotent.
 export const STATE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS admin_record_order (resource TEXT NOT NULL, record_id INTEGER NOT NULL, position INTEGER NOT NULL CHECK(position >= 0), PRIMARY KEY(resource,record_id));
 CREATE TABLE IF NOT EXISTS guest_sessions (
   token_hash TEXT PRIMARY KEY,
   expires_at TIMESTAMPTZ NOT NULL,
@@ -37,4 +39,11 @@ CREATE INDEX IF NOT EXISTS otp_sends_ip_idx ON otp_sends(ip_hash, sent_at);
 
 export async function ensureStateSchema() {
   await q(STATE_SCHEMA_SQL);
+  await q(
+    `INSERT INTO content_blocks(block_key,title,subtitle,body,image_url,cta_label,cta_url)
+    SELECT block_key,title,subtitle,body,image_url,cta_label,cta_url FROM jsonb_to_recordset($1::jsonb)
+    AS x(block_key text,title text,subtitle text,body text,image_url text,cta_label text,cta_url text)
+    ON CONFLICT(block_key) DO NOTHING`,
+    [JSON.stringify(pageContent)],
+  );
 }

@@ -11,15 +11,16 @@ export default function ProductGallery({
   product: Product;
   gemstone?: boolean;
 }) {
-  const [images, setImages] = useState<ProductImage[]>([]);
+  const [images, setImages] = useState<ProductImage[]>(product.images || []);
   const [selected, setSelected] = useState(0);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let current = true;
-    setImages([]);
+    setImages(product.images || []);
     setSelected(0);
     setError(false);
+    if (product.images?.length) return;
     api("/products/" + product.slug)
       .then((data) => {
         if (current) setImages(data.images || []);
@@ -30,7 +31,7 @@ export default function ProductGallery({
     return () => {
       current = false;
     };
-  }, [product.slug, product.image, attempt]);
+  }, [product.slug, product.image, product.images, attempt]);
   const gallery = [
     { image_url: product.image, alt_text: product.name },
     ...images,
@@ -39,7 +40,7 @@ export default function ProductGallery({
       image.image_url &&
       list.findIndex((item) => item.image_url === image.image_url) === index,
   );
-  const active = selected % gallery.length;
+  const active = selected % Math.max(1, gallery.length);
   const image = gallery[active];
   const move = (step: number) =>
     setSelected((active + step + gallery.length) % gallery.length);

@@ -1,3 +1,5 @@
+import { isDiscoverBlock, pageContent } from "../../shared/pageContent";
+import { listRecords, moveRecord } from "../../shared/adminLists";
 import {
   ArrowLeft,
   LayoutDashboard,
@@ -39,37 +41,38 @@ const label = (r: any) =>
   r.id;
 // Admin sections: [URL segment, admin resource, menu label, icon]. The section lives in
 // the URL (/admin/orders, /admin/customers, …) so a refresh or shared link reopens it.
-const NAV_GROUPS: { title: string; items: [string, string, string, any][] }[] = [
-  {
-    title: "STORE",
-    items: [
-      ["products", "products", "Products", Package],
-      ["categories", "categories", "Categories", Tags],
-      ["storefront", "content_blocks", "Storefront", PanelsTopLeft],
-      ["navigation", "navigation", "Header menu & submenus", PanelsTopLeft],
-      ["discover", "discover", "Discover pages", PanelsTopLeft],
-    ],
-  },
-  {
-    title: "COMMERCE",
-    items: [
-      ["orders", "orders", "Orders", ShoppingBag],
-      ["customers", "users", "Customers", Users],
-      ["discounts", "coupons", "Discounts", BadgePercent],
-    ],
-  },
-  {
-    title: "MARKETING",
-    items: [
-      ["seo", "seo_pages", "SEO", Search],
-      ["tracking", "site_settings", "Pixel & tracking", Settings],
-    ],
-  },
-  {
-    title: "SETTINGS",
-    items: [["settings", "settings", "Store settings", Settings]],
-  },
-];
+const NAV_GROUPS: { title: string; items: [string, string, string, any][] }[] =
+  [
+    {
+      title: "STORE",
+      items: [
+        ["products", "products", "Products", Package],
+        ["categories", "categories", "Categories", Tags],
+        ["storefront", "content_blocks", "Storefront", PanelsTopLeft],
+        ["navigation", "navigation", "Header menu & submenus", PanelsTopLeft],
+        ["discover", "discover", "Discover pages", PanelsTopLeft],
+      ],
+    },
+    {
+      title: "COMMERCE",
+      items: [
+        ["orders", "orders", "Orders", ShoppingBag],
+        ["customers", "users", "Customers", Users],
+        ["discounts", "coupons", "Discounts", BadgePercent],
+      ],
+    },
+    {
+      title: "MARKETING",
+      items: [
+        ["seo", "seo_pages", "SEO", Search],
+        ["tracking", "site_settings", "Pixel & tracking", Settings],
+      ],
+    },
+    {
+      title: "SETTINGS",
+      items: [["settings", "settings", "Store settings", Settings]],
+    },
+  ];
 const SECTION_TO_TAB = Object.fromEntries(
   NAV_GROUPS.flatMap((g) => g.items.map(([section, tab]) => [section, tab])),
 );
@@ -79,6 +82,11 @@ export default function AdminPage() {
   const { section = DEFAULT_SECTION } = useParams();
   const navigate = useNavigate();
   const tab = SECTION_TO_TAB[section] || SECTION_TO_TAB[DEFAULT_SECTION];
+  const [filterField, setFilterField] = useState(""),
+    [filterValue, setFilterValue] = useState(""),
+    [sortField, setSortField] = useState("list_priority"),
+    [sortDirection, setSortDirection] = useState("asc"),
+    [dragId, setDragId] = useState<number | null>(null);
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [connected, setConnected] = useState(false),
@@ -115,7 +123,8 @@ export default function AdminPage() {
   }, []);
   // Unknown section in the URL (e.g. /admin/xyz): replace it with the default.
   useEffect(() => {
-    if (!SECTION_TO_TAB[section]) navigate("/admin/" + DEFAULT_SECTION, { replace: true });
+    if (!SECTION_TO_TAB[section])
+      navigate("/admin/" + DEFAULT_SECTION, { replace: true });
   }, [section]);
   const login = async () => {
     setBusy(true);
@@ -143,7 +152,7 @@ export default function AdminPage() {
       ]);
       setRows(
         tab === "discover"
-          ? data.filter((r: any) => ["about", "craft"].includes(r.block_key))
+          ? data.filter((r: any) => isDiscoverBlock(r.block_key))
           : data,
       );
       setStats(summary);
@@ -165,6 +174,10 @@ export default function AdminPage() {
     if (connected) {
       setRows([]);
       setQuery("");
+      setFilterField("");
+      setFilterValue("");
+      setSortField("list_priority");
+      setSortDirection("asc");
       setNotice("");
       load();
     }
@@ -267,8 +280,11 @@ export default function AdminPage() {
     if (tab === "discover" && f.key === "block_key")
       return (
         <select value={value} onChange={(e) => change(e.target.value)}>
-          <option value="about">About Crysmona</option>
-          <option value="craft">Our Craft</option>
+          {pageContent.map((block) => (
+            <option key={block.block_key} value={block.block_key}>
+              {block.block_key}: {block.title}
+            </option>
+          ))}
         </select>
       );
     if (tab === "products" && f.key === "image_url")
@@ -406,6 +422,44 @@ export default function AdminPage() {
         )}
       </>
     );
+  };
+  const visibleRows = listRecords(
+    rows,
+    query,
+    filterField,
+    filterValue,
+    sortField,
+    sortDirection,
+  );
+  const filterFields = definition.fields.filter(
+    (f) => f.type !== "specs" && f.type !== "textarea",
+  );
+  const canReorder =
+    !busy &&
+    !query &&
+    !filterValue &&
+    sortField === "list_priority" &&
+    sortDirection === "asc" &&
+    tab !== "discover";
+  const reorder = async (from: number, to: number) => {
+    if (!canReorder || from === to) return;
+    const next = moveRecord(visibleRows, from, to);
+    setBusy(true);
+    setError("");
+    try {
+      await request(resource + "/reorder", {
+        method: "PUT",
+        body: JSON.stringify({ ids: next.map((row) => row.id) }),
+      });
+      setRows(next.map((row, list_priority) => ({ ...row, list_priority })));
+      await refresh();
+      setNotice("Listing priority saved.");
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setBusy(false);
+      setDragId(null);
+    }
   };
   if (!connected)
     return (
@@ -560,6 +614,80 @@ export default function AdminPage() {
             {error}
           </p>
         )}
+        <div className="admin-list-controls">
+          <label>
+            Filter by
+            <select
+              value={filterField}
+              onChange={(e) => {
+                setFilterField(e.target.value);
+                setFilterValue("");
+              }}
+            >
+              <option value="">All records</option>
+              {filterFields.map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {filterField && (
+            <label>
+              Value
+              <select
+                value={filterValue}
+                onChange={(e) => setFilterValue(e.target.value)}
+              >
+                <option value="">All values</option>
+                {Array.from(
+                  new Set(rows.map((row) => String(row[filterField] ?? ""))),
+                )
+                  .filter(Boolean)
+                  .sort()
+                  .map((value) => (
+                    <option key={value} value={value}>
+                      {value === "true"
+                        ? "Yes"
+                        : value === "false"
+                          ? "No"
+                          : value}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
+          <label>
+            Sort by
+            <select
+              value={sortField}
+              onChange={(e) => setSortField(e.target.value)}
+            >
+              <option value="list_priority">Listing priority</option>
+              <option value="id">Date added</option>
+              {filterFields.map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Direction
+            <select
+              value={sortDirection}
+              onChange={(e) => setSortDirection(e.target.value)}
+            >
+              <option value="asc">Ascending</option>
+              <option value="desc">Descending</option>
+            </select>
+          </label>
+        </div>
+        <p className="admin-note">
+          Drag a row or use the arrow buttons to save listing priority. Clear
+          filters and search, and sort by listing priority ascending first.
+          Discover section order can be changed in Storefront.
+        </p>
         <div className="studio-toolbar">
           <label>
             <Search />
@@ -603,91 +731,119 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {rows
-                .filter((r) =>
-                  JSON.stringify(r).toLowerCase().includes(query.toLowerCase()),
-                )
-                .map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <div className="admin-record">
-                        {r.image_url && <img src={r.image_url} alt="" />}
-                        <div>
-                          <b>{label(r)}</b>
-                          {r.slug && <small>{r.slug}</small>}
-                        </div>
+              {visibleRows.map((r, index) => (
+                <tr
+                  key={r.id}
+                  draggable={canReorder}
+                  onDragStart={(e) => {
+                    setDragId(r.id);
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", String(r.id));
+                  }}
+                  onDragEnd={() => setDragId(null)}
+                  onDragOver={(e) => {
+                    if (canReorder) e.preventDefault();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragId !== null) void reorder(dragId, r.id);
+                  }}
+                >
+                  <td>
+                    <div className="admin-record">
+                      {r.image_url && <img src={r.image_url} alt="" />}
+                      <div>
+                        <b>{label(r)}</b>
+                        {r.slug && <small>{r.slug}</small>}
                       </div>
-                    </td>
-                    <td>
-                      {r.price_cents !== undefined
-                        ? "$" +
-                          (r.price_cents / 100).toLocaleString("en-US") +
-                          " · " +
-                          r.stock_qty +
-                          " in stock"
-                        : r.message ||
-                          r.description ||
-                          r.url ||
-                          r.value ||
-                          r.setting_value ||
-                          r.path ||
-                          r.phone ||
-                          r.product_id ||
-                          "—"}
-                    </td>
-                    <td>
-                      <span className="admin-pill">
-                        {r.status ||
-                          r.payment_status ||
-                          (r.active === false ? "Hidden" : "Active")}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="admin-actions">
-                        {tab === "orders" && (
-                          <button
-                            onClick={async () => {
-                              setError("");
-                              try {
-                                setOrderDetail(
-                                  await request("orders/" + r.id + "/detail"),
-                                );
-                              } catch (e: any) {
-                                setError(e.message);
-                              }
-                            }}
-                          >
-                            View details
-                          </button>
-                        )}
+                    </div>
+                  </td>
+                  <td>
+                    {r.price_cents !== undefined
+                      ? "$" +
+                        (r.price_cents / 100).toLocaleString("en-US") +
+                        " · " +
+                        r.stock_qty +
+                        " in stock"
+                      : r.message ||
+                        r.description ||
+                        r.url ||
+                        r.value ||
+                        r.setting_value ||
+                        r.path ||
+                        r.phone ||
+                        r.product_id ||
+                        "—"}
+                  </td>
+                  <td>
+                    <span className="admin-pill">
+                      {r.status ||
+                        r.payment_status ||
+                        (r.active === false ? "Hidden" : "Active")}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="admin-actions">
+                      <button
+                        aria-label={"Move " + label(r) + " up"}
+                        disabled={!canReorder || index === 0}
+                        onClick={() => reorder(r.id, visibleRows[index - 1].id)}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        aria-label={"Move " + label(r) + " down"}
+                        disabled={
+                          !canReorder || index === visibleRows.length - 1
+                        }
+                        onClick={() => reorder(r.id, visibleRows[index + 1].id)}
+                      >
+                        ↓
+                      </button>
+                      {tab === "orders" && (
                         <button
-                          aria-label={"Edit " + label(r)}
-                          onClick={() => open(r)}
+                          onClick={async () => {
+                            setError("");
+                            try {
+                              setOrderDetail(
+                                await request("orders/" + r.id + "/detail"),
+                              );
+                            } catch (e: any) {
+                              setError(e.message);
+                            }
+                          }}
                         >
-                          <Pencil /> Edit
+                          View details
                         </button>
-                        {!["orders", "users"].includes(tab) && (
-                          <button
-                            className="danger"
-                            aria-label={"Delete " + label(r)}
-                            onClick={() => {
-                              setError("");
-                              setRemoving(r);
-                            }}
-                          >
-                            <Trash2 /> Delete
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      )}
+                      <button
+                        aria-label={"Edit " + label(r)}
+                        onClick={() => open(r)}
+                      >
+                        <Pencil /> Edit
+                      </button>
+                      {!["orders", "users"].includes(tab) && (
+                        <button
+                          className="danger"
+                          aria-label={"Delete " + label(r)}
+                          onClick={() => {
+                            setError("");
+                            setRemoving(r);
+                          }}
+                        >
+                          <Trash2 /> Delete
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
-          {!rows.length && (
+          {!visibleRows.length && (
             <div className="admin-empty">
               <LayoutDashboard />
-              <h2>{busy ? "Loading records…" : "No records yet"}</h2>
+              <h2>{busy ? "Loading records…" : "No matching records"}</h2>
               <p>Add the first record to this section.</p>
             </div>
           )}

@@ -17,4 +17,5 @@ export const dto = (p: any) => ({
   kind: p.kind,
   specifications: p.specifications || {},
   stockQty: p.stock_qty,
+  images: p.images || [],
 });
