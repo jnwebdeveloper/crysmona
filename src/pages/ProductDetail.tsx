@@ -4,11 +4,8 @@ import {
   ArrowRight,
   Minus,
   Plus,
-  RotateCcw,
-  ShieldCheck,
   ShoppingBag,
   Star,
-  Truck,
 } from "lucide-react";
 
 import { go as navTo, useStore } from "../lib/Store";
@@ -108,16 +105,6 @@ export default function ProductDetail({ product }: { product: Product }) {
           >
             BUY IT NOW
           </button>
-          <div className="pdp-perks">
-            <span>
-              <RotateCcw />
-              7-day easy returns
-            </span>
-            <span>
-              <ShieldCheck />
-              Authenticity assured
-            </span>
-          </div>
         </article>
       </section>
       {Object.keys(product.specifications || {}).length > 0 && (
