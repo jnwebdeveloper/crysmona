@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import Loader from "../components/Loader";
 import { Field, resources } from "../../shared/adminSchema";
 import { adminValidation } from "../../shared/adminValidation";
@@ -36,11 +37,51 @@ const label = (r: any) =>
   r.code ||
   r.author ||
   r.id;
+// Admin sections: [URL segment, admin resource, menu label, icon]. The section lives in
+// the URL (/admin/orders, /admin/customers, …) so a refresh or shared link reopens it.
+const NAV_GROUPS: { title: string; items: [string, string, string, any][] }[] = [
+  {
+    title: "STORE",
+    items: [
+      ["products", "products", "Products", Package],
+      ["categories", "categories", "Categories", Tags],
+      ["storefront", "content_blocks", "Storefront", PanelsTopLeft],
+      ["navigation", "navigation", "Header menu & submenus", PanelsTopLeft],
+      ["discover", "discover", "Discover pages", PanelsTopLeft],
+    ],
+  },
+  {
+    title: "COMMERCE",
+    items: [
+      ["orders", "orders", "Orders", ShoppingBag],
+      ["customers", "users", "Customers", Users],
+      ["discounts", "coupons", "Discounts", BadgePercent],
+    ],
+  },
+  {
+    title: "MARKETING",
+    items: [
+      ["seo", "seo_pages", "SEO", Search],
+      ["tracking", "site_settings", "Pixel & tracking", Settings],
+    ],
+  },
+  {
+    title: "SETTINGS",
+    items: [["settings", "settings", "Store settings", Settings]],
+  },
+];
+const SECTION_TO_TAB = Object.fromEntries(
+  NAV_GROUPS.flatMap((g) => g.items.map(([section, tab]) => [section, tab])),
+);
+const DEFAULT_SECTION = "products";
+
 export default function AdminPage() {
+  const { section = DEFAULT_SECTION } = useParams();
+  const navigate = useNavigate();
+  const tab = SECTION_TO_TAB[section] || SECTION_TO_TAB[DEFAULT_SECTION];
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [connected, setConnected] = useState(false),
-    [tab, setTab] = useState("products"),
     [rows, setRows] = useState<any[]>([]),
     [stats, setStats] = useState<any>(null),
     [editing, setEditing] = useState<any>(null),
@@ -72,6 +113,10 @@ export default function AdminPage() {
       .then(() => load())
       .catch(() => {});
   }, []);
+  // Unknown section in the URL (e.g. /admin/xyz): replace it with the default.
+  useEffect(() => {
+    if (!SECTION_TO_TAB[section]) navigate("/admin/" + DEFAULT_SECTION, { replace: true });
+  }, [section]);
   const login = async () => {
     setBusy(true);
     setError("");
@@ -427,46 +472,17 @@ export default function AdminPage() {
         <img src="/assets/crysmona-logo-cropped.png" alt="Crysmona" />
         <b>STOREFRONT STUDIO</b>
         <nav className="admin-nav" aria-label="Admin navigation">
-          {[
-            {
-              title: "STORE",
-              items: [
-                ["products", "Products", Package],
-                ["categories", "Categories", Tags],
-                ["content_blocks", "Storefront", PanelsTopLeft],
-                ["navigation", "Header menu & submenus", PanelsTopLeft],
-                ["discover", "Discover pages", PanelsTopLeft],
-              ],
-            },
-            {
-              title: "COMMERCE",
-              items: [
-                ["orders", "Orders", ShoppingBag],
-                ["users", "Customers", Users],
-                ["coupons", "Discounts", BadgePercent],
-              ],
-            },
-            {
-              title: "MARKETING",
-              items: [
-                ["seo_pages", "SEO", Search],
-                ["site_settings", "Pixel & tracking", Settings],
-              ],
-            },
-            {
-              title: "SETTINGS",
-              items: [["settings", "Store settings", Settings]],
-            },
-          ].map((group) => (
+          {NAV_GROUPS.map((group) => (
             <section className="admin-nav-group" key={group.title}>
               <span>{group.title}</span>
-              {group.items.map(([id, name, Icon]: any) => (
+              {group.items.map(([id, itemTab, name, Icon]) => (
                 <button
                   key={id}
-                  className={tab === id ? "active" : ""}
+                  className={tab === itemTab ? "active" : ""}
+                  aria-current={tab === itemTab ? "page" : undefined}
                   onClick={() => {
-                    setTab(id);
                     setEditing(null);
+                    navigate("/admin/" + id);
                   }}
                 >
                   <Icon /> <em>{name}</em>

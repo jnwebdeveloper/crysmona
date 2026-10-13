@@ -56,7 +56,7 @@ export default function App() {
       <NavigationEffects />
       <Routes>
         <Route
-          path="admin"
+          path="admin/:section?"
           element={
             <Suspense
               fallback={
