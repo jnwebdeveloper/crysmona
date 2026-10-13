@@ -4,7 +4,9 @@ import { log } from "../lib/logger.js";
 
 // PayPal Orders v2 REST client. Every call sends a PayPal-Request-Id, so retrying
 // the same operation (same requestId) returns PayPal's original result instead of
-// charging or refunding twice.
+// charging or refunding twice. Request ids must be unique across every database that
+// shares the PayPal app (local, preview, production, and the same database after a
+// reset), so they are built from the random order number, never the numeric order id.
 export const paypalReady = () =>
   Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
 
@@ -97,7 +99,14 @@ async function call(path: string, body: unknown, requestId?: string, method = "P
 }
 
 // Creates a PayPal order and returns its id and the URL the customer approves at.
-export async function createPayPalOrder(orderId: string, amount: string, origin: string) {
+// custom_id carries the customer-facing order number so a payment can be found in the
+// PayPal dashboard by the number on the customer's receipt.
+export async function createPayPalOrder(
+  orderId: string,
+  orderNumber: string,
+  amount: string,
+  origin: string,
+) {
   const result = await call(
     "/v2/checkout/orders",
     {
@@ -105,7 +114,7 @@ export async function createPayPalOrder(orderId: string, amount: string, origin:
       purchase_units: [
         {
           reference_id: orderId,
-          custom_id: orderId,
+          custom_id: orderNumber,
           amount: { currency_code: "USD", value: amount },
         },
       ],
@@ -120,7 +129,7 @@ export async function createPayPalOrder(orderId: string, amount: string, origin:
         },
       },
     },
-    orderId,
+    orderNumber + "-create",
   );
   const approveUrl: string | undefined = result.links?.find(
     (l: any) => l.rel === "payer-action" || l.rel === "approve",

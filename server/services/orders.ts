@@ -192,6 +192,7 @@ export async function placeOrder(input: {
     const origin = process.env.WEB_ORIGIN || "http://localhost:5173";
     const { paypalOrderId, approveUrl } = await createPayPalOrder(
       String(order.id),
+      order.order_number,
       order.paypal_amount,
       origin,
     );
@@ -339,7 +340,7 @@ export async function capturePayment(input: {
   const outcome =
     o.payment_status === "under_review" && o.paypal_capture_id
       ? await getPayPalCapture(o.paypal_capture_id, o.paypal_amount)
-      : await capturePayPalOrder(o.paypal_order_id, o.paypal_amount, o.id + "-capture");
+      : await capturePayPalOrder(o.paypal_order_id, o.paypal_amount, o.order_number + "-capture");
 
   if (outcome.state === "pending") {
     await markCaptureUnderReview(o.id, outcome.captureId, outcome.reason);
@@ -437,7 +438,7 @@ export async function cancelOrder(input: { orderNumber: string; userId: number; 
       ({ refundId } = await refundPayPalCapture(
         o.paypal_capture_id,
         (o.total_cents / 100).toFixed(2),
-        o.id + "-refund",
+        o.order_number + "-refund",
       ));
     } catch (error) {
       await q("UPDATE orders SET refund_status='failed',updated_at=now() WHERE id=$1", [o.id]);
