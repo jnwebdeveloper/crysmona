@@ -1,3 +1,4 @@
+import ProductShare from "./ProductShare";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../lib/Store";
@@ -52,6 +53,7 @@ export default function ProductGallery({
           product={product}
           className={gemstone ? "heart" : "pdp-heart"}
         />
+        <ProductShare name={product.name} slug={product.slug} />
         {gallery.length > 1 && (
           <>
             <button

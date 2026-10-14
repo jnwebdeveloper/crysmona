@@ -1,4 +1,3 @@
-import ProductShare from "../components/ProductShare";
 import { ArrowRight, Gem, Heart, Minus, Plus, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { go, useStore } from "../lib/Store";
@@ -38,7 +37,6 @@ export default function GemstoneDetail({ product }: { product: Product }) {
         <article className="gem-detail-info">
           <span className="eyebrow">THE GEMSTONE COLLECTION</span>
           <h1>{product.name}</h1>
-          <ProductShare name={product.name} slug={product.slug} />
           <p className="gem-subtitle">
             {product.specifications?.["Gemstone Shape"] || "Distinctive stones"}{" "}
             · {product.specifications?.["Gemstone Type"] || "Cabochon"}

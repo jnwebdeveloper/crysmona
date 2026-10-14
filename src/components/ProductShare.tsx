@@ -17,7 +17,7 @@ export default function ProductShare({ name, slug }: { name: string; slug: strin
     } finally { setBusy(false); }
   };
   return <div className="product-share">
-    <button type="button" onClick={share} disabled={busy}><Share2 />Share</button>
+    <button type="button" aria-label="Share product" title="Share product" onClick={share} disabled={busy}><Share2 /></button>
     {message && <p role="status">{message}</p>}
     {fallback && <input aria-label="Product link to share" value={fallback} readOnly onFocus={e => e.target.select()} />}
   </div>;
