@@ -8,7 +8,7 @@ export default function Checkout() {
   const { user } = useStore();
   const { items, clear: onComplete } = useCart();
   const { openLogin: onLogin } = useUi();
-  const [method, setMethod] = useState("cod"),
+  const [method, setMethod] = useState("paypal"),
     [config, setConfig] = useState<any>(null),
     [quote, setQuote] = useState<any>(null),
     [coupon, setCoupon] = useState(""),
@@ -160,22 +160,7 @@ export default function Checkout() {
             </fieldset>
             <fieldset>
               <legend>Payment method</legend>
-              <label
-                className={
-                  "payment-choice " + (method === "cod" ? "selected" : "")
-                }
-              >
-                <input
-                  type="radio"
-                  name="payment"
-                  checked={method === "cod"}
-                  onChange={() => setMethod("cod")}
-                />
-                <span>
-                  <b>Cash on delivery</b>
-                  <small>Pay when your order arrives.</small>
-                </span>
-              </label>
+              {/* Cash on delivery is temporarily hidden. PayPal is the default. */}
               <label
                 className={
                   "payment-choice " + (method === "paypal" ? "selected" : "")
@@ -195,7 +180,7 @@ export default function Checkout() {
                   <small>
                     {config?.available
                       ? "Continue to PayPal to approve your payment."
-                      : "PayPal is currently unavailable. Please use cash on delivery."}
+                      : "PayPal is currently unavailable. Please try again later or contact us."}
                   </small>
                 </span>
               </label>

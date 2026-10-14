@@ -723,7 +723,7 @@ export default function AdminPage() {
                 setQuery("");
               }}
             >
-              Listing priority / reorder
+              Reset
             </button>
             {reordering && <span role="status">Saving order…</span>}
           </div>

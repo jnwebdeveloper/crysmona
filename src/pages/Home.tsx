@@ -143,7 +143,7 @@ export default function Home() {
           Timeless designs for every occasion. Find the perfect piece to express
           your style.
         </p>
-        <div className="jewellery-row">
+        <div className="jewellery-row" role="region" aria-label="Jewellery categories, scroll to explore" tabIndex={0}>
           {(store.categories.length
             ? store.categories
                 .filter((c: any) => c.type === "jewellery")

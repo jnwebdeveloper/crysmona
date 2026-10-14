@@ -67,7 +67,7 @@ export default function OrdersPage() {
                   <span>TOTAL</span>
                   <b>${o.total.toLocaleString("en-US")}</b>
                 </div>
-                <div className="order-card-actions"><em>{o.status}</em><button onClick={()=>navTo("/orders/"+encodeURIComponent(o.id))}>VIEW DETAILS <ArrowRight /></button></div>
+                <div className="order-card-actions"><em>{o.status.replace(/_/g, " ").replace(/^./, c => c.toUpperCase())}</em><button onClick={()=>navTo("/orders/"+encodeURIComponent(o.id))}>View details</button></div>
               </header>
               {o.items.map((i) => (
                 <div className="order-item" key={i.product.slug}>

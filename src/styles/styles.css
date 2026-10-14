@@ -4058,3 +4058,44 @@ html {
 
 .admin-column-sort { background: transparent; color: inherit; border: 0; padding: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; text-align: left; }
 .admin-column-sort:focus-visible { outline: 2px solid #a47835; outline-offset: 5px; }
+
+/* Consistent storefront actions and horizontally scrolling categories. */
+.order-card .order-card-actions em,
+.order-card .order-card-actions button {
+  background: #9a6c34; color: #fff; border: 0; border-radius: 0;
+  font: 700 12px Montserrat, sans-serif; font-style: normal;
+  padding: 10px 14px; min-height: 36px; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center;
+  letter-spacing: normal; text-transform: none;
+}
+#home a, #home a:visited { color: inherit; }
+#home .jewellery-row { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 24px; padding-bottom: 18px; scroll-snap-type: x proximity; }
+#home .jewellery-row > article { flex: 0 0 clamp(220px, 24vw, 320px); min-width: 0; scroll-snap-align: start; }
+.product-share { margin: 12px 0; }
+.product-share button { display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid #b89a74; padding: 9px 14px; color: #6f4b28; font: inherit; cursor: pointer; }
+.product-share svg { width: 17px; height: 17px; }
+.product-share p { font-size: 13px; margin: 8px 0; }
+.product-share input { width: 100%; padding: 8px; }
+
+/* Admin dropdowns use the same typography as the surrounding interface. */
+.admin-page select,
+.admin-page select option {
+  font-family: Montserrat, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink);
+}
+.admin-list-controls { align-items: flex-end; }
+.admin-list-controls select,
+.admin-list-controls > button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid #d7c8b6;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 14px/1.5 Montserrat, Arial, sans-serif;
+}
+.admin-list-controls > button:hover { border-color: var(--gold); }
+.admin-list-controls select:focus-visible,
+.admin-list-controls > button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

@@ -1,3 +1,4 @@
+import ProductShare from "../components/ProductShare";
 import { useState } from "react";
 
 import {
@@ -48,6 +49,7 @@ export default function ProductDetail({ product }: { product: Product }) {
         <article className="pdp-info">
           <span>CRYSMONA SIGNATURE</span>
           <h1>{product.name}</h1>
+          <ProductShare name={product.name} slug={product.slug} />
           <strong>{product.price}</strong>
           <p className="product-description">{product.description}</p>
           <div className="pdp-meta">
