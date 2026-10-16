@@ -1,5 +1,9 @@
 import express from "express";
-import { admin, adminAuthService, adminRepository } from "../auth/admin/index.js";
+import {
+  admin,
+  adminAuthService,
+  adminRepository,
+} from "../auth/admin/index.js";
 import {
   clearSessionCookie,
   readSessionToken,
@@ -20,7 +24,10 @@ router.post("/api/admin/auth/login", async (req, res) => {
       readSessionToken(req.headers.cookie),
     );
     setSessionCookie(res, session.token);
-    log.info("admin signed in", { requestId: (req as any).id, admin: session.email });
+    log.info("admin signed in", {
+      requestId: (req as any).id,
+      admin: session.email,
+    });
     res.json({ email: session.email });
   } catch (error) {
     // Failed admin logins are a security signal; the attempted password is never logged.
@@ -37,6 +44,21 @@ router.post("/api/admin/auth/login", async (req, res) => {
 router.get("/api/admin/auth/me", admin, (req, res) =>
   res.json({ email: req.adminAccount!.email }),
 );
+router.post("/api/admin/auth/password", admin, async (req, res) => {
+  if (!req.is("application/json"))
+    throw bad("Send the password change as JSON.", 415);
+  await adminAuthService.changePassword(
+    req.adminAccount!,
+    req.body,
+    clientIp(req),
+    req.adminTokenHash!,
+  );
+  log.info("admin password changed", {
+    requestId: (req as any).id,
+    admin: req.adminAccount!.email,
+  });
+  res.json({ ok: true });
+});
 router.post("/api/admin/auth/logout", admin, async (req, res) => {
   await adminRepository.deleteSession(req.adminTokenHash!);
   clearSessionCookie(res);

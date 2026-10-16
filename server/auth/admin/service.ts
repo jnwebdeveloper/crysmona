@@ -6,10 +6,11 @@ import {
   verifyPassword,
 } from "./password.js";
 import { hashToken, newSessionToken } from "./cookies.js";
-import type { AdminRepository } from "./repository.js";
+import type { AdminRepository, SessionAccount } from "./repository.js";
 import {
   normalizeEmail,
   parseLogin,
+  parsePasswordChange,
   validateNewPassword,
 } from "./validation.js";
 
@@ -49,6 +50,36 @@ export function createAdminAuthService(
       );
       if (!issued) throw bad("Email or password is incorrect.", 401);
       return { email: account.email, token };
+    },
+    async changePassword(
+      account: SessionAccount,
+      body: unknown,
+      ip: string,
+      tokenHash: string,
+    ) {
+      const { currentPassword, newPassword } = parsePasswordChange(body);
+      // Shares the login limiter so a stolen session cannot brute-force the current password.
+      await limitLogin(ip, account.email);
+      const stored = await repository.findByEmail(account.email);
+      if (
+        !stored?.active ||
+        !(await verifyPassword(currentPassword, stored.password_hash))
+      )
+        throw bad("Current password is incorrect.", 400);
+      validateNewPassword(newPassword);
+      if (newPassword === currentPassword)
+        throw bad("Choose a new password that differs from the current one.");
+      const changed = await repository.changePassword(
+        stored.id,
+        stored.password_hash,
+        await hashPassword(newPassword),
+        tokenHash,
+      );
+      if (!changed)
+        throw bad(
+          "Your password was changed elsewhere. Please try again.",
+          409,
+        );
     },
     async createAccount(emailInput: unknown, password: string) {
       const email = normalizeEmail(emailInput);

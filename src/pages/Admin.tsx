@@ -9,6 +9,7 @@ import {
   Users,
   PanelsTopLeft,
   BadgePercent,
+  KeyRound,
   Settings,
   Pencil,
   Plus,
@@ -109,7 +110,13 @@ export default function AdminPage() {
     [lookups, setLookups] = useState<Record<string, any[]>>({}),
     [orderDetail, setOrderDetail] = useState<any>(null),
     [fieldErrors, setFieldErrors] = useState<Record<string, string>>({}),
-    [maxImageBytes, setMaxImageBytes] = useState(8 * 1024 * 1024);
+    [maxImageBytes, setMaxImageBytes] = useState(8 * 1024 * 1024),
+    [passwordForm, setPasswordForm] = useState<{
+      current: string;
+      next: string;
+      confirm: string;
+      error: string;
+    } | null>(null);
   const { refresh } = useStore();
   const resource = tab === "discover" ? "content_blocks" : tab;
   const definition =
@@ -146,6 +153,28 @@ export default function AdminPage() {
       await load();
     } catch (error: any) {
       setError(error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const changePassword = async () => {
+    if (!passwordForm) return;
+    const { current, next, confirm } = passwordForm;
+    if (next !== confirm)
+      return setPasswordForm({
+        ...passwordForm,
+        error: "The new passwords do not match.",
+      });
+    setBusy(true);
+    try {
+      await request("auth/password", {
+        method: "POST",
+        body: JSON.stringify({ currentPassword: current, newPassword: next }),
+      });
+      setPasswordForm(null);
+      setNotice("Password changed. Other devices have been signed out.");
+    } catch (error: any) {
+      setPasswordForm({ ...passwordForm, error: error.message });
     } finally {
       setBusy(false);
     }
@@ -610,6 +639,13 @@ export default function AdminPage() {
             <ArrowLeft /> <em>View storefront</em>
           </button>
           <button
+            onClick={() =>
+              setPasswordForm({ current: "", next: "", confirm: "", error: "" })
+            }
+          >
+            <KeyRound /> <em>Change password</em>
+          </button>
+          <button
             onClick={async () => {
               try {
                 await request("auth/logout", { method: "POST" });
@@ -617,6 +653,7 @@ export default function AdminPage() {
                 setPassword("");
                 setEditing(null);
                 setRemoving(null);
+                setPasswordForm(null);
               } catch (error: any) {
                 setError(error.message);
               }
@@ -1105,6 +1142,63 @@ export default function AdminPage() {
               </p>
             </div>
           </section>
+        </div>
+      )}
+      {passwordForm && (
+        <div className="admin-modal">
+          <form
+            className="delete-dialog password-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Change password"
+            onSubmit={(e) => {
+              e.preventDefault();
+              changePassword();
+            }}
+          >
+            <KeyRound />
+            <h2>Change password</h2>
+            <p>
+              Use at least 15 characters. Other devices signed in to this
+              account will be signed out.
+            </p>
+            {(
+              [
+                ["current", "Current password", "current-password"],
+                ["next", "New password", "new-password"],
+                ["confirm", "Confirm new password", "new-password"],
+              ] as const
+            ).map(([key, text, autoComplete]) => (
+              <label key={key}>
+                {text}
+                <input
+                  required
+                  type="password"
+                  minLength={key === "current" ? undefined : 15}
+                  autoComplete={autoComplete}
+                  value={passwordForm[key]}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      [key]: e.target.value,
+                      error: "",
+                    })
+                  }
+                />
+              </label>
+            ))}
+            {passwordForm.error && (
+              <p className="form-error" role="alert">
+                {passwordForm.error}
+              </p>
+            )}
+            <div>
+              <button type="button" onClick={() => setPasswordForm(null)}>
+                Cancel
+              </button>
+              <button disabled={busy}>Update password</button>
+            </div>
+          </form>
         </div>
       )}
       {removing && (

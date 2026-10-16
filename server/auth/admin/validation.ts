@@ -23,6 +23,23 @@ export function validateNewPassword(value: unknown): asserts value is string {
   }
 }
 
+export function parsePasswordChange(body: unknown): {
+  currentPassword: string;
+  newPassword: unknown;
+} {
+  const { currentPassword, newPassword } = (
+    body && typeof body === "object" ? body : {}
+  ) as Record<string, unknown>;
+  if (
+    typeof currentPassword !== "string" ||
+    !currentPassword ||
+    currentPassword.length > MAX_PASSWORD_LENGTH
+  ) {
+    throw bad("Enter your current password.");
+  }
+  return { currentPassword, newPassword };
+}
+
 export function parseLogin(body: unknown): { email: string; password: string } {
   if (!body || typeof body !== "object")
     throw bad("Enter a valid email and password.");

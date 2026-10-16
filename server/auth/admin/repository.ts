@@ -87,6 +87,39 @@ export function createAdminRepository(database: Pool) {
         client.release();
       }
     },
+    async changePassword(
+      adminId: number,
+      verifiedHash: string,
+      passwordHash: string,
+      keepTokenHash: string,
+    ): Promise<boolean> {
+      const client = await database.connect();
+      try {
+        await client.query("BEGIN");
+        // Only update the hash the current password was verified against; a concurrent
+        // reset or change wins and this request must be retried.
+        const result = await client.query<{ id: number }>(
+          "UPDATE admin_accounts SET password_hash = $1 WHERE id = $2 AND password_hash = $3 AND active = true RETURNING id",
+          [passwordHash, adminId, verifiedHash],
+        );
+        if (!result.rows[0]) {
+          await client.query("ROLLBACK");
+          return false;
+        }
+        // Sign out every other device; the session that made the change stays signed in.
+        await client.query(
+          "DELETE FROM admin_sessions WHERE admin_id = $1 AND token_hash <> $2",
+          [adminId, keepTokenHash],
+        );
+        await client.query("COMMIT");
+        return true;
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
     async resetPassword(email: string, passwordHash: string): Promise<boolean> {
       const client = await database.connect();
       try {
