@@ -56,17 +56,11 @@ export default function ProductDetail({ product }: { product: Product }) {
             <b>Metal</b>
             <span>{product.metal || "—"}</span>
           </div>
-          <p
-            className={
-              (product.stockQty ?? 0) <= 0
-                ? "stock-status sold-out"
-                : "stock-status"
-            }
-          >
-            {(product.stockQty ?? 0) <= 0
-              ? "This piece has found its home. Discover another favourite below."
-              : `${product.stockQty} available`}
-          </p>
+          {(product.stockQty ?? 0) <= 0 && (
+            <p className="stock-status sold-out">
+              This piece has found its home. Discover another favourite below.
+            </p>
+          )}
           <div className="qty">
             <span>Quantity</span>
             <div>

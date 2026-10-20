@@ -1,6 +1,6 @@
 import ProductShare from "./ProductShare";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { api } from "../lib/Store";
 import { WishButton } from "./WishButton";
 import { Product } from "../lib/model";
@@ -16,6 +16,8 @@ export default function ProductGallery({
   const [selected, setSelected] = useState(0);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // Hover zoom: the cursor position becomes the transform origin.
+  const [zoom, setZoom] = useState<string | null>(null);
   useEffect(() => {
     let current = true;
     setImages(product.images || []);
@@ -45,10 +47,26 @@ export default function ProductGallery({
   const image = gallery[active];
   const move = (step: number) =>
     setSelected((active + step + gallery.length) % gallery.length);
+  const trackZoom = (event: React.MouseEvent<HTMLDivElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - box.left) / box.width) * 100;
+    const y = ((event.clientY - box.top) / box.height) * 100;
+    setZoom(`${x}% ${y}%`);
+  };
   return (
     <div className="product-gallery">
       <div className={gemstone ? "gem-detail-image" : "pdp-main-image"}>
-        <img src={image?.image_url} alt={image?.alt_text || product.name} />
+        <div
+          className={zoom ? "gallery-zoom zoomed" : "gallery-zoom"}
+          onMouseMove={trackZoom}
+          onMouseLeave={() => setZoom(null)}
+        >
+          <img
+            src={image?.image_url}
+            alt={image?.alt_text || product.name}
+            style={zoom ? { transformOrigin: zoom } : undefined}
+          />
+        </div>
         <WishButton
           product={product}
           className={gemstone ? "heart" : "pdp-heart"}

@@ -58,17 +58,11 @@ export default function GemstoneDetail({ product }: { product: Product }) {
               </span>
             </div>
           )}
-          <p
-            className={
-              (product.stockQty ?? 0) <= 0
-                ? "stock-status sold-out"
-                : "stock-status"
-            }
-          >
-            {(product.stockQty ?? 0) <= 0
-              ? "This collection has found its home. Save it to your wishlist and check back soon."
-              : `${product.stockQty} available`}
-          </p>
+          {(product.stockQty ?? 0) <= 0 && (
+            <p className="stock-status sold-out">
+              This collection has found its home. Save it to your wishlist and check back soon.
+            </p>
+          )}
           <div className="gem-buy-row">
             <div className="gem-quantity">
               <button
