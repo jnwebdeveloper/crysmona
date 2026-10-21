@@ -8,6 +8,7 @@ import { bad } from "../lib/errors.js";
 import { pool, q } from "../lib/db.js";
 import { expireUnpaidOrders } from "../services/orders.js";
 import { paypalReady } from "../services/paypal.js";
+import { claimMedia, MediaFolder } from "../services/storage.js";
 const app = express.Router();
 app.get("/api/admin/dashboard", admin, async (_req, res) => {
   await expireUnpaidOrders();
@@ -133,6 +134,7 @@ export async function saveProduct(
     values.slug = base + "-" + randomUUID().slice(0, 8);
   }
   const client = await pool.connect();
+  let claimed: Awaited<ReturnType<typeof claimMedia>> | undefined;
   try {
     await client.query("BEGIN");
     const keys = Object.keys(values);
@@ -145,15 +147,35 @@ export async function saveProduct(
           `INSERT INTO products(${keys.join(",")}) VALUES(${keys.map((_, i) => "$" + (i + 1)).join(",")}) RETURNING *`,
           Object.values(values),
         );
-    const product = result.rows[0];
+    let product = result.rows[0];
     if (!product) throw bad("Product not found.", 404);
+    // Media uploaded before a new product had an ID is renamed to include it.
+    claimed = await claimMedia(
+      "products",
+      [
+        product.image_url,
+        ...(Array.isArray(images) ? images.map((image: any) => image.media_url) : []),
+      ],
+      product.id,
+    );
+    const renamed = claimed.renamed;
+    if (renamed.has(product.image_url))
+      product = (
+        await client.query(
+          "UPDATE products SET image_url=$1 WHERE id=$2 RETURNING *",
+          [renamed.get(product.image_url), product.id],
+        )
+      ).rows[0];
     if (Array.isArray(images)) {
       await client.query("DELETE FROM product_images WHERE product_id=$1", [
         product.id,
       ]);
       const gallery: any[] = [
         { media_url: product.image_url, alt_text: product.name },
-        ...images,
+        ...images.map((image: any) => ({
+          ...image,
+          media_url: renamed.get(image.media_url) || image.media_url,
+        })),
       ];
       const seen = new Set<string>();
       for (const image of gallery) {
@@ -172,12 +194,41 @@ export async function saveProduct(
       }
     }
     await client.query("COMMIT");
+    await claimed.commit();
     return product;
   } catch (error) {
     await client.query("ROLLBACK");
+    await claimed?.discard();
     throw error;
   } finally {
     client.release();
+  }
+}
+
+// Category and content block images uploaded before the record existed are
+// renamed to include its ID once it has been created.
+const mediaFolders: Record<string, MediaFolder> = {
+  categories: "categories",
+  content_blocks: "contents",
+};
+async function claimRecordImage(table: string, row: any) {
+  const folder = mediaFolders[table];
+  if (!folder || !row?.image_url) return row;
+  const claimed = await claimMedia(folder, [row.image_url], row.id);
+  const url = claimed.renamed.get(row.image_url);
+  if (!url) return row;
+  try {
+    const updated = (
+      await q(`UPDATE ${table} SET image_url=$1 WHERE id=$2 RETURNING *`, [
+        url,
+        row.id,
+      ])
+    ).rows[0];
+    await claimed.commit();
+    return updated;
+  } catch (error) {
+    await claimed.discard();
+    throw error;
   }
 }
 
@@ -324,7 +375,7 @@ for (const [table, definition] of Object.entries(resources)) {
       `INSERT INTO ${table}(${keys.join(",")}) VALUES(${keys.map((_, i) => "$" + (i + 1)).join(",")}) RETURNING *`,
       keys.map((k) => values[k]),
     );
-    res.status(201).json(rows[0]);
+    res.status(201).json(await claimRecordImage(table, rows[0]));
   });
   app.put("/api/admin/" + table + "/:id", admin, async (req, res) => {
     const existing = (
@@ -408,7 +459,7 @@ for (const [table, definition] of Object.entries(resources)) {
         ],
       );
     }
-    res.json(rows[0]);
+    res.json(await claimRecordImage(table, rows[0]));
   });
   app.delete("/api/admin/" + table + "/:id", admin, async (req, res) => {
     if (table === "orders") {

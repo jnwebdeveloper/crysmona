@@ -45,19 +45,15 @@ Carousel slides are active content blocks named `hero`, `hero-02`, `hero-03`, et
 
 Support pages are editable content blocks `faq`, `shipping`, `returns`, `care`, `privacy`, and `terms`. Their initial text is basic guidance; the merchant must supply final business policies. Footer social links appear only when `instagram_url` or `facebook_url` are configured in Settings.
 
-## Media storage (Vercel Blob, Cloudflare R2, Amazon S3, others)
+## Media storage (Cloudflare R2, Amazon S3, others)
 
-Admin image uploads go to Vercel Blob or an S3-compatible bucket. Storage has **not yet been configured**; until it is, the admin shows a clear error and nothing is written to a local uploads directory. Existing bundled images remain available.
+Admin uploads (product images and videos, category and content images) go **directly from the browser to an S3-compatible bucket** through a short-lived signed URL. The API then checks the stored file's contents and deletes anything that isn't a genuine image or video. Images can be JPEG, PNG or WebP up to 8 MB. Videos can be MP4 or WebM up to 50 MB. Files are named `<folder>/<record id>-<uuid>.<ext>` in `products/`, `categories/` or `contents/` (Storefront and Discover content blocks). Uploads for a record that isn't saved yet are renamed to include its ID when it is first saved. Only the public URL is saved in the database. Credentials never reach the browser.
 
-Several buckets can be configured as numbered blocks (`STORAGE_1_*`, `STORAGE_2_*`, …), each with `TYPE` `vercel-blob`, `r2`, `s3` or `custom`. `STORAGE_ACTIVE` picks the number that receives new uploads. Images uploaded earlier keep their full URL in the database and keep loading from their original bucket, so switching storage is an `.env` change plus an API restart. Every declared storage is validated at startup. `.env.example` documents each variable.
+**Production setup (bucket, custom domain, CORS, API token, environment variables, deploy): see [docs/r2-production-setup.md](docs/r2-production-setup.md).**
 
-1. Vercel Blob: in Vercel, open Project → Storage → Create → Blob and connect the store; use its read/write token as `STORAGE_<n>_TOKEN` (or leave it empty on Vercel to use `BLOB_READ_WRITE_TOKEN`), then skip to step 3. Otherwise create a bucket and an access key that can only write to that bucket (R2: an object read/write API token; S3: an IAM user allowed `s3:PutObject` on `arn:aws:s3:::<bucket>/products/*`).
-2. Make the bucket publicly readable over HTTPS (R2: custom domain or r2.dev; S3: CloudFront or a public-read bucket policy). A custom domain lets you move buckets later without rewriting saved URLs.
-3. Fill in a `STORAGE_<n>_*` block in `.env` and set `STORAGE_ACTIVE`. The older `R2_*` variables still work as storage 1 when no `STORAGE_<n>_*` variables are set.
-4. Restart the API. Use the image file input in any admin image field. JPEG, PNG and WebP files up to 8 MB (about 4.2 MB on Vercel, which caps function request bodies) are accepted, checked by signature and sent from memory to the active storage. Only the returned public URL is saved in the product/content record. Credentials never reach the browser.
-5. To migrate existing database image references, run `npm run media:migrate` to preview the count; then `npm run media:migrate -- --apply` to upload to the active storage and replace database URLs. This preserves original local files. Unreferenced branding assets remain bundled.
+Several storages can be configured as numbered blocks (`STORAGE_1_*`, `STORAGE_2_*`, …), each with `TYPE` `r2`, `s3`, `custom` or `vercel-blob`. `STORAGE_ACTIVE` picks the one that receives new uploads, and it must be an S3-compatible type (Vercel Blob storages only keep serving files uploaded earlier). Saved URLs are absolute, so older files keep loading from their original storage. Every declared storage is validated at startup. `.env.example` documents each variable.
 
-Server-proxied uploads do not require browser-to-bucket CORS. Live storage delivery cannot be verified until credentials exist.
+Browser uploads need a CORS rule on the bucket that allows `PUT` with the `content-type` header from the site's origin. To move existing `/assets/…` references into the active storage, run `npm run media:migrate` to preview, then `npm run media:migrate -- --apply`.
 
 ## Checkout and production dependencies
 

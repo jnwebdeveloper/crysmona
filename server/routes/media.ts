@@ -19,7 +19,10 @@ router.get("/api/admin/media/config", admin, (_req, res) => {
 // Step 1: a signed URL the browser PUTs the file to. Step 2: confirm the stored
 // file is what it claims to be before the admin saves it to a product.
 router.post("/api/admin/media/sign", admin, async (req, res) => {
-  res.status(201).json(await signUpload(req.body?.contentType, req.body?.size));
+  const { contentType, size, folder, recordId } = req.body || {};
+  res
+    .status(201)
+    .json(await signUpload(contentType, size, { folder, recordId }));
 });
 router.post("/api/admin/media/confirm", admin, async (req, res) => {
   res.json(await confirmUpload(req.body?.key));

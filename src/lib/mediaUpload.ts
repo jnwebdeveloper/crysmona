@@ -9,6 +9,12 @@ export const MEDIA_RULES =
   "Images: JPEG, PNG or WebP up to 8 MB · Videos: MP4 or WebM up to 50 MB";
 
 export type MediaType = "image" | "video";
+// Where a file is stored. Files are named after the record's ID; a record that
+// isn't saved yet gets a temporary name, renamed when it is first saved.
+export type UploadTarget = {
+  folder: "products" | "categories" | "contents";
+  recordId?: number | string | null;
+};
 
 // Returns an error message for a file the server would refuse, or "".
 export function checkMediaFile(file: File, allowVideo: boolean) {
@@ -28,11 +34,12 @@ export function checkMediaFile(file: File, allowVideo: boolean) {
 export async function uploadMedia(
   request: (path: string, options?: RequestInit) => Promise<any>,
   file: File,
+  target: UploadTarget,
   onProgress?: (percent: number) => void,
 ): Promise<{ url: string; mediaType: MediaType }> {
   const signed = await request("media/sign", {
     method: "POST",
-    body: JSON.stringify({ contentType: file.type, size: file.size }),
+    body: JSON.stringify({ contentType: file.type, size: file.size, ...target }),
   });
   await new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();

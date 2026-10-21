@@ -1,4 +1,5 @@
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
@@ -217,8 +218,25 @@ const mediaTypes: Record<string, { kind: "image" | "video"; extension: string }>
   "video/mp4": { kind: "video", extension: "mp4" },
   "video/webm": { kind: "video", extension: "webm" },
 };
-const uploadKey =
-  /^products\/[0-9a-f-]{36}\.(jpg|png|webp|mp4|webm)$/;
+// Object keys are "<folder>/<record id>-<uuid>.<ext>": product media under
+// products/, category images under categories/, content block images under
+// contents/. The record's ID can be read back from the name. A record that isn't
+// saved yet gets "<folder>/new-<uuid>", renamed once it has an ID (see
+// claimMedia). Files uploaded before this naming ("products/<uuid>") keep their names.
+export type MediaFolder = "products" | "categories" | "contents";
+const folders: MediaFolder[] = ["products", "categories", "contents"];
+const uuid = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+const uploadKey = new RegExp(
+  String.raw`^(products|categories|contents)/(\d+-|new-)${uuid}\.(jpg|png|webp|mp4|webm)$`,
+);
+export type UploadTarget = { folder?: unknown; recordId?: unknown };
+function keyPrefix({ folder, recordId }: UploadTarget) {
+  if (!folders.includes(folder as MediaFolder)) throw bad("Unknown upload folder.");
+  if (recordId == null || recordId === "") return `${folder}/new-`;
+  const id = Number(recordId);
+  if (!Number.isSafeInteger(id) || id < 1) throw bad("Unknown record.");
+  return `${folder}/${id}-`;
+}
 function directStorage() {
   const { active } = storageConfig();
   if (!active)
@@ -230,7 +248,11 @@ function directStorage() {
     throw bad("Direct uploads need an R2, S3 or custom storage as STORAGE_ACTIVE.", 503);
   return active;
 }
-export async function signUpload(contentType: unknown, size: unknown) {
+export async function signUpload(
+  contentType: unknown,
+  size: unknown,
+  target: UploadTarget,
+) {
   const type = typeof contentType === "string" ? mediaTypes[contentType] : undefined;
   if (!type)
     throw bad("Choose a JPEG, PNG or WebP image, or an MP4 or WebM video.");
@@ -239,8 +261,9 @@ export async function signUpload(contentType: unknown, size: unknown) {
     throw bad(
       `${type.kind === "video" ? "Videos" : "Images"} must be ${limit.label} up to ${limit.maxBytes / 1048576} MB.`,
     );
+  const prefix = keyPrefix(target);
   const storage = directStorage();
-  const key = `products/${randomUUID()}.${type.extension}`;
+  const key = `${prefix}${randomUUID()}.${type.extension}`;
   const uploadUrl = await getSignedUrl(
     client(storage),
     new PutObjectCommand({
@@ -304,4 +327,60 @@ export async function confirmUpload(key: unknown) {
     );
   }
   return { url: storage.publicUrl + "/" + key, mediaType: kind };
+}
+
+// A new record's media is uploaded before it has an ID, as "<folder>/new-<uuid>".
+// Once the row exists, copy each such file to "<folder>/<id>-<uuid>" (a
+// server-side copy inside the bucket) and report the URL changes. The caller
+// deletes the originals with commit() after saving the new URLs, or the copies
+// with discard() if saving fails.
+export async function claimMedia(
+  folder: MediaFolder,
+  urls: unknown[],
+  recordId: number,
+) {
+  const pendingKey = new RegExp(
+    String.raw`^${folder}/new-(${uuid}\.(jpg|png|webp|mp4|webm))$`,
+  );
+  const moves: { storage: S3Storage; from: string; to: string }[] = [];
+  const renamed = new Map<string, string>();
+  const pending = urls.filter(
+    (url): url is string =>
+      typeof url === "string" && url.includes(`/${folder}/new-`),
+  );
+  if (pending.length) {
+    const storages = storageConfig().storages.filter(
+      (s): s is S3Storage => s.type !== "vercel-blob",
+    );
+    for (const url of new Set(pending)) {
+      const storage = storages.find((s) => url.startsWith(s.publicUrl + "/"));
+      const from = storage && url.slice(storage.publicUrl.length + 1);
+      const match = from && pendingKey.exec(from);
+      if (!storage || !from || !match) continue;
+      const to = `${folder}/${recordId}-${match[1]}`;
+      await client(storage).send(
+        new CopyObjectCommand({
+          Bucket: storage.bucket,
+          CopySource: `${storage.bucket}/${from}`,
+          Key: to,
+        }),
+        { abortSignal: AbortSignal.timeout(60000) },
+      );
+      moves.push({ storage, from, to });
+      renamed.set(url, `${storage.publicUrl}/${to}`);
+    }
+  }
+  const remove = (pick: "from" | "to") =>
+    Promise.all(
+      moves.map((move) =>
+        client(move.storage)
+          .send(new DeleteObjectCommand({ Bucket: move.storage.bucket, Key: move[pick] }))
+          .catch(() => {}),
+      ),
+    );
+  return {
+    renamed,
+    commit: () => remove("from"),
+    discard: () => remove("to"),
+  };
 }

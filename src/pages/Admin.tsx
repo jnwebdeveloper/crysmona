@@ -366,7 +366,10 @@ export default function AdminPage() {
               setBusy(true);
               setError("");
               try {
-                const result = await uploadMedia(request, file);
+                const result = await uploadMedia(request, file, {
+                  folder: resource === "categories" ? "categories" : "contents",
+                  recordId: editing?.id,
+                });
                 change(result.url);
               } catch (e: any) {
                 setError(e.message);
@@ -1338,8 +1341,11 @@ function ProductImages({
                   ? `Uploading ${index + 1} of ${files.length}: ${file.name}`
                   : `Uploading ${file.name}`;
               setProgress(label + "…");
-              const result = await uploadMedia(request, file, (percent) =>
-                setProgress(`${label} · ${percent}%`),
+              const result = await uploadMedia(
+                request,
+                file,
+                { folder: "products", recordId: editing.id },
+                (percent) => setProgress(`${label} · ${percent}%`),
               );
               append(result.url, result.mediaType);
             }
