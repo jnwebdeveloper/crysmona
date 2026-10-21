@@ -80,7 +80,7 @@ app.get("/api/admin/products/:id/images", admin, async (req, res) => {
   res.json(
     (
       await q(
-        "SELECT image_url, alt_text FROM product_images WHERE product_id=$1 ORDER BY sort_order,id",
+        "SELECT media_url, alt_text, media_type FROM product_images WHERE product_id=$1 ORDER BY sort_order,id",
         [req.params.id],
       )
     ).rows,
@@ -101,15 +101,26 @@ export async function saveProduct(
       images.some(
         (image) =>
           !image ||
-          typeof image.image_url !== "string" ||
-          !image.image_url.trim() ||
-          !validUrl(image.image_url) ||
+          typeof image.media_url !== "string" ||
+          !image.media_url.trim() ||
+          !validUrl(image.media_url) ||
           (image.alt_text != null &&
             (typeof image.alt_text !== "string" ||
-              image.alt_text.length > 5000)),
+              image.alt_text.length > 5000)) ||
+          (image.media_type != null &&
+            !["image", "video"].includes(image.media_type)),
       ))
   )
-    throw bad("Provide up to 100 valid product images.");
+    throw bad("Provide up to 100 valid product images and videos.");
+  // The default image is used on listing cards and share previews, so it must be a photo.
+  if (
+    Array.isArray(images) &&
+    images.some(
+      (image: any) =>
+        image.media_type === "video" && image.media_url === values.image_url,
+    )
+  )
+    throw bad("Choose an image, not a video, as the default image.");
   if (!id && !values.slug) {
     const base =
       String(values.name)
@@ -140,17 +151,23 @@ export async function saveProduct(
       await client.query("DELETE FROM product_images WHERE product_id=$1", [
         product.id,
       ]);
-      const gallery = [
-        { image_url: product.image_url, alt_text: product.name },
+      const gallery: any[] = [
+        { media_url: product.image_url, alt_text: product.name },
         ...images,
       ];
       const seen = new Set<string>();
       for (const image of gallery) {
-        if (seen.has(image.image_url)) continue;
-        seen.add(image.image_url);
+        if (seen.has(image.media_url)) continue;
+        seen.add(image.media_url);
         await client.query(
-          "INSERT INTO product_images(product_id,image_url,alt_text,sort_order) VALUES($1,$2,$3,$4)",
-          [product.id, image.image_url, image.alt_text || "", seen.size - 1],
+          "INSERT INTO product_images(product_id,media_url,alt_text,sort_order,media_type) VALUES($1,$2,$3,$4,$5)",
+          [
+            product.id,
+            image.media_url,
+            image.alt_text || "",
+            seen.size - 1,
+            image.media_type === "video" ? "video" : "image",
+          ],
         );
       }
     }

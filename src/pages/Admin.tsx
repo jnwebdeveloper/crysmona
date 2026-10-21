@@ -25,6 +25,15 @@ import Loader from "../components/Loader";
 import { Field, resources } from "../../shared/adminSchema";
 import { adminValidation } from "../../shared/adminValidation";
 import { api, go, useStore } from "../lib/Store";
+import {
+  checkMediaFile,
+  IMAGE_TYPES,
+  MEDIA_RULES,
+  MediaType,
+  uploadMedia,
+  VIDEO_TYPES,
+} from "../lib/mediaUpload";
+import type { GalleryItem } from "../../shared/product";
 const label = (r: any) =>
   r.name ||
   r.label ||
@@ -110,7 +119,6 @@ export default function AdminPage() {
     [lookups, setLookups] = useState<Record<string, any[]>>({}),
     [orderDetail, setOrderDetail] = useState<any>(null),
     [fieldErrors, setFieldErrors] = useState<Record<string, string>>({}),
-    [maxImageBytes, setMaxImageBytes] = useState(8 * 1024 * 1024),
     [passwordForm, setPasswordForm] = useState<{
       current: string;
       next: string;
@@ -202,13 +210,6 @@ export default function AdminPage() {
       setBusy(false);
     }
   };
-  useEffect(() => {
-    // The deployed API accepts smaller uploads (Vercel caps request bodies).
-    if (connected)
-      request("media/config")
-        .then((config) => setMaxImageBytes(config.maxBytes))
-        .catch(() => {});
-  }, [connected]);
   useEffect(() => {
     if (connected) {
       setRows([]);
@@ -337,7 +338,6 @@ export default function AdminPage() {
           busy={busy}
           setBusy={setBusy}
           setError={setError}
-          maxBytes={maxImageBytes}
         />
       );
     if (f.key === "image_url")
@@ -356,21 +356,17 @@ export default function AdminPage() {
             aria-label="Upload image"
             onChange={async (e) => {
               const file = e.target.files?.[0];
+              e.target.value = "";
               if (!file) return;
-              if (file.size > maxImageBytes) {
-                setError(
-                  `Choose an image smaller than ${+(maxImageBytes / 1048576).toFixed(1)} MB.`,
-                );
+              const problem = checkMediaFile(file, false);
+              if (problem) {
+                setError(problem);
                 return;
               }
               setBusy(true);
               setError("");
               try {
-                const result = await request("media/upload", {
-                  method: "POST",
-                  headers: { "Content-Type": file.type },
-                  body: file,
-                });
+                const result = await uploadMedia(request, file);
                 change(result.url);
               } catch (e: any) {
                 setError(e.message);
@@ -380,8 +376,7 @@ export default function AdminPage() {
             }}
           />
           <small>
-            JPEG, PNG or WebP · up to {+(maxImageBytes / 1048576).toFixed(1)} MB
-            · saved to cloud storage
+            JPEG, PNG or WebP · up to 8 MB · saved to cloud storage
           </small>
           {value && (
             <img
@@ -1293,25 +1288,27 @@ function ProductImages({
   busy,
   setBusy,
   setError,
-  maxBytes,
 }: any) {
   const [url, setUrl] = useState("");
-  const images: { image_url: string; alt_text: string }[] = [
+  const [progress, setProgress] = useState("");
+  const images: GalleryItem[] = [
     ...(editing.image_url
-      ? [{ image_url: editing.image_url, alt_text: editing.name || "" }]
+      ? [{ media_url: editing.image_url, alt_text: editing.name || "" }]
       : []),
     ...(editing.images || []),
   ].filter(
     (image, i, all) =>
-      all.findIndex((x) => x.image_url === image.image_url) === i,
+      all.findIndex((x) => x.media_url === image.media_url) === i,
   );
-  const append = (image_url: string) =>
+  const append = (media_url: string, media_type: MediaType) =>
     setEditing((current: any) => ({
       ...current,
-      image_url: current.image_url || image_url,
+      // Listing cards and share previews need a photo, so a video never becomes the default.
+      image_url:
+        current.image_url || (media_type === "image" ? media_url : ""),
       images: [
         ...(current.images || []),
-        { image_url, alt_text: current.name || "" },
+        { media_url, alt_text: current.name || "", media_type },
       ],
     }));
   return (
@@ -1319,45 +1316,50 @@ function ProductImages({
       <input
         type="file"
         multiple
-        accept="image/jpeg,image/png,image/webp"
+        accept={[...IMAGE_TYPES, ...VIDEO_TYPES].join(",")}
         disabled={busy || editing.images === undefined}
-        aria-label="Upload product images"
+        aria-label="Upload product images and videos"
         onChange={async (e) => {
           const files = Array.from(e.target.files || []);
           e.target.value = "";
-          if (
-            files.some(
-              (file) =>
-                file.size > maxBytes ||
-                !["image/jpeg", "image/png", "image/webp"].includes(file.type),
-            )
-          ) {
-            setError(
-              `Choose JPEG, PNG or WebP images smaller than ${(maxBytes / 1048576).toFixed(1)} MB each.`,
-            );
+          const problem = files
+            .map((file) => checkMediaFile(file, true))
+            .find(Boolean);
+          if (problem) {
+            setError(problem);
             return;
           }
           setBusy(true);
           setError("");
           try {
-            for (const file of files) {
-              const result = await request("media/upload", {
-                method: "POST",
-                headers: { "Content-Type": file.type },
-                body: file,
-              });
-              append(result.url);
+            for (const [index, file] of files.entries()) {
+              const label =
+                files.length > 1
+                  ? `Uploading ${index + 1} of ${files.length}: ${file.name}`
+                  : `Uploading ${file.name}`;
+              setProgress(label + "…");
+              const result = await uploadMedia(request, file, (percent) =>
+                setProgress(`${label} · ${percent}%`),
+              );
+              append(result.url, result.mediaType);
             }
           } catch (error: any) {
             setError(error.message);
           } finally {
+            setProgress("");
             setBusy(false);
           }
         }}
       />
       <small>
-        Select multiple images. Choose a default image for the product listing.
+        {MEDIA_RULES}. Select multiple files. Choose a default image for the
+        product listing (videos can't be the default).
       </small>
+      {progress && (
+        <small className="admin-upload-progress" aria-live="polite">
+          {progress}
+        </small>
+      )}
       <div>
         <input
           aria-label="Product image URL"
@@ -1369,7 +1371,8 @@ function ProductImages({
           type="button"
           disabled={busy || !url.trim() || editing.images === undefined}
           onClick={() => {
-            append(url.trim());
+            const value = url.trim();
+            append(value, /\.(mp4|webm)(\?|$)/i.test(value) ? "video" : "image");
             setUrl("");
           }}
         >
@@ -1378,45 +1381,59 @@ function ProductImages({
       </div>
       <div className="admin-gallery">
         {images.map((image) => (
-          <div key={image.image_url}>
-            <img
-              src={image.image_url}
-              alt={image.alt_text || "Product image"}
-            />
-            <button
-              type="button"
-              disabled={busy || editing.images === undefined}
-              aria-pressed={editing.image_url === image.image_url}
-              onClick={() =>
-                setEditing((current: any) => ({
-                  ...current,
-                  images,
-                  image_url: image.image_url,
-                }))
-              }
-            >
-              {editing.image_url === image.image_url
-                ? "Default image"
-                : "Set as default"}
-            </button>
+          <div key={image.media_url}>
+            {image.media_type === "video" ? (
+              <span className="admin-gallery-video">
+                <video src={image.media_url} muted preload="metadata" />
+                <b aria-hidden="true">▶</b>
+              </span>
+            ) : (
+              <img
+                src={image.media_url}
+                alt={image.alt_text || "Product image"}
+              />
+            )}
+            {image.media_type === "video" ? (
+              <button type="button" disabled>
+                Video
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={busy || editing.images === undefined}
+                aria-pressed={editing.image_url === image.media_url}
+                onClick={() =>
+                  setEditing((current: any) => ({
+                    ...current,
+                    images,
+                    image_url: image.media_url,
+                  }))
+                }
+              >
+                {editing.image_url === image.media_url
+                  ? "Default image"
+                  : "Set as default"}
+              </button>
+            )}
             <button
               type="button"
               disabled={busy || editing.images === undefined}
               onClick={() => {
                 const remaining = images.filter(
-                  (x) => x.image_url !== image.image_url,
+                  (x) => x.media_url !== image.media_url,
                 );
                 setEditing((current: any) => ({
                   ...current,
                   images: remaining,
                   image_url:
-                    current.image_url === image.image_url
-                      ? remaining[0]?.image_url || ""
+                    current.image_url === image.media_url
+                      ? remaining.find((x) => x.media_type !== "video")
+                          ?.media_url || ""
                       : current.image_url,
                 }));
               }}
             >
-              Remove image
+              {image.media_type === "video" ? "Remove video" : "Remove image"}
             </button>
           </div>
         ))}

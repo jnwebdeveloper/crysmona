@@ -38,8 +38,8 @@ test("gallery saves include the default once and generate distinct valid product
   >;
   const second = { ...first };
   await saveProduct(first, [
-    { image_url: "/other.jpg" },
-    { image_url: "/default.jpg" },
+    { media_url: "/other.jpg" },
+    { media_url: "/default.jpg" },
   ]);
   assert.match(first.slug, /^moonstone-[a-f0-9]{8}$/);
   assert.equal(
@@ -53,11 +53,11 @@ test("gallery saves include the default once and generate distinct valid product
 
 test("invalid gallery URLs are rejected before starting a transaction", async () => {
   await assert.rejects(
-    saveProduct({ name: "Moonstone" }, [{ image_url: "javascript:alert(1)" }]),
+    saveProduct({ name: "Moonstone" }, [{ media_url: "javascript:alert(1)" }]),
     /valid product images/,
   );
   await assert.rejects(
-    saveProduct({ name: "Moonstone" }, [{ image_url: "" }]),
+    saveProduct({ name: "Moonstone" }, [{ media_url: "" }]),
     /valid product images/,
   );
 });

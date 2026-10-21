@@ -23,7 +23,7 @@ app.get("/api/products/:slug", async (req, res) => {
   );
   if (!rows[0]) throw bad("Product not found.", 404);
   const images = await q(
-    "SELECT image_url,alt_text FROM product_images WHERE product_id=$1 ORDER BY sort_order",
+    "SELECT media_url,alt_text,media_type FROM product_images WHERE product_id=$1 ORDER BY sort_order,id",
     [rows[0].id],
   );
   res.json({ ...dto(rows[0]), images: images.rows });

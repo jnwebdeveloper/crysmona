@@ -1,4 +1,10 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { put } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
 import { bad } from "../lib/errors.js";
@@ -194,4 +200,108 @@ export async function uploadImage(data: Buffer, storageId?: number) {
     { abortSignal: AbortSignal.timeout(30000) },
   );
   return { key, url: storage.publicUrl + "/" + key, storage: storage.id };
+}
+
+// Admin uploads go straight from the browser to the bucket through a short-lived
+// signed URL, so files never pass through the API (Vercel caps request bodies at
+// 4.5 MB). The signature pins the content type and exact size, and confirmUpload
+// then checks the stored file's leading bytes before the admin can save it.
+export const mediaLimits = {
+  image: { maxBytes: 8 * 1024 * 1024, label: "JPEG, PNG or WebP" },
+  video: { maxBytes: 50 * 1024 * 1024, label: "MP4 or WebM" },
+};
+const mediaTypes: Record<string, { kind: "image" | "video"; extension: string }> = {
+  "image/jpeg": { kind: "image", extension: "jpg" },
+  "image/png": { kind: "image", extension: "png" },
+  "image/webp": { kind: "image", extension: "webp" },
+  "video/mp4": { kind: "video", extension: "mp4" },
+  "video/webm": { kind: "video", extension: "webm" },
+};
+const uploadKey =
+  /^products\/[0-9a-f-]{36}\.(jpg|png|webp|mp4|webm)$/;
+function directStorage() {
+  const { active } = storageConfig();
+  if (!active)
+    throw bad(
+      "Uploads are unavailable. Configure media storage (STORAGE_1_*) on the server.",
+      503,
+    );
+  if (active.type === "vercel-blob")
+    throw bad("Direct uploads need an R2, S3 or custom storage as STORAGE_ACTIVE.", 503);
+  return active;
+}
+export async function signUpload(contentType: unknown, size: unknown) {
+  const type = typeof contentType === "string" ? mediaTypes[contentType] : undefined;
+  if (!type)
+    throw bad("Choose a JPEG, PNG or WebP image, or an MP4 or WebM video.");
+  const limit = mediaLimits[type.kind];
+  if (!Number.isInteger(size) || (size as number) < 1 || (size as number) > limit.maxBytes)
+    throw bad(
+      `${type.kind === "video" ? "Videos" : "Images"} must be ${limit.label} up to ${limit.maxBytes / 1048576} MB.`,
+    );
+  const storage = directStorage();
+  const key = `products/${randomUUID()}.${type.extension}`;
+  const uploadUrl = await getSignedUrl(
+    client(storage),
+    new PutObjectCommand({
+      Bucket: storage.bucket,
+      Key: key,
+      ContentType: contentType as string,
+      ContentLength: size as number,
+    }),
+    { expiresIn: 600, signableHeaders: new Set(["content-type", "content-length"]) },
+  );
+  return {
+    key,
+    uploadUrl,
+    url: storage.publicUrl + "/" + key,
+    mediaType: type.kind,
+    // The bucket's CORS rule must allow these request headers.
+    headers: { "Content-Type": contentType as string },
+  };
+}
+function matchesSignature(head: Buffer, extension: string) {
+  if (extension === "mp4")
+    return head.length >= 12 && head.toString("ascii", 4, 8) === "ftyp";
+  if (extension === "webm")
+    return head.length >= 4 && head.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
+  // Any genuine image is accepted whatever its name: files saved as ".jpg" are
+  // often PNG or WebP inside, and browsers render images by their content.
+  try {
+    return Boolean(imageType(head));
+  } catch {
+    return false;
+  }
+}
+// Verifies an uploaded object really is the image or video its name claims, and
+// deletes it otherwise.
+export async function confirmUpload(key: unknown) {
+  if (typeof key !== "string" || !uploadKey.test(key)) throw bad("Unknown upload.");
+  const storage = directStorage();
+  const extension = key.split(".").pop()!;
+  const kind = mediaTypes[
+    Object.keys(mediaTypes).find((m) => mediaTypes[m].extension === extension)!
+  ].kind;
+  let head: Buffer, total: number;
+  try {
+    const object = await client(storage).send(
+      new GetObjectCommand({ Bucket: storage.bucket, Key: key, Range: "bytes=0-31" }),
+      { abortSignal: AbortSignal.timeout(15000) },
+    );
+    head = Buffer.from(await object.Body!.transformToByteArray());
+    total = Number(object.ContentRange?.split("/")[1] ?? object.ContentLength);
+  } catch {
+    throw bad("The upload didn't reach storage. Please try again.");
+  }
+  if (!matchesSignature(head, extension) || !(total <= mediaLimits[kind].maxBytes)) {
+    await client(storage)
+      .send(new DeleteObjectCommand({ Bucket: storage.bucket, Key: key }))
+      .catch(() => {});
+    throw bad(
+      kind === "video"
+        ? "That file isn't a valid MP4 or WebM video."
+        : "That file isn't a valid JPEG, PNG or WebP image.",
+    );
+  }
+  return { url: storage.publicUrl + "/" + key, mediaType: kind };
 }

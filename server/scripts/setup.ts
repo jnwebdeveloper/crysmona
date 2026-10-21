@@ -189,6 +189,12 @@ try {
       "utf8",
     ),
   );
+  await pool.query(
+    await readFile(
+      new URL("../../database/010-product-video.sql", import.meta.url),
+      "utf8",
+    ),
+  );
   // Development bootstrap admin. Created only when the email does not already exist,
   // so subsequent setup runs never overwrite a password changed by the owner.
   const bootstrapAdminEmail = (process.env.DEFAULT_ADMIN_EMAIL || "admin@crysmona.com")

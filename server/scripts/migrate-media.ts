@@ -3,15 +3,21 @@ import { readFile } from "node:fs/promises";
 import { resolve, sep } from "node:path";
 import { pool } from "../lib/db.js";
 import { storageConfig, uploadImage } from "../services/storage.js";
-const tables = ["products", "product_images", "categories", "content_blocks"];
+// Table → column holding the file URL.
+const tables = {
+  products: "image_url",
+  product_images: "media_url",
+  categories: "image_url",
+  content_blocks: "image_url",
+};
 const root = resolve("public");
 try {
   const urls = new Set<string>();
-  for (const table of tables) {
+  for (const [table, column] of Object.entries(tables)) {
     const result = await pool.query(
-      `SELECT DISTINCT image_url FROM ${table} WHERE image_url LIKE '/assets/%' OR image_url LIKE '/uploads/%'`,
+      `SELECT DISTINCT ${column} AS url FROM ${table} WHERE ${column} LIKE '/assets/%' OR ${column} LIKE '/uploads/%'`,
     );
-    for (const row of result.rows) urls.add(row.image_url);
+    for (const row of result.rows) urls.add(row.url);
   }
   if (!process.argv.includes("--apply")) {
     console.log(
@@ -31,9 +37,9 @@ try {
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
-        for (const table of tables)
+        for (const [table, column] of Object.entries(tables))
           await client.query(
-            `UPDATE ${table} SET image_url=$1 WHERE image_url=$2`,
+            `UPDATE ${table} SET ${column}=$1 WHERE ${column}=$2`,
             [result.url, url],
           );
         await client.query("COMMIT");

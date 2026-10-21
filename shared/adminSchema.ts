@@ -49,7 +49,7 @@ export const resources: Record<string, { label: string; fields: Field[] }> = {
     label: "Product gallery",
     fields: [
       f("product_id", "Product ID", "text", true),
-      f("image_url", "Image", "text", true),
+      f("media_url", "Image or video URL", "text", true),
       f("alt_text", "Image description"),
       f("sort_order", "Display order", "number"),
     ],

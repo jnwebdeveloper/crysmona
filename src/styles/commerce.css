@@ -1478,3 +1478,59 @@ footer section a {
     transition: none;
   }
 }
+.gallery-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+.product-gallery-thumbnails button.thumb-video {
+  position: relative;
+  background: #1b1410;
+}
+.product-gallery-thumbnails video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.product-gallery-thumbnails .thumb-video svg {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 26px;
+  height: 26px;
+  padding: 6px;
+  border-radius: 50%;
+  background: #000a;
+  color: #fff;
+  fill: #fff;
+}
+.admin-gallery-video {
+  position: relative;
+  display: block;
+  height: 150px;
+  background: #1b1410;
+}
+.admin-gallery-video video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.admin-gallery-video b {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 28px;
+  text-shadow: 0 2px 8px #000a;
+}
+.admin-upload-progress {
+  display: block;
+  color: #1f4d43;
+  font-weight: 600;
+}

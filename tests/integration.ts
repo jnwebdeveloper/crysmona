@@ -174,14 +174,12 @@ try {
     media.status === 200 && media.data.available === false,
     "Unconfigured media storage reported honestly",
   );
-  const upload = await fetch(base + "/admin/media/upload", {
-    method: "POST",
-    headers: {
-      Cookie: adminCookie,
-      "Content-Type": "image/png",
-    },
-    body: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-  });
+  const upload = await call(
+    "/admin/media/sign",
+    "POST",
+    { contentType: "image/png", size: 8 },
+    true,
+  );
   check(upload.status === 503, "No local upload fallback when storage unavailable");
   const phone = "9" + String(Date.now()).slice(-9);
   check(

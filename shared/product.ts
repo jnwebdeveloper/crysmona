@@ -15,7 +15,13 @@ export type Product = {
   metal?: string;
   specifications?: Record<string, string>;
   stockQty?: number;
-  images?: { image_url: string; alt_text: string }[];
+  images?: GalleryItem[];
+};
+// One entry in a product gallery. Rows saved before videos existed have no media_type.
+export type GalleryItem = {
+  media_url: string;
+  alt_text: string;
+  media_type?: "image" | "video";
 };
 export const formatPrice = (cents: number) =>
   new Intl.NumberFormat("en-US", {

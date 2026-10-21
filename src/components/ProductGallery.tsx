@@ -1,10 +1,10 @@
 import ProductShare from "./ProductShare";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { api } from "../lib/Store";
 import { WishButton } from "./WishButton";
 import { Product } from "../lib/model";
-type ProductImage = { image_url: string; alt_text: string };
+import type { GalleryItem } from "../../shared/product";
 export default function ProductGallery({
   product,
   gemstone = false,
@@ -12,7 +12,7 @@ export default function ProductGallery({
   product: Product;
   gemstone?: boolean;
 }) {
-  const [images, setImages] = useState<ProductImage[]>(product.images || []);
+  const [images, setImages] = useState<GalleryItem[]>(product.images || []);
   const [selected, setSelected] = useState(0);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -35,16 +35,17 @@ export default function ProductGallery({
       current = false;
     };
   }, [product.slug, product.image, product.images, attempt]);
-  const gallery = [
-    { image_url: product.image, alt_text: product.name },
+  const gallery: GalleryItem[] = [
+    { media_url: product.image, alt_text: product.name },
     ...images,
   ].filter(
     (image, index, list) =>
-      image.image_url &&
-      list.findIndex((item) => item.image_url === image.image_url) === index,
+      image.media_url &&
+      list.findIndex((item) => item.media_url === image.media_url) === index,
   );
   const active = selected % Math.max(1, gallery.length);
   const image = gallery[active];
+  const isVideo = image?.media_type === "video";
   const move = (step: number) =>
     setSelected((active + step + gallery.length) % gallery.length);
   const trackZoom = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -53,20 +54,38 @@ export default function ProductGallery({
     const y = ((event.clientY - box.top) / box.height) * 100;
     setZoom(`${x}% ${y}%`);
   };
+  useEffect(() => setZoom(null), [active]);
   return (
     <div className="product-gallery">
       <div className={gemstone ? "gem-detail-image" : "pdp-main-image"}>
-        <div
-          className={zoom ? "gallery-zoom zoomed" : "gallery-zoom"}
-          onMouseMove={trackZoom}
-          onMouseLeave={() => setZoom(null)}
-        >
-          <img
-            src={image?.image_url}
-            alt={image?.alt_text || product.name}
-            style={zoom ? { transformOrigin: zoom } : undefined}
+        {isVideo ? (
+          // Keyed by URL so switching slides unmounts it, which stops playback.
+          <video
+            key={image.media_url}
+            className="gallery-video"
+            src={image.media_url}
+            controls
+            // Muted videos may autoplay in every browser, including iPhone Safari.
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            aria-label={image.alt_text || product.name + " video"}
           />
-        </div>
+        ) : (
+          <div
+            className={zoom ? "gallery-zoom zoomed" : "gallery-zoom"}
+            onMouseMove={trackZoom}
+            onMouseLeave={() => setZoom(null)}
+          >
+            <img
+              src={image?.media_url}
+              alt={image?.alt_text || product.name}
+              style={zoom ? { transformOrigin: zoom } : undefined}
+            />
+          </div>
+        )}
         <WishButton
           product={product}
           className={gemstone ? "heart" : "pdp-heart"}
@@ -101,8 +120,14 @@ export default function ProductGallery({
         {gallery.map((item, index) => (
           <button
             type="button"
-            key={item.image_url}
-            aria-label={"View product image " + (index + 1)}
+            key={item.media_url}
+            className={item.media_type === "video" ? "thumb-video" : undefined}
+            aria-label={
+              (item.media_type === "video"
+                ? "Play product video "
+                : "View product image ") +
+              (index + 1)
+            }
             aria-pressed={active === index}
             onClick={() => setSelected(index)}
             onKeyDown={(event) => {
@@ -118,17 +143,30 @@ export default function ProductGallery({
               }
             }}
           >
-            <img
-              src={item.image_url}
-              alt={item.alt_text || product.name}
-              loading="lazy"
-            />
+            {item.media_type === "video" ? (
+              <>
+                <video
+                  src={item.media_url + "#t=0.1"}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  aria-hidden="true"
+                />
+                <Play aria-hidden="true" />
+              </>
+            ) : (
+              <img
+                src={item.media_url}
+                alt={item.alt_text || product.name}
+                loading="lazy"
+              />
+            )}
           </button>
         ))}
       </div>
       {gallery.length > 1 && (
         <p className="gallery-caption" aria-live="polite">
-          Image {active + 1} of {gallery.length}
+          {isVideo ? "Video" : "Image"} {active + 1} of {gallery.length}
         </p>
       )}
       {error && (
