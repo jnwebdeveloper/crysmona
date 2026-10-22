@@ -827,6 +827,40 @@ button:disabled {
   width: 12px;
   height: 12px;
 }
+/* Reorder arrows: a joined pair of square buttons, larger than the text actions. */
+.admin-move {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid #b89a72;
+  background: #fff;
+}
+.admin-actions .admin-move button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #5c392e;
+  cursor: pointer;
+}
+.admin-actions .admin-move button + button {
+  border-left: 1px solid #b89a72;
+}
+.admin-actions .admin-move button:hover:not(:disabled) {
+  background: #174e46;
+  color: #fff;
+}
+.admin-actions .admin-move button:focus-visible {
+  outline: 2px solid #a47835;
+  outline-offset: -2px;
+}
+.admin-actions .admin-move svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.4;
+}
 .studio-refresh {
   display: flex;
   gap: 8px;

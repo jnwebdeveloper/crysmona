@@ -1,7 +1,9 @@
 import { isDiscoverBlock, pageContent } from "../../shared/pageContent";
 import { listRecords, moveRecord } from "../../shared/adminLists";
 import {
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   LayoutDashboard,
   Package,
   Tags,
@@ -962,22 +964,26 @@ export default function AdminPage() {
                   </td>
                   <td>
                     <div className="admin-actions">
-                      <button
-                        aria-label={"Move " + label(r) + " up"}
-                        disabled={!canReorder || index === 0}
-                        onClick={() => reorder(r.id, visibleRows[index - 1].id)}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        aria-label={"Move " + label(r) + " down"}
-                        disabled={
-                          !canReorder || index === visibleRows.length - 1
-                        }
-                        onClick={() => reorder(r.id, visibleRows[index + 1].id)}
-                      >
-                        ↓
-                      </button>
+                      <span className="admin-move" role="group" aria-label="Reorder">
+                        <button
+                          aria-label={"Move " + label(r) + " up"}
+                          title="Move up"
+                          disabled={!canReorder || index === 0}
+                          onClick={() => reorder(r.id, visibleRows[index - 1].id)}
+                        >
+                          <ArrowUp />
+                        </button>
+                        <button
+                          aria-label={"Move " + label(r) + " down"}
+                          title="Move down"
+                          disabled={
+                            !canReorder || index === visibleRows.length - 1
+                          }
+                          onClick={() => reorder(r.id, visibleRows[index + 1].id)}
+                        >
+                          <ArrowDown />
+                        </button>
+                      </span>
                       {tab === "orders" && (
                         <button
                           onClick={async () => {
