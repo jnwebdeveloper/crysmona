@@ -2,6 +2,7 @@ import { ArrowRight, Gem, Heart, Minus, Plus, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { go, useStore } from "../lib/Store";
 import ProductGallery from "../components/ProductGallery";
+import RichText from "../components/RichText";
 import { Product } from "../lib/model";
 import { useCart } from "../lib/cart";
 export default function GemstoneDetail({ product }: { product: Product }) {
@@ -42,7 +43,7 @@ export default function GemstoneDetail({ product }: { product: Product }) {
             · {product.specifications?.["Gemstone Type"] || "Cabochon"}
           </p>
           <strong className="gem-detail-price">{product.price}</strong>
-          <p className="product-description">{product.description}</p>
+          <RichText className="product-description" value={product.description} />
           {product.specifications?.["Number Of Pieces"] && (
             <div className="gem-lot">
               <Gem />

@@ -37,6 +37,7 @@ import {
   VIDEO_TYPES,
 } from "../lib/mediaUpload";
 import type { GalleryItem } from "../../shared/product";
+import RichTextEditor from "../components/RichTextEditor";
 const label = (r: any) =>
   r.name ||
   r.label ||
@@ -331,6 +332,15 @@ export default function AdminPage() {
             </option>
           ))}
         </select>
+      );
+    if (tab === "products" && f.key === "description")
+      return (
+        <RichTextEditor
+          value={value}
+          onChange={change}
+          label="Product description"
+          placeholder="Describe the piece: its stone, craft and story…"
+        />
       );
     if (tab === "products" && f.key === "image_url")
       return (
@@ -1079,15 +1089,23 @@ export default function AdminPage() {
             <div className="admin-form-grid">
               {definition.fields
                 .filter((f) => !(tab === "products" && f.key === "slug"))
-                .map((f) => (
-                  <label
+                .map((f) => {
+                  // A rich text field holds buttons, so it can't sit inside a
+                  // <label> (clicking the text would press the first button).
+                  const rich = tab === "products" && f.key === "description";
+                  const Wrapper = rich ? "div" : "label";
+                  return (
+                  <Wrapper
                     key={f.key}
                     className={
                       f.type === "specs" ||
-                      (tab === "products" && f.key === "image_url")
-                        ? "full-width"
+                      (tab === "products" &&
+                        ["image_url", "note", "description"].includes(f.key))
+                        ? "full-width" + (rich ? " admin-rich-field" : "")
                         : ""
                     }
+                    role={rich ? "group" : undefined}
+                    aria-label={rich ? f.label : undefined}
                   >
                     {f.label}
                     {f.required ? " *" : ""}
@@ -1098,8 +1116,9 @@ export default function AdminPage() {
                         {fieldErrors[f.key]}
                       </small>
                     )}
-                  </label>
-                ))}
+                  </Wrapper>
+                  );
+                })}
             </div>
             <button className="login-submit" disabled={busy}>
               {busy ? "SAVING…" : "SAVE CHANGES"}

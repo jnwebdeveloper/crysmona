@@ -52,6 +52,19 @@ app.get("/api/storefront", async (_req, res) => {
   });
 });
 
+// Product descriptions may be rich text (HTML); meta tags need plain text.
+const plainText = (value: string | null) =>
+  (value || "")
+    .replace(/<\/(p|h2|h3|li|blockquote)>|<br\s*\/?>/gi, " ")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
 app.get("/api/seo", async (req, res) => {
   const path = String(req.query.path || "/");
   let { rows } = await q(
@@ -71,9 +84,9 @@ app.get("/api/seo", async (req, res) => {
         {
           path,
           title: product.name + " | Crysmona",
-          description: product.description,
+          description: plainText(product.description),
           og_title: product.name,
-          og_description: product.description,
+          og_description: plainText(product.description),
           og_image: product.image_url,
           active: true,
         },

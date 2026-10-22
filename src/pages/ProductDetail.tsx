@@ -10,6 +10,7 @@ import {
 
 import { go as navTo, useStore } from "../lib/Store";
 import ProductGallery from "../components/ProductGallery";
+import RichText from "../components/RichText";
 import { Product } from "../lib/model";
 import { useCart } from "../lib/cart";
 
@@ -112,7 +113,7 @@ export default function ProductDetail({ product }: { product: Product }) {
                 (clamped ? " is-clamped" : "")
               }
             >
-              <p className="product-description">{product.description}</p>
+              <RichText className="product-description" value={product.description} />
             </div>
             {(clamped || expanded) && (
               <button

@@ -26,8 +26,13 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1146.0",
     "@aws-sdk/s3-request-presigner": "^3.1146.0",
+    "@tiptap/extensions": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "@tiptap/react": "3.31.4",
+    "@tiptap/starter-kit": "3.31.4",
     "@vercel/blob": "2.8.0",
     "cors": "^2.8.5",
+    "dompurify": "^3.4.16",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
     "lucide-react": "^0.468.0",
