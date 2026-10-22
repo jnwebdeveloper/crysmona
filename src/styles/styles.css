@@ -1977,10 +1977,14 @@ a {
 }
 .recommend > div {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 24px;
-  max-width: 1050px;
+  max-width: 1280px;
   margin: auto;
+}
+/* "You may also like" directly after "Similar items": no double gap. */
+.recommend + .recommend {
+  padding-top: 0;
 }
 .pdp-story {
   display: grid;

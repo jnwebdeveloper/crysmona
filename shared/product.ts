@@ -15,6 +15,7 @@ export type Product = {
   metal?: string;
   specifications?: Record<string, string>;
   stockQty?: number;
+  featured?: boolean;
   images?: GalleryItem[];
 };
 // One entry in a product gallery. Rows saved before videos existed have no media_type.

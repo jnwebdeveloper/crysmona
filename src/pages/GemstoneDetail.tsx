@@ -1,13 +1,13 @@
 import { ArrowRight, Gem, Heart, Minus, Plus, ShieldCheck } from "lucide-react";
 import { useState } from "react";
-import { go, useStore } from "../lib/Store";
+import { go } from "../lib/Store";
 import ProductGallery from "../components/ProductGallery";
+import ProductRecommendations from "../components/ProductRecommendations";
 import RichText from "../components/RichText";
 import { Product } from "../lib/model";
 import { useCart } from "../lib/cart";
 export default function GemstoneDetail({ product }: { product: Product }) {
   const [qty, setQty] = useState(1);
-  const { catalog } = useStore();
   const { add } = useCart();
   return (
     <main className="page gem-detail">
@@ -116,29 +116,7 @@ export default function GemstoneDetail({ product }: { product: Product }) {
           ))}
         </dl>
       </section>
-      <section className="gem-related">
-        <span className="eyebrow">KEEP EXPLORING</span>
-        <h2>More colours to fall for</h2>
-        <div>
-          {catalog
-            .filter((p) => p.kind === "gemstone" && p.slug !== product.slug)
-            .slice(0, 4)
-            .map((p) => (
-              <a
-                key={p.slug}
-                href={"/product/" + p.slug}
-                onClick={(e) => {
-                  e.preventDefault();
-                  go("/product/" + p.slug);
-                }}
-              >
-                <img src={p.image} alt={p.name} />
-                <h3>{p.name}</h3>
-                <span>{p.price}</span>
-              </a>
-            ))}
-        </div>
-      </section>
+      <ProductRecommendations product={product} />
     </main>
   );
 }

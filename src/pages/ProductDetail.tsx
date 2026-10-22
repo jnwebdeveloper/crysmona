@@ -10,14 +10,14 @@ import {
 
 import { go as navTo, useStore } from "../lib/Store";
 import ProductGallery from "../components/ProductGallery";
+import ProductRecommendations from "../components/ProductRecommendations";
 import RichText from "../components/RichText";
 import { Product } from "../lib/model";
 import { useCart } from "../lib/cart";
 
 import SubscribeForm from "../components/SubscribeForm";
-import ProductCard from "../components/ProductCard";
 export default function ProductDetail({ product }: { product: Product }) {
-  const { catalog: products, store, user } = useStore();
+  const { store, user } = useStore();
   const { add } = useCart();
   const [q, setQ] = useState(1);
   // Stone and metal lead the specifications table; empty values are left out, and
@@ -187,18 +187,7 @@ export default function ProductDetail({ product }: { product: Product }) {
           </dl>
         </section>
       )}
-      <section className="recommend">
-        <span>CURATED FOR YOU</span>
-        <h2>You may also like</h2>
-        <div>
-          {products
-            .filter((p) => p.slug !== product.slug)
-            .slice(0, 3)
-            .map((p) => (
-              <ProductCard key={p.slug} p={p} add={add} />
-            ))}
-        </div>
-      </section>
+      <ProductRecommendations product={product} />
       <section className="pdp-story">
         <img src="/assets/jewellery-1.jpg" />
         <article>
