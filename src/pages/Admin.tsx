@@ -4,6 +4,7 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
+  ExternalLink,
   LayoutDashboard,
   Package,
   Tags,
@@ -964,6 +965,22 @@ export default function AdminPage() {
                   </td>
                   <td>
                     <div className="admin-actions">
+                      {tab === "products" && r.slug && (
+                        <a
+                          className="admin-store-link"
+                          href={"/product/" + r.slug}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={"View " + label(r) + " in the store (opens in a new tab)"}
+                          title={
+                            r.active === false
+                              ? "View in store (hidden products show as unavailable)"
+                              : "View in store"
+                          }
+                        >
+                          <ExternalLink />
+                        </a>
+                      )}
                       <span className="admin-move" role="group" aria-label="Reorder">
                         <button
                           aria-label={"Move " + label(r) + " up"}

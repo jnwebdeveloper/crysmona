@@ -827,6 +827,31 @@ button:disabled {
   width: 12px;
   height: 12px;
 }
+/* "View in store" icon link, the same size as the reorder arrows. */
+.admin-actions .admin-store-link {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #b89a72;
+  background: #fff;
+  color: #5c392e;
+}
+.admin-actions .admin-store-link svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.2;
+}
+.admin-actions .admin-store-link:hover {
+  background: #a97935;
+  border-color: #a97935;
+  color: #fff;
+}
+.admin-actions .admin-store-link:focus-visible {
+  outline: 2px solid #a47835;
+  outline-offset: 2px;
+}
 /* Reorder arrows: a joined pair of square buttons, larger than the text actions. */
 .admin-move {
   display: inline-flex;
@@ -849,7 +874,7 @@ button:disabled {
   border-left: 1px solid #b89a72;
 }
 .admin-actions .admin-move button:hover:not(:disabled) {
-  background: #174e46;
+  background: #a97935;
   color: #fff;
 }
 .admin-actions .admin-move button:focus-visible {
