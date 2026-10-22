@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import {
   ArrowRight,
@@ -29,6 +29,46 @@ export default function ProductDetail({ product }: { product: Product }) {
     if (!specs.some(([name]) => name.toLowerCase() === key.trim().toLowerCase()))
       specs.push([key, value]);
   const specRows = specs.filter(([, value]) => value?.trim());
+  // On desktop the info column matches the gallery's height: the description
+  // takes the space left, is cut off with "View more" when too long, and the buy
+  // buttons line up with the bottom of the gallery. If even a 3-line description
+  // doesn't fit, the column is allowed to grow instead ("tall").
+  const infoRef = useRef<HTMLElement>(null);
+  const descRef = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [tall, setTall] = useState(false);
+  const [clamped, setClamped] = useState(false);
+  useLayoutEffect(() => {
+    const info = infoRef.current,
+      desc = descRef.current;
+    if (!info || !desc) return;
+    const measure = () => {
+      if (info.classList.contains("pdp-fit") && info.scrollHeight > info.clientHeight + 1) {
+        setTall(true);
+        return;
+      }
+      setClamped(!expanded && desc.scrollHeight > desc.clientHeight + 1);
+    };
+    measure();
+    // When the gallery or window really changes size (images loading, resizing),
+    // check again from the fitted layout.
+    const gallery = info.previousElementSibling as HTMLElement | null;
+    const size = () => `${gallery?.offsetHeight}x${window.innerWidth}`;
+    let last = size();
+    const recheck = () => {
+      if (size() === last) return;
+      last = size();
+      setTall(false);
+      measure();
+    };
+    const observer = new ResizeObserver(recheck);
+    if (gallery) observer.observe(gallery);
+    window.addEventListener("resize", recheck);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", recheck);
+    };
+  }, [expanded, tall, product.description]);
   return (
     <main className="page product-page">
       <div className="crumbs">
@@ -55,11 +95,37 @@ export default function ProductDetail({ product }: { product: Product }) {
       </div>
       <section className="pdp-hero">
         <ProductGallery product={product} />
-        <article className="pdp-info">
+        <article
+          ref={infoRef}
+          className={"pdp-info" + (!expanded && !tall ? " pdp-fit" : "")}
+        >
           <span>CRYSMONA SIGNATURE</span>
           <h1>{product.name}</h1>
           <strong>{product.price}</strong>
-          <p className="product-description">{product.description}</p>
+          <div className="pdp-desc-wrap">
+            <div
+              ref={descRef}
+              id="pdp-description"
+              className={
+                "pdp-desc" +
+                (expanded ? " is-expanded" : "") +
+                (clamped ? " is-clamped" : "")
+              }
+            >
+              <p className="product-description">{product.description}</p>
+            </div>
+            {(clamped || expanded) && (
+              <button
+                type="button"
+                className="pdp-desc-toggle"
+                aria-expanded={expanded}
+                aria-controls="pdp-description"
+                onClick={() => setExpanded(!expanded)}
+              >
+                {expanded ? "View less" : "View more"}
+              </button>
+            )}
+          </div>
           {(product.stockQty ?? 0) <= 0 && (
             <p className="stock-status sold-out">
               This piece has found its home. Discover another favourite below.
