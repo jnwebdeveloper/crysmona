@@ -1827,19 +1827,6 @@ a {
   color: var(--muted);
   max-width: 540px;
 }
-.pdp-meta {
-  display: grid;
-  grid-template-columns: 90px 1fr;
-  gap: 10px;
-  padding: 22px 0;
-  border-top: 1px solid #e6dbcf;
-  border-bottom: 1px solid #e6dbcf;
-  margin-top: 24px;
-  font-size: 11px;
-}
-.pdp-meta span {
-  color: var(--muted);
-}
 .qty {
   display: flex;
   justify-content: space-between;

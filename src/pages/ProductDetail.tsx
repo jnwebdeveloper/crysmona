@@ -19,6 +19,16 @@ export default function ProductDetail({ product }: { product: Product }) {
   const { catalog: products, store, user } = useStore();
   const { add } = useCart();
   const [q, setQ] = useState(1);
+  // Stone and metal lead the specifications table; empty values are left out, and
+  // a specification with the same name isn't repeated.
+  const specs: [string, string][] = [
+    ["Stone", product.stone],
+    ["Metal", product.metal || ""],
+  ];
+  for (const [key, value] of Object.entries(product.specifications || {}))
+    if (!specs.some(([name]) => name.toLowerCase() === key.trim().toLowerCase()))
+      specs.push([key, value]);
+  const specRows = specs.filter(([, value]) => value?.trim());
   return (
     <main className="page product-page">
       <div className="crumbs">
@@ -50,12 +60,6 @@ export default function ProductDetail({ product }: { product: Product }) {
           <h1>{product.name}</h1>
           <strong>{product.price}</strong>
           <p className="product-description">{product.description}</p>
-          <div className="pdp-meta">
-            <b>Stone</b>
-            <span>{product.stone}</span>
-            <b>Metal</b>
-            <span>{product.metal || "—"}</span>
-          </div>
           {(product.stockQty ?? 0) <= 0 && (
             <p className="stock-status sold-out">
               This piece has found its home. Discover another favourite below.
@@ -101,20 +105,18 @@ export default function ProductDetail({ product }: { product: Product }) {
           </button>
         </article>
       </section>
-      {Object.keys(product.specifications || {}).length > 0 && (
+      {specRows.length > 0 && (
         <section className="gem-specs">
           <div>
             <h2>Gemstone specifications</h2>
           </div>
           <dl>
-            {Object.entries(product.specifications || {}).map(
-              ([key, value]) => (
-                <div key={key}>
-                  <dt>{key}</dt>
-                  <dd>{value}</dd>
-                </div>
-              ),
-            )}
+            {specRows.map(([key, value]) => (
+              <div key={key}>
+                <dt>{key}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
           </dl>
         </section>
       )}
