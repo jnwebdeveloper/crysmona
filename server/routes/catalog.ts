@@ -55,7 +55,7 @@ app.get("/api/storefront", async (_req, res) => {
 // Product descriptions may be rich text (HTML); meta tags need plain text.
 const plainText = (value: string | null) =>
   (value || "")
-    .replace(/<\/(p|h2|h3|li|blockquote)>|<br\s*\/?>/gi, " ")
+    .replace(/<\/(p|h[1-6]|li|blockquote)>|<br\s*\/?>/gi, " ")
     .replace(/<[^>]*>/g, "")
     .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<")

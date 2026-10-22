@@ -16,6 +16,42 @@ export type UploadTarget = {
   recordId?: number | string | null;
 };
 
+// Product photos look best (and identical across the product page, cards and
+// "similar items") as squares of at least this size. See productImageAdvice.
+export const PRODUCT_IMAGE_SIZE = 2000;
+export const PRODUCT_IMAGE_MIN = 1600;
+export const PRODUCT_IMAGE_TIPS =
+  "Product photos: square, 2000 × 2000 px (at least 1600 × 1600), with the piece centred and filling about 70–80% of the frame.";
+
+async function imageSize(file: File) {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const size = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return size;
+  } catch {
+    return null;
+  }
+}
+
+// A warning (not an error) for a product photo that isn't square or is too
+// small, or "" when it's fine. Videos are not checked.
+export async function productImageAdvice(file: File) {
+  if (!IMAGE_TYPES.includes(file.type)) return "";
+  const size = await imageSize(file);
+  if (!size) return "";
+  const { width, height } = size;
+  const square = Math.abs(width - height) <= Math.max(width, height) * 0.02;
+  const large = Math.min(width, height) >= PRODUCT_IMAGE_MIN;
+  if (square && large) return "";
+  const issue = !square
+    ? !large
+      ? "isn't square and is small"
+      : "isn't square"
+    : "is small";
+  return `${file.name} is ${width} × ${height} px and ${issue}. For best results use a square image, at least ${PRODUCT_IMAGE_MIN} × ${PRODUCT_IMAGE_MIN} (ideally ${PRODUCT_IMAGE_SIZE} × ${PRODUCT_IMAGE_SIZE}).`;
+}
+
 // Returns an error message for a file the server would refuse, or "".
 export function checkMediaFile(file: File, allowVideo: boolean) {
   if (IMAGE_TYPES.includes(file.type))

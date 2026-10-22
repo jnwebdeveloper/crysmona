@@ -3,8 +3,6 @@ import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
 import {
   Bold,
-  Heading2,
-  Heading3,
   Italic,
   Link,
   Link2Off,
@@ -50,7 +48,7 @@ export default function RichTextEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: { levels: [2, 3] },
+        heading: { levels: [1, 2, 3, 4, 5, 6] },
         code: false,
         codeBlock: false,
         horizontalRule: false,
@@ -97,6 +95,9 @@ export default function RichTextEditor({
   );
 }
 
+type Level = 1 | 2 | 3 | 4 | 5 | 6;
+const levels: Level[] = [1, 2, 3, 4, 5, 6];
+
 function Toolbar({ editor, disabled }: { editor: Editor; disabled: boolean }) {
   const chain = () => editor.chain().focus();
   const editLink = () => {
@@ -133,8 +134,25 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled: boolean }) {
       {button("Underline", <Underline />, () => chain().toggleUnderline().run(), editor.isActive("underline"))}
       {button("Strikethrough", <Strikethrough />, () => chain().toggleStrike().run(), editor.isActive("strike"))}
       <span className="rte-sep" aria-hidden="true" />
-      {button("Heading", <Heading2 />, () => chain().toggleHeading({ level: 2 }).run(), editor.isActive("heading", { level: 2 }))}
-      {button("Subheading", <Heading3 />, () => chain().toggleHeading({ level: 3 }).run(), editor.isActive("heading", { level: 3 }))}
+      <select
+        className="rte-block"
+        aria-label="Text style"
+        title="Text style"
+        disabled={disabled}
+        value={String(levels.find((level) => editor.isActive("heading", { level })) ?? 0)}
+        onChange={(e) => {
+          const level = Number(e.target.value) as Level;
+          if (level) chain().setHeading({ level }).run();
+          else chain().setParagraph().run();
+        }}
+      >
+        <option value="0">Paragraph</option>
+        {levels.map((level) => (
+          <option key={level} value={level}>
+            Heading {level}
+          </option>
+        ))}
+      </select>
       {button("Bulleted list", <List />, () => chain().toggleBulletList().run(), editor.isActive("bulletList"))}
       {button("Numbered list", <ListOrdered />, () => chain().toggleOrderedList().run(), editor.isActive("orderedList"))}
       {button("Quote", <Quote />, () => chain().toggleBlockquote().run(), editor.isActive("blockquote"))}

@@ -1041,23 +1041,55 @@ button:disabled {
 .rich-text > :last-child {
   margin-bottom: 0;
 }
+.rich-text h1,
 .rich-text h2,
-.rich-text h3 {
+.rich-text h3,
+.rich-text h4,
+.rich-text h5,
+.rich-text h6 {
   font-family: "Cormorant Garamond", serif;
   font-weight: 600;
   color: #2d211c;
   line-height: 1.2;
   margin: 1em 0 0.4em;
 }
-.rich-text > h2:first-child,
-.rich-text > h3:first-child {
+.rich-text > :is(h1, h2, h3, h4, h5, h6):first-child {
   margin-top: 0;
 }
+/* Sized relative to the surrounding text so they stay below the page title. */
+.rich-text h1 {
+  font-size: 2em;
+}
 .rich-text h2 {
-  font-size: 1.6em;
+  font-size: 1.7em;
 }
 .rich-text h3 {
-  font-size: 1.3em;
+  font-size: 1.45em;
+}
+.rich-text h4 {
+  font-size: 1.25em;
+}
+.rich-text h5 {
+  font-size: 1.1em;
+}
+.rich-text h6 {
+  font-size: 1em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.rte .rte-toolbar select.rte-block {
+  width: auto;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid #d9cabb;
+  background: #fff;
+  color: #5c392e;
+  font: 12px Montserrat, sans-serif;
+  cursor: pointer;
+}
+.rte .rte-toolbar select.rte-block:focus-visible {
+  outline: 2px solid #a47835;
+  outline-offset: 1px;
 }
 .rich-text ul,
 .rich-text ol {
@@ -1720,6 +1752,37 @@ footer section a {
   color: #fff;
   font-size: 28px;
   text-shadow: 0 2px 8px #000a;
+}
+.admin-upload-tips {
+  display: block;
+  color: #6f5d4e;
+  text-transform: none;
+  line-height: 1.5;
+}
+.admin-upload-advice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid #e3c98f;
+  border-left: 3px solid #a97935;
+  background: #fbf3e2;
+  color: #5c4520;
+  font-size: 12px;
+  line-height: 1.5;
+  text-transform: none;
+}
+.admin-upload-advice button {
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #8f642c;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
 }
 .admin-upload-progress {
   display: block;

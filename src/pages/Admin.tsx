@@ -33,6 +33,8 @@ import {
   IMAGE_TYPES,
   MEDIA_RULES,
   MediaType,
+  PRODUCT_IMAGE_TIPS,
+  productImageAdvice,
   uploadMedia,
   VIDEO_TYPES,
 } from "../lib/mediaUpload";
@@ -1336,6 +1338,7 @@ function ProductImages({
 }: any) {
   const [url, setUrl] = useState("");
   const [progress, setProgress] = useState("");
+  const [advice, setAdvice] = useState<string[]>([]);
   const images: GalleryItem[] = [
     ...(editing.image_url
       ? [{ media_url: editing.image_url, alt_text: editing.name || "" }]
@@ -1376,6 +1379,10 @@ function ProductImages({
           }
           setBusy(true);
           setError("");
+          // Size advice only warns; the files still upload.
+          setAdvice(
+            (await Promise.all(files.map(productImageAdvice))).filter(Boolean),
+          );
           try {
             for (const [index, file] of files.entries()) {
               const label =
@@ -1403,6 +1410,18 @@ function ProductImages({
         {MEDIA_RULES}. Select multiple files. Choose a default image for the
         product listing (videos can't be the default).
       </small>
+      <small className="admin-upload-tips">{PRODUCT_IMAGE_TIPS}</small>
+      {advice.length > 0 && (
+        <div className="admin-upload-advice" role="status">
+          <b>Image size advice</b>
+          {advice.map((message) => (
+            <span key={message}>{message}</span>
+          ))}
+          <button type="button" onClick={() => setAdvice([])}>
+            Dismiss
+          </button>
+        </div>
+      )}
       {progress && (
         <small className="admin-upload-progress" aria-live="polite">
           {progress}

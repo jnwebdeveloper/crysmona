@@ -6,7 +6,7 @@ import DOMPurify from "dompurify";
 // Tags and attributes the editor can produce; anything else is removed on display.
 const ALLOWED_TAGS = [
   "p", "br", "strong", "b", "em", "i", "u", "s",
-  "h2", "h3", "ul", "ol", "li", "blockquote", "a",
+  "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote", "a",
 ];
 const ALLOWED_ATTR = ["href", "target", "rel"];
 
@@ -55,7 +55,7 @@ export function toSafeHtml(value: string | null | undefined) {
 export function richTextToPlain(value: string | null | undefined) {
   if (!value || !isRichText(value)) return value || "";
   // Keep a space between paragraphs, list items and line breaks.
-  const spaced = value.replace(/<\/(p|h2|h3|li|blockquote)>|<br\s*\/?>/gi, "$& ");
+  const spaced = value.replace(/<\/(p|h[1-6]|li|blockquote)>|<br\s*\/?>/gi, "$& ");
   const doc = new DOMParser().parseFromString(spaced, "text/html");
   return (doc.body.textContent || "").replace(/\s+/g, " ").trim();
 }
