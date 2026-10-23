@@ -27,7 +27,7 @@ import { useNavigate, useParams } from "react-router";
 import Loader from "../components/Loader";
 import { Field, resources } from "../../shared/adminSchema";
 import { adminValidation } from "../../shared/adminValidation";
-import { api, go, useStore } from "../lib/Store";
+import { api, go } from "../lib/Store";
 import {
   checkMediaFile,
   IMAGE_TYPES,
@@ -131,7 +131,6 @@ export default function AdminPage() {
       confirm: string;
       error: string;
     } | null>(null);
-  const { refresh } = useStore();
   const resource = tab === "discover" ? "content_blocks" : tab;
   const definition =
     tab === "discover"
@@ -298,7 +297,6 @@ export default function AdminPage() {
       });
       setEditing(null);
       await load();
-      await refresh();
       setNotice("Changes saved. Your storefront is up to date.");
     } catch (e: any) {
       setError(e.message);
@@ -313,7 +311,6 @@ export default function AdminPage() {
       await request(resource + "/" + removing.id, { method: "DELETE" });
       setRemoving(null);
       await load();
-      await refresh();
       setNotice("Record deleted.");
     } catch (e: any) {
       setError(e.message);

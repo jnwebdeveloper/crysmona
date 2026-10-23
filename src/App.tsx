@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect } from "react";
+import { lazy, useEffect } from "react";
 import {
   Route,
   Routes,
@@ -6,12 +6,10 @@ import {
   useNavigate,
   useNavigationType,
 } from "react-router";
-import Loader from "./components/Loader";
+import AdminLayout from "./components/AdminLayout";
 import RequireLogin from "./components/RequireLogin";
 import RequireStore from "./components/RequireStore";
 import StoreLayout from "./components/StoreLayout";
-import { useAnalytics } from "./hooks/useAnalytics";
-import { useSeo } from "./hooks/useSeo";
 import { setNavigator } from "./lib/Store";
 import CartPage from "./pages/CartPage";
 import Checkout from "./pages/Checkout";
@@ -31,8 +29,8 @@ import { WishlistPage } from "./pages/WishlistPage";
 const AdminPage = lazy(() => import("./pages/Admin"));
 const SUPPORT_PAGES = ["faq", "returns", "care", "privacy", "terms"];
 
-// Lets go() navigate through React Router, and scrolls to the top on new pages
-// (back/forward keeps the browser's scroll position).
+// Shared by both webapps: lets go() navigate through React Router, and scrolls to
+// the top on new pages (back/forward keeps the browser's scroll position).
 function NavigationEffects() {
   const navigate = useNavigate();
   const navigationType = useNavigationType();
@@ -45,12 +43,7 @@ function NavigationEffects() {
     if (navigationType !== "POP")
       window.scrollTo({ top: 0, behavior: "smooth" });
   }, [pathname]);
-  useSeo();
-  const { showConsent, chooseConsent } = useAnalytics();
-  return showConsent ? <section className="consent-banner" role="region" aria-label="Analytics and advertising preferences">
-    <p>May we use analytics and advertising cookies to measure visits and improve our advertising? You can use the store without accepting. <a href="/privacy">Privacy policy</a></p>
-    <div><button type="button" onClick={() => chooseConsent("denied")}>Decline</button><button type="button" onClick={() => chooseConsent("granted")}>Accept</button></div>
-  </section> : null;
+  return null;
 }
 
 export default function App() {
@@ -58,20 +51,11 @@ export default function App() {
     <>
       <NavigationEffects />
       <Routes>
-        <Route
-          path="admin/:section?"
-          element={
-            <Suspense
-              fallback={
-                <main className="page">
-                  <Loader label="Loading admin…" />
-                </main>
-              }
-            >
-              <AdminPage />
-            </Suspense>
-          }
-        />
+        {/* Admin webapp */}
+        <Route element={<AdminLayout />}>
+          <Route path="admin/:section?" element={<AdminPage />} />
+        </Route>
+        {/* Store webapp */}
         <Route element={<StoreLayout />}>
           {/* Pages that need the catalog, store content or bag. */}
           <Route element={<RequireStore />}>
