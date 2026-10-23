@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect } from "react";
+import React, { lazy, Suspense, useEffect, useLayoutEffect } from "react";
 import {
   Route,
   Routes,
@@ -36,15 +36,18 @@ const SUPPORT_PAGES = ["faq", "returns", "care", "privacy", "terms"];
 function NavigationEffects() {
   const navigate = useNavigate();
   const navigationType = useNavigationType();
-  const { pathname } = useLocation();
+  const { key } = useLocation();
   useEffect(() => {
     setNavigator((path) => navigate(path));
     return () => setNavigator(null);
   }, [navigate]);
-  useEffect(() => {
-    if (navigationType !== "POP")
-      window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [pathname]);
+  useLayoutEffect(() => {
+    if (navigationType !== "POP") {
+      // Reset before paint. An animated scroll can be interrupted when the new
+      // page changes the document height. The key also covers same-page links.
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+  }, [key, navigationType]);
   useSeo();
   const { showConsent, chooseConsent } = useAnalytics();
   return showConsent ? <section className="consent-banner" role="region" aria-label="Analytics and advertising preferences">
