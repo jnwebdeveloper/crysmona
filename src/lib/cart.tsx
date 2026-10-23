@@ -136,7 +136,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     );
     // Navigate as soon as the item is added; tracking must not delay or block it.
     go("/cart");
-    showToast(`${product.name} added to your bag`);
+    showToast("");
     try {
       if (typeof (window as any).fbq === "function")
         (window as any).fbq("track", "AddToCart", {
