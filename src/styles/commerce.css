@@ -1833,7 +1833,7 @@ footer section a {
   font-weight: 600;
 }
 
-/* Transparent navigation: compact on scroll, with contrast around text/icons. */
+/* Navigation stays compact on scroll with clean menu text and icons. */
 .nav.site-nav,
 .nav.site-nav.is-scrolled {
   background: transparent;
@@ -1851,11 +1851,7 @@ footer section a {
 .site-nav nav > a,
 .site-nav .nav-toggle {
   color: #21150f;
-  text-shadow:
-    -1px 0 1px #fffdf4,
-    1px 0 1px #fffdf4,
-    0 -1px 1px #fffdf4,
-    0 1px 1px #fffdf4;
+  text-shadow: none;
 }
 .site-nav .nav-icons > button,
 .site-nav .hamb {
@@ -1864,7 +1860,7 @@ footer section a {
 .site-nav .nav-icons > button > svg,
 .site-nav .hamb > svg,
 .site-nav .nav-toggle > svg {
-  filter: drop-shadow(0 0 1px #fffdf4) drop-shadow(0 0 1px #fffdf4);
+  filter: none;
 }
 .site-nav .nav-toggle[aria-expanded="true"] {
   color: #79501d;
