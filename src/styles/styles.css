@@ -159,15 +159,6 @@ button {
   object-fit: cover;
   object-position: center 20%;
 }
-.hero > em {
-  position: absolute;
-  right: 4.5%;
-  top: 210px;
-  color: #f4eadb;
-  font-family: "Cormorant Garamond", serif;
-  font-size: 25px;
-  line-height: 1.1;
-}
 .trust {
   min-height: 105px;
   display: grid;
@@ -676,9 +667,6 @@ footer > section span {
   .hero-image {
     height: 430px;
   }
-  .hero > em {
-    display: none;
-  }
   .trust {
     grid-template-columns: 1fr 1fr;
     padding: 18px;
@@ -854,11 +842,6 @@ footer > section span {
 .hero-image img {
   object-position: center center;
   filter: saturate(0.92) contrast(1.02);
-}
-.hero > em {
-  right: 3.8%;
-  top: 235px;
-  font-size: 26px;
 }
 .trust {
   min-height: 96px;

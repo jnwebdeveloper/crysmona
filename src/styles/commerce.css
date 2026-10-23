@@ -1352,9 +1352,6 @@ button:disabled {
   .hero-slide .hero-image {
     padding-bottom: 55px;
   }
-  .hero-slide em {
-    display: none;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-slide,
@@ -1396,15 +1393,6 @@ footer section a {
 .hero.hero-carousel .hero-copy {
   padding: 185px 7% 90px 12%;
 }
-.hero-slide > em {
-  position: absolute;
-  right: 4%;
-  top: 235px;
-  color: #f4eadb;
-  font-family: "Cormorant Garamond", serif;
-  font-size: 26px;
-  line-height: 1.1;
-}
 @media (max-width: 900px) {
   .hero.hero-carousel .hero-slide {
     grid-template-columns: 1fr;
@@ -1414,9 +1402,6 @@ footer section a {
   }
   .hero.hero-carousel .hero-image {
     height: 380px;
-  }
-  .hero-slide > em {
-    display: none;
   }
   .carousel-controls {
     left: 50%;

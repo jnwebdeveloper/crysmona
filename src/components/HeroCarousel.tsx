@@ -3,8 +3,6 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Pause,
-  Play,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { go } from "../lib/Store";
@@ -19,8 +17,9 @@ type Slide = {
   block_key: string;
 };
 export default function HeroCarousel({ slides }: { slides: Slide[] }) {
+  // Auto-advance stops while the carousel is hovered or focused, and for visitors
+  // who prefer reduced motion.
   const [index, setIndex] = useState(0),
-    [paused, setPaused] = useState(false),
     [hover, setHover] = useState(false),
     [focused, setFocused] = useState(false),
     [reduced, setReduced] = useState(false);
@@ -32,12 +31,12 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
     return () => media.removeEventListener("change", update);
   }, []);
   useEffect(() => {
-    if (paused || hover || focused || reduced || slides.length < 2) return;
+    if (hover || focused || reduced || slides.length < 2) return;
     const timer = setInterval(() => {
       if (!document.hidden) setIndex((i) => (i + 1) % slides.length);
     }, 6500);
     return () => clearInterval(timer);
-  }, [paused, hover, focused, reduced, slides.length]);
+  }, [hover, focused, reduced, slides.length]);
   if (!slides.length) return null;
   const active = index % slides.length,
     slide = slides[active];
@@ -83,13 +82,6 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
             loading="eager"
           />
         </div>
-        <em>
-          More
-          <br />
-          Than
-          <br />
-          Jewellery
-        </em>
       </div>
       {slides.length > 1 && (
         <div className="carousel-controls">
@@ -108,13 +100,6 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
           </div>
           <button aria-label="Next slide" onClick={() => change(1)}>
             <ChevronRight />
-          </button>
-          <button
-            aria-label={paused ? "Resume slideshow" : "Pause slideshow"}
-            aria-pressed={paused}
-            onClick={() => setPaused(!paused)}
-          >
-            {paused ? <Play /> : <Pause />}
           </button>
         </div>
       )}
