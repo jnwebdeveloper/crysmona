@@ -1737,6 +1737,35 @@ a {
   color: #776b64;
   border-bottom: 1px solid #eee3d6;
 }
+.crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.crumbs a {
+  color: inherit;
+  text-decoration: none;
+}
+.crumbs a:hover {
+  color: #94692f;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.crumbs a:focus-visible {
+  outline: 2px solid #a47835;
+  outline-offset: 2px;
+}
+.crumbs [aria-current="page"] {
+  color: #2d211c;
+}
+/* Separators are decoration: screen readers announce the list, not slashes. */
+.crumbs li + li::before {
+  content: "/";
+  content: "/" / "";
+  margin: 0 0.6em;
+}
 .pdp-hero {
   display: grid;
   grid-template-columns: 54% 46%;

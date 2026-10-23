@@ -43,6 +43,21 @@ export default function ProductDetail({ product }: { product: Product }) {
   const isGem = product.kind === "gemstone";
   const copy = COPY[isGem ? "gemstone" : "jewellery"];
   const spec = product.specifications || {};
+  // Breadcrumb: Home / Jewellery or Gemstones / category (when the product has an
+  // active one) / product. The category links to the listing filtered by it.
+  const category = store.categories?.find(
+    (c: any) => c.id === product.categoryId && c.active !== false,
+  );
+  const crumbs: [string, string][] = [
+    ["HOME", "/"],
+    [copy.crumb[0], copy.crumb[1]],
+    ...(category
+      ? [[
+          String(category.name).toUpperCase(),
+          `${copy.crumb[1]}?category=${encodeURIComponent(category.slug)}`,
+        ] as [string, string]]
+      : []),
+  ];
   // Jewellery: stone and metal lead the specifications table. Empty values are
   // left out, and a specification with the same name isn't repeated.
   const specs: [string, string][] = isGem
@@ -97,28 +112,24 @@ export default function ProductDetail({ product }: { product: Product }) {
   }, [expanded, tall, product.description]);
   return (
     <main className="page product-page">
-      <div className="crumbs">
-        <a
-          href="/"
-          onClick={(e) => {
-            e.preventDefault();
-            navTo("/");
-          }}
-        >
-          HOME
-        </a>{" "}
-        /{" "}
-        <a
-          href={copy.crumb[1]}
-          onClick={(e) => {
-            e.preventDefault();
-            navTo(copy.crumb[1]);
-          }}
-        >
-          {copy.crumb[0]}
-        </a>{" "}
-        / {product.name.toUpperCase()}
-      </div>
+      <nav className="crumbs" aria-label="Breadcrumb">
+        <ol>
+          {crumbs.map(([label, url]) => (
+            <li key={url}>
+              <a
+                href={url}
+                onClick={(e) => {
+                  e.preventDefault();
+                  navTo(url);
+                }}
+              >
+                {label}
+              </a>
+            </li>
+          ))}
+          <li aria-current="page">{product.name.toUpperCase()}</li>
+        </ol>
+      </nav>
       <section className="pdp-hero">
         <ProductGallery product={product} />
         <article
