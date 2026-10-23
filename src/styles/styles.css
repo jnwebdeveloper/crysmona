@@ -1996,13 +1996,21 @@ a {
   color: #a87937;
 }
 .recommend {
-  text-align: center;
+  text-align: left;
   padding: 65px 6%;
   background: #fbf6ef;
 }
 .recommend h2 {
   font-size: 46px;
   margin: 8px 0 32px;
+}
+/* Headings line up with the first product card. */
+.recommend > span,
+.recommend > h2 {
+  display: block;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .recommend > div {
   display: grid;
