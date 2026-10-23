@@ -134,16 +134,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           )
         : [...c, { product, qty }],
     );
-    showToast(`${product.name} added to your bag`);
-    if ((window as any).fbq)
-      (window as any).fbq("track", "AddToCart", {
-        content_name: product.name,
-        content_ids: [product.slug],
-        content_type: "product",
-        value: product.priceCents ? product.priceCents / 100 : undefined,
-        currency: "USD",
-      });
+    // Navigate as soon as the item is added; tracking must not delay or block it.
     go("/cart");
+    showToast(`${product.name} added to your bag`);
+    try {
+      if (typeof (window as any).fbq === "function")
+        (window as any).fbq("track", "AddToCart", {
+          content_name: product.name,
+          content_ids: [product.slug],
+          content_type: "product",
+          value: product.priceCents ? product.priceCents / 100 : undefined,
+          currency: "USD",
+        });
+    } catch {
+      // Tracking failures do not affect the bag or navigation.
+    }
   };
 
   const update = (slug: string, qty: number) => {

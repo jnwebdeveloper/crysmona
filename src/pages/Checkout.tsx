@@ -104,14 +104,6 @@ export default function Checkout() {
       ) : (
         <div className="checkout-layout">
           <form className="checkout-form" onSubmit={submit}>
-            {!user && (
-              <div className="checkout-signin">
-                <p>Sign in to save this order to your account.</p>
-                <button type="button" onClick={onLogin}>
-                  SIGN IN
-                </button>
-              </div>
-            )}
             <fieldset>
               <legend>Contact & delivery</legend>
               <div className="two">
