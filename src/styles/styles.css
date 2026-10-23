@@ -4171,3 +4171,81 @@ html {
 .product-gallery .gem-detail-image .product-share button { width: 42px; height: 42px; }
 .product-gallery .product-share p { position: absolute; right: 0; top: 48px; width: 220px; max-width: 65vw; background: #fff; padding: 10px; border: 1px solid #d7c8b6; }
 .product-gallery .product-share input { position: absolute; right: 0; top: 125px; width: 220px; max-width: 65vw; background: #fff; }
+
+/* Storefront footer: warm editorial typography and restrained gold details. */
+#footer {
+  display: block;
+  padding: 0 clamp(24px, 6vw, 96px);
+  background: #f2ece2;
+  border-top: 1px solid #e0d4c3;
+  color: #39291f;
+}
+#footer .footer-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 58px 0 44px;
+  border-bottom: 1px solid #d9cbb8;
+}
+#footer .footer-eyebrow {
+  color: #81613a;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .22em;
+}
+#footer h2 {
+  margin: 18px 0 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(36px, 4.2vw, 58px);
+  line-height: 1.08;
+  font-weight: 500;
+  letter-spacing: -.025em;
+}
+#footer a { text-decoration: none; transition: color .2s, border-color .2s, background .2s; }
+#footer a:hover { color: #8a602c; }
+#footer a:focus-visible { outline: 2px solid #926a36; outline-offset: 5px; border-radius: 2px; }
+#footer .footer-discover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  margin: 0 0 5px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid #9e7a4b;
+  color: #493420;
+  font-size: 12px;
+  font-weight: 500;
+}
+#footer .footer-discover svg { width: 19px; height: 19px; stroke-width: 1.4; }
+#footer .footer-main { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 64px; padding: 48px 0 50px; }
+#footer .footer-logo { display: inline-block; margin: 0; }
+#footer .foot-brand img { display: block; width: 174px; height: 65px; object-fit: contain; object-position: left center; }
+#footer .foot-brand p { max-width: 285px; margin: 17px 0 22px; color: #726354; font-size: 12px; line-height: 1.9; }
+#footer .footer-socials { display: flex; gap: 10px; }
+#footer .footer-socials a { display: grid; place-items: center; width: 37px; height: 37px; margin: 0; border: 1px solid #cebea8; border-radius: 50%; }
+#footer .footer-socials a:hover { background: #e9dfcf; border-color: #9e7a4b; }
+#footer .footer-socials svg { width: 15px; height: 15px; margin: 0; stroke-width: 1.5; }
+#footer .footer-links h3 { margin: 12px 0 23px; color: #493420; font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+#footer .footer-links a { display: table; margin: 0 0 13px; color: #6c5b4c; font-size: 12px; line-height: 1.6; }
+#footer .footer-links a:hover { color: #8a602c; text-decoration: underline; text-underline-offset: 4px; }
+#footer .footer-links .footer-contact { display: inline-flex; align-items: center; gap: 14px; margin-top: 9px; color: #493420; }
+#footer .footer-contact svg { width: 15px; height: 15px; }
+#footer .footer-bottom { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid #d9cbb8; padding: 23px 0; }
+#footer .footer-bottom p, #footer .footer-bottom a, #footer .footer-signoff { margin: 0; color: #756555; font-size: 10px; line-height: 1.7; }
+#footer .footer-signoff { font-family: "Cormorant Garamond", Georgia, serif; font-size: 16px; font-style: italic; }
+#footer .footer-bottom nav { display: flex; flex-wrap: wrap; gap: 20px; }
+@media (max-width: 900px) {
+  #footer .footer-main { grid-template-columns: 1.3fr 1fr 1fr; gap: 30px; }
+  #footer .footer-signoff { display: none; }
+}
+@media (max-width: 600px) {
+  #footer .footer-intro { align-items: flex-start; flex-direction: column; gap: 28px; padding: 40px 0 32px; }
+  #footer .footer-discover { font-size: 11px; }
+  #footer .footer-main { grid-template-columns: 1fr 1fr; gap: 30px 22px; padding: 30px 0; }
+  #footer .foot-brand { grid-column: 1 / -1; }
+  #footer .foot-brand p { max-width: 310px; margin-top: 12px; }
+  #footer .footer-links h3 { font-size: 9px; letter-spacing: .12em; margin-bottom: 18px; }
+  #footer .footer-links a { font-size: 11px; }
+  #footer .footer-bottom { align-items: flex-start; flex-direction: column; gap: 12px; padding: 20px 0 26px; }
+}
