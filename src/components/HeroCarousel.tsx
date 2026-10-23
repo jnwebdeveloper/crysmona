@@ -1,3 +1,4 @@
+import RichText from "./RichText";
 import {
   ArrowRight,
   ChevronLeft,
@@ -68,7 +69,7 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
         <div className="hero-copy">
           <span>{slide.subtitle}</span>
           <h1 style={{ whiteSpace: "pre-line" }}>{slide.title}</h1>
-          <p>{slide.body}</p>
+          <RichText value={slide.body} />
           {slide.cta_url && (
             <button onClick={() => go(slide.cta_url)}>
               {slide.cta_label || "EXPLORE"} <ArrowRight />

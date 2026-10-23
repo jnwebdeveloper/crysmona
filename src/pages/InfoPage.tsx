@@ -1,3 +1,4 @@
+import RichText from "../components/RichText";
 import { ArrowRight, Gem, HandHeart, Heart } from "lucide-react";
 import { go, useStore } from "../lib/Store";
 export default function InfoPage({ title }: { title: string }) {
@@ -30,7 +31,7 @@ export default function InfoPage({ title }: { title: string }) {
         <div>
           <span>{hero.subtitle}</span>
           <h1>{hero.title}</h1>
-          <p>{hero.body}</p>
+          <RichText value={hero.body} />
         </div>
         {hero.image_url && <img src={hero.image_url} alt={hero.title} />}
       </section>
@@ -40,7 +41,7 @@ export default function InfoPage({ title }: { title: string }) {
             <article key={b.block_key}>
               <b>{b.subtitle}</b>
               <h2>{b.title}</h2>
-              <p>{b.body}</p>
+              <RichText value={b.body} />
             </article>
           ))}
         </section>
@@ -56,7 +57,7 @@ export default function InfoPage({ title }: { title: string }) {
                   <article key={b.block_key}>
                     <Icon />
                     <h3>{b.title}</h3>
-                    <p>{b.body}</p>
+                    <RichText value={b.body} />
                   </article>
                 );
               })}
@@ -72,7 +73,7 @@ export default function InfoPage({ title }: { title: string }) {
           <article>
             <span>{feature.subtitle}</span>
             <h2>{feature.title}</h2>
-            <p>{feature.body}</p>
+            <RichText value={feature.body} />
             {feature.cta_url && (
               <a href={feature.cta_url}>
                 {feature.cta_label}

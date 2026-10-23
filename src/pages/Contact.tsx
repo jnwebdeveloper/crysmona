@@ -1,3 +1,4 @@
+import RichText from "../components/RichText";
 import { useState } from "react";
 
 import { ArrowRight } from "lucide-react";
@@ -22,7 +23,7 @@ export default function Contact() {
       <section className="page-hero">
         <span>{block?.subtitle}</span>
         <h1>{block?.title || "Contact"}</h1>
-        <p className="product-description">{block?.body}</p>
+        <RichText className="product-description" value={block?.body} />
         {block?.image_url && (
           <img
             className="contact-hero-image"

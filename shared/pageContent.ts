@@ -79,3 +79,31 @@ export const pageContent = [
 ];
 export const isDiscoverBlock = (key: string) =>
   pageContent.some((block) => block.block_key === key);
+
+export const contentPageGroups = [
+  { key: "home", label: "Home", discover: false },
+  { key: "about", label: "About Us", discover: true },
+  { key: "craft", label: "Our Craft", discover: true },
+  { key: "contact", label: "Contact Us", discover: true },
+  { key: "faq", label: "FAQs", discover: false },
+  { key: "shipping", label: "Shipping & Delivery", discover: false },
+  { key: "returns", label: "Returns & Exchanges", discover: false },
+  { key: "care", label: "Jewellery Care", discover: false },
+  { key: "privacy", label: "Privacy Policy", discover: false },
+  { key: "terms", label: "Terms & Conditions", discover: false },
+  { key: "other", label: "Other Content", discover: false },
+];
+
+export function contentPageGroup(key: string = "") {
+  if (
+    ["hero", "story", "signature"].some(
+      (prefix) => key === prefix || key.startsWith(prefix + "-"),
+    )
+  )
+    return "home";
+  return (
+    contentPageGroups.find(
+      (group) => key === group.key || key.startsWith(group.key + "-"),
+    )?.key || "other"
+  );
+}
