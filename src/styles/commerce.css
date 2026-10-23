@@ -42,64 +42,10 @@
 .nav-icons button {
   color: var(--ink);
 }
-.gem-detail {
-  background: #fcf8f2;
-}
-.gem-detail-hero {
-  max-width: 1320px;
-  margin: auto;
-  padding: 10px 5% 65px;
-  display: grid;
-  grid-template-columns: 1.08fr 1fr;
-  gap: 70px;
-}
-.gem-detail-image {
-  position: relative;
-  background: #eee4d8;
-  aspect-ratio: 1/1.05;
-  overflow: hidden;
-}
-.gem-detail-image > img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: #000;
-}
-.gem-detail-image .heart {
-  width: 42px;
-  height: 42px;
-  right: 20px;
-  top: 20px;
-}
-.gem-detail-image .heart svg {
-  width: 20px;
-}
-.gem-detail-info {
-  align-self: center;
-}
-.gem-detail-info h1 {
-  font:
-    56px/1 "Cormorant Garamond",
-    serif;
-  margin: 15px 0;
-}
 .gem-subtitle {
   font-size: 12px;
   color: #857365;
   margin: 16px 0 26px;
-}
-.gem-detail-price {
-  display: block;
-  font:
-    600 29px Montserrat,
-    sans-serif;
-  margin-bottom: 26px;
-}
-.gem-detail-info > p:not(.gem-subtitle),
-.gem-detail-info > .product-description {
-  font-size: 13px;
-  line-height: 1.9;
-  color: #77665c;
 }
 .gem-lot {
   display: flex;
@@ -123,30 +69,6 @@
   color: #847263;
   margin-top: 7px;
 }
-.gem-buy-row {
-  display: flex;
-  gap: 15px;
-  margin-top: 28px;
-}
-.gem-quantity {
-  display: flex;
-  align-items: center;
-  border: 1px solid #cdbba5;
-}
-.gem-quantity button {
-  border: 0;
-  background: transparent;
-  padding: 14px;
-}
-.gem-quantity svg {
-  width: 15px;
-}
-.gem-quantity span {
-  min-width: 23px;
-  text-align: center;
-  font-size: 12px;
-}
-.gem-add,
 .wishlist-copy > button,
 .wishlist-empty > button,
 .payment-result > button {
@@ -160,12 +82,6 @@
   padding: 17px 22px;
   font-size: 10px;
   letter-spacing: 1px;
-}
-.gem-add {
-  flex: 1;
-}
-.gem-add svg {
-  width: 17px;
 }
 .gem-promises {
   display: flex;
@@ -191,8 +107,7 @@
   gap: 60px;
   padding: 55px 5% 70px;
 }
-.gem-specs h2,
-.gem-related h2 {
+.gem-specs h2 {
   font:
     42px/1.05 "Cormorant Garamond",
     serif;
@@ -222,35 +137,6 @@
 .gem-specs dd {
   margin: 0;
   font-weight: 500;
-}
-.gem-related {
-  max-width: 1280px;
-  margin: auto;
-  padding: 40px 5% 75px;
-}
-.gem-related > div {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 22px;
-  margin-top: 28px;
-}
-.gem-related a {
-  color: var(--ink);
-  text-decoration: none;
-}
-.gem-related img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-}
-.gem-related h3 {
-  font:
-    25px "Cormorant Garamond",
-    serif;
-  margin: 12px 0;
-}
-.gem-related a > span {
-  font-size: 16px;
 }
 .gem-thumbnails {
   display: flex;
@@ -1187,37 +1073,17 @@ button:disabled {
   .account-strip {
     padding-top: 105px;
   }
-  .gem-detail-hero {
-    gap: 35px;
-  }
-  .gem-detail-info h1 {
-    font-size: 44px;
-  }
 }
 @media (max-width: 760px) {
-  .gem-detail-hero,
   .gem-specs {
     grid-template-columns: 1fr;
     gap: 30px;
   }
-  .gem-detail-hero {
-    padding-bottom: 35px;
-  }
-  .gem-detail-info h1 {
-    font-size: 43px;
-  }
   .gem-specs {
     padding-top: 35px;
   }
-  .gem-related > div,
   .wishlist-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-  .gem-related h2 {
-    font-size: 34px;
-  }
-  .gem-related h3 {
-    font-size: 22px;
   }
   .wishlist-grid {
     padding: 30px 5%;
@@ -1316,12 +1182,6 @@ button:disabled {
   .wishlist-grid {
     grid-template-columns: 1fr;
   }
-  .gem-buy-row {
-    gap: 10px;
-  }
-  .gem-quantity button {
-    padding: 12px;
-  }
   .gem-promises {
     flex-wrap: wrap;
   }
@@ -1417,7 +1277,6 @@ button:disabled {
   line-height: 1.6;
 }
 .product-price b,
-.gem-detail-price,
 .pdp-info > strong,
 .signature-buy strong,
 .wishlist-copy > strong,
@@ -1616,8 +1475,7 @@ footer section a {
   height: 100%;
   object-fit: cover;
 }
-.product-gallery .pdp-main-image,
-.product-gallery .gem-detail-image {
+.product-gallery .pdp-main-image {
   position: relative;
 }
 .gallery-arrow {
@@ -1692,9 +1550,6 @@ footer section a {
 }
 .pdp-main-image .gallery-zoom > img {
   background: #f0e1d2;
-}
-.gem-detail-image .gallery-zoom > img {
-  background: #000;
 }
 @media (hover: hover) and (pointer: fine) {
   .gallery-zoom.zoomed > img {

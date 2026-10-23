@@ -5,13 +5,7 @@ import { api } from "../lib/Store";
 import { WishButton } from "./WishButton";
 import { Product } from "../lib/model";
 import type { GalleryItem } from "../../shared/product";
-export default function ProductGallery({
-  product,
-  gemstone = false,
-}: {
-  product: Product;
-  gemstone?: boolean;
-}) {
+export default function ProductGallery({ product }: { product: Product }) {
   const [images, setImages] = useState<GalleryItem[]>(product.images || []);
   const [selected, setSelected] = useState(0);
   const [error, setError] = useState(false);
@@ -57,7 +51,7 @@ export default function ProductGallery({
   useEffect(() => setZoom(null), [active]);
   return (
     <div className="product-gallery">
-      <div className={gemstone ? "gem-detail-image" : "pdp-main-image"}>
+      <div className="pdp-main-image">
         {isVideo ? (
           // Keyed by URL so switching slides unmounts it, which stops playback.
           <video
@@ -88,7 +82,7 @@ export default function ProductGallery({
         )}
         <WishButton
           product={product}
-          className={gemstone ? "heart" : "pdp-heart"}
+          className="pdp-heart"
         />
         <ProductShare name={product.name} slug={product.slug} />
         {gallery.length > 1 && (

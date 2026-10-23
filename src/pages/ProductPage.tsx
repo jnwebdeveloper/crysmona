@@ -1,10 +1,9 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router";
 import { useStore } from "../lib/Store";
-import GemstoneDetail from "./GemstoneDetail";
 import ProductDetail from "./ProductDetail";
 
-// /product/:slug — gemstones and jewellery share the URL but use different layouts.
+// /product/:slug — jewellery and gemstones share one product page.
 export default function ProductPage() {
   const { slug } = useParams();
   const { catalog } = useStore();
@@ -19,9 +18,5 @@ export default function ProductPage() {
         </section>
       </main>
     );
-  return product.kind === "gemstone" ? (
-    <GemstoneDetail key={product.slug} product={product} />
-  ) : (
-    <ProductDetail key={product.slug} product={product} />
-  );
+  return <ProductDetail key={product.slug} product={product} />;
 }

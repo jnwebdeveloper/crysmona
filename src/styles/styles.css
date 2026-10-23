@@ -4167,8 +4167,6 @@ html {
 
 .product-gallery .product-share { position: absolute; right: 22px; top: 78px; margin: 0; z-index: 2; }
 .product-gallery .product-share button { width: 46px; height: 46px; padding: 0; border: 0; border-radius: 50%; background: #fff; display: grid; place-items: center; color: var(--ink); }
-.product-gallery .gem-detail-image .product-share { right: 20px; top: 72px; }
-.product-gallery .gem-detail-image .product-share button { width: 42px; height: 42px; }
 .product-gallery .product-share p { position: absolute; right: 0; top: 48px; width: 220px; max-width: 65vw; background: #fff; padding: 10px; border: 1px solid #d7c8b6; }
 .product-gallery .product-share input { position: absolute; right: 0; top: 125px; width: 220px; max-width: 65vw; background: #fff; }
 

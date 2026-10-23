@@ -15,8 +15,8 @@ Related docs: [usecases.md](usecases.md) (admin behaviour step by step),
 
 ## 1. Product recommendations: Similar items and You may also like
 
-**Where it shows:** store webapp, at the bottom of both product pages, jewellery
-(`ProductDetail`) and gemstone (`GemstoneDetail`). "Similar items" comes first,
+**Where it shows:** store webapp, on the product page (`ProductDetail`, shared by
+jewellery and gemstones), below the specifications. "Similar items" comes first,
 then "You may also like".
 
 ### Code
@@ -25,7 +25,7 @@ then "You may also like".
 |---|---|
 | `src/lib/recommendations.ts` | All the rules: `similarItems()`, `youMayAlsoLike()`, `RECOMMENDATION_COUNT` |
 | `src/components/ProductRecommendations.tsx` | Renders both sections with `ProductCard`; hides a section with nothing to show |
-| `src/pages/ProductDetail.tsx`, `src/pages/GemstoneDetail.tsx` | Render `<ProductRecommendations product={product} />` |
+| `src/pages/ProductDetail.tsx` | Renders `<ProductRecommendations product={product} />` for both kinds |
 | `src/styles/styles.css` (`.recommend`) | Section layout: 4 cards per row on desktop, 2 at ≤ 900px, 1 at ≤ 560px |
 | `server/services/catalog.ts` (`dto`) | Sends the product fields the rules use, including `featured` |
 

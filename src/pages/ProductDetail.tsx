@@ -2,8 +2,11 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import {
   ArrowRight,
+  Gem,
+  Heart,
   Minus,
   Plus,
+  ShieldCheck,
   ShoppingBag,
   Star,
 } from "lucide-react";
@@ -16,16 +19,38 @@ import { Product } from "../lib/model";
 import { useCart } from "../lib/cart";
 
 import SubscribeForm from "../components/SubscribeForm";
+// Product page for both jewellery and gemstones. They share one layout; the
+// wording and a few gemstone-only blocks (Shape · Type line, "collection of N
+// pieces" box, promises row) depend on the kind.
+const COPY = {
+  jewellery: {
+    crumb: ["JEWELLERY", "/jewellery"],
+    eyebrow: "CRYSMONA SIGNATURE",
+    soldOut: "This piece has found its home. Discover another favourite below.",
+  },
+  gemstone: {
+    crumb: ["GEMSTONES", "/gemstones"],
+    eyebrow: "THE GEMSTONE COLLECTION",
+    soldOut:
+      "This collection has found its home. Save it to your wishlist and check back soon.",
+  },
+} as const;
+
 export default function ProductDetail({ product }: { product: Product }) {
   const { store, user } = useStore();
   const { add } = useCart();
   const [q, setQ] = useState(1);
-  // Stone and metal lead the specifications table; empty values are left out, and
-  // a specification with the same name isn't repeated.
-  const specs: [string, string][] = [
-    ["Stone", product.stone],
-    ["Metal", product.metal || ""],
-  ];
+  const isGem = product.kind === "gemstone";
+  const copy = COPY[isGem ? "gemstone" : "jewellery"];
+  const spec = product.specifications || {};
+  // Jewellery: stone and metal lead the specifications table. Empty values are
+  // left out, and a specification with the same name isn't repeated.
+  const specs: [string, string][] = isGem
+    ? []
+    : [
+        ["Stone", product.stone],
+        ["Metal", product.metal || ""],
+      ];
   for (const [key, value] of Object.entries(product.specifications || {}))
     if (!specs.some(([name]) => name.toLowerCase() === key.trim().toLowerCase()))
       specs.push([key, value]);
@@ -84,13 +109,13 @@ export default function ProductDetail({ product }: { product: Product }) {
         </a>{" "}
         /{" "}
         <a
-          href="/jewellery"
+          href={copy.crumb[1]}
           onClick={(e) => {
             e.preventDefault();
-            navTo("/jewellery");
+            navTo(copy.crumb[1]);
           }}
         >
-          JEWELLERY
+          {copy.crumb[0]}
         </a>{" "}
         / {product.name.toUpperCase()}
       </div>
@@ -100,8 +125,14 @@ export default function ProductDetail({ product }: { product: Product }) {
           ref={infoRef}
           className={"pdp-info" + (!expanded && !tall ? " pdp-fit" : "")}
         >
-          <span>CRYSMONA SIGNATURE</span>
+          <span>{copy.eyebrow}</span>
           <h1>{product.name}</h1>
+          {isGem && (
+            <p className="gem-subtitle">
+              {spec["Gemstone Shape"] || "Distinctive stones"} ·{" "}
+              {spec["Gemstone Type"] || "Cabochon"}
+            </p>
+          )}
           <strong>{product.price}</strong>
           <div className="pdp-desc-wrap">
             <div
@@ -127,10 +158,22 @@ export default function ProductDetail({ product }: { product: Product }) {
               </button>
             )}
           </div>
+          {isGem && spec["Number Of Pieces"] && (
+            <div className="gem-lot">
+              <Gem />
+              <span>
+                <b>A collection of {spec["Number Of Pieces"]} pieces</b>
+                <small>
+                  {spec["Gemstone Weight"]
+                    ? spec["Gemstone Weight"] + " · "
+                    : ""}
+                  Price shown for this collection
+                </small>
+              </span>
+            </div>
+          )}
           {(product.stockQty ?? 0) <= 0 && (
-            <p className="stock-status sold-out">
-              This piece has found its home. Discover another favourite below.
-            </p>
+            <p className="stock-status sold-out">{copy.soldOut}</p>
           )}
           <div className="qty">
             <span>Quantity</span>
@@ -170,13 +213,31 @@ export default function ProductDetail({ product }: { product: Product }) {
           >
             BUY IT NOW
           </button>
+          {isGem && (
+            <div className="gem-promises">
+              <span>
+                <ShieldCheck /> Thoughtfully selected
+              </span>
+              <span>
+                <Heart /> Each stone is individual
+              </span>
+            </div>
+          )}
         </article>
       </section>
       {specRows.length > 0 && (
         <section className="gem-specs">
-          <div>
-            <h2>Gemstone specifications</h2>
-          </div>
+          {isGem ? (
+            <div>
+              <span className="eyebrow">A CLOSER LOOK</span>
+              <h2>Details of your stone</h2>
+              <p>Every characteristic, in one place.</p>
+            </div>
+          ) : (
+            <div>
+              <h2>Gemstone specifications</h2>
+            </div>
+          )}
           <dl>
             {specRows.map(([key, value]) => (
               <div key={key}>
