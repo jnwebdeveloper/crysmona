@@ -3,7 +3,6 @@ import { BrowserRouter } from "react-router";
 import App from "./App";
 import "./styles/styles.css";
 import "./styles/commerce.css";
-import "./styles/typography.css";
 const root = document.getElementById("root");
 if (!root) throw new Error("Root missing");
 createRoot(root).render(

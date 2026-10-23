@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Montserrat:wght@400;500;600&display=swap");
 :root {
   --cream: #f7f1e8;
   --paper: #fbf8f3;
@@ -3408,7 +3409,7 @@ a {
 }
 .admin-main h1 {
   text-transform: capitalize;
-  font-family: var(--font-display);
+  font-family: Georgia, serif;
   font-size: 42px;
   margin: 4px 0;
 }
@@ -3523,7 +3524,7 @@ a {
   position: relative;
 }
 .admin-modal h2 {
-  font-family: var(--font-display);
+  font-family: Georgia, serif;
   font-size: 30px;
 }
 .admin-form-grid {
