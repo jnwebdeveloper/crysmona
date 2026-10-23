@@ -67,7 +67,7 @@ export function LoginModal({
     try {
       await requestCode();
       setOtp("");
-      setNotice("A new code is on its way.");
+      setNotice("Use the verification code shown below.");
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -147,7 +147,9 @@ export function LoginModal({
           <p>
             {step === "phone"
               ? "Sign in or create your account with your mobile number."
-              : "Enter the six-digit code for +91 " + phone + "."}
+              : demo
+                ? "Use code " + demo + " to sign in with +91 " + phone + "."
+                : "Enter the six-digit code for +91 " + phone + "."}
           </p>
           <form onSubmit={submit}>
             {step === "phone" ? (
@@ -230,7 +232,7 @@ export function LoginModal({
               </button>
               {demo && (
                 <p className="demo-notice">
-                  Development preview · Use code <b>{demo}</b>. No SMS is sent.
+                  Temporary sign-in · Use code <b>{demo}</b>. No SMS is sent.
                 </p>
               )}
             </>

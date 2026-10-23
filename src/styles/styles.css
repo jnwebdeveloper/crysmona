@@ -2365,7 +2365,7 @@ a {
 }
 .cart-item {
   display: grid;
-  grid-template-columns: 145px minmax(0, 1fr) 120px 110px;
+  grid-template-columns: 145px minmax(0, 1fr) 90px 32px;
   align-items: center;
   gap: 24px;
   padding: 28px 0;
@@ -2388,7 +2388,7 @@ a {
 }
 .cart-item h2 {
   font-family: "Cormorant Garamond", serif;
-  font-size: 28px;
+  font-size: 24px;
   margin: 5px 0;
   cursor: pointer;
 }
@@ -2404,8 +2404,30 @@ a {
   letter-spacing: 1px;
   border-bottom: 1px solid #a67a45;
 }
+.cart-item-info {
+  min-width: 0;
+}
+.cart-remove {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink, #30251f);
+}
+.cart-remove svg {
+  width: 18px;
+  height: 18px;
+}
+.cart-remove:hover {
+  color: #a47639;
+}
 .cart-qty {
   display: flex;
+  width: 120px;
+  margin-top: 12px;
   border: 1px solid #d9c8b6;
   height: 40px;
 }
@@ -2459,6 +2481,9 @@ a {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
+}
+.cart-summary p {
+  font-size: 13px;
 }
 .cart-summary > strong {
   display: block;
@@ -2670,10 +2695,10 @@ a {
     position: static;
   }
   .cart-item {
-    grid-template-columns: 120px 1fr 110px;
+    grid-template-columns: 120px minmax(0, 1fr) 85px 32px;
   }
   .cart-item > strong {
-    grid-column: 2/4;
+    grid-column: 3;
   }
   .checkout-summary {
     order: -1;
@@ -2694,15 +2719,17 @@ a {
     width: 100%;
   }
   .cart-item {
-    grid-template-columns: 95px 1fr;
+    grid-template-columns: 95px minmax(0, 1fr) 32px;
     gap: 16px;
   }
   .cart-item > img {
     width: 95px;
     height: 110px;
   }
-  .cart-qty {
-    grid-column: 2;
+  .cart-remove {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: start;
   }
   .cart-item > strong {
     grid-column: 2;
@@ -4890,4 +4917,15 @@ html {
   font-weight: normal;
   text-transform: none;
   letter-spacing: normal;
+}
+
+/* Larger order metadata, scoped to customer order history. */
+.orders-page .order-item p {
+  font-size: 12px;
+}
+.orders-page .order-item > strong {
+  font-size: 17px;
+}
+.orders-page .order-card header b {
+  font-size: 14px;
 }

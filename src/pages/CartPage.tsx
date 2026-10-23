@@ -1,4 +1,4 @@
-import { ArrowRight, Minus, Plus, ShoppingBag } from "lucide-react";
+import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 
 import { go as navTo } from "../lib/Store";
 import { formatPrice, money } from "../lib/model";
@@ -27,40 +27,42 @@ export default function CartPage() {
             {items.map(({ product, qty }) => (
               <article className="cart-item" key={product.slug}>
                 <img src={product.image} alt={product.name} />
-                <div>
+                <div className="cart-item-info">
                   <span>{product.stone}</span>
                   <h2 onClick={() => navTo("/product/" + product.slug)}>
                     {product.name}
                   </h2>
+                  <div className="cart-qty">
+                    <button
+                      aria-label={"Decrease quantity of " + product.name}
+                      onClick={() => update(product.slug, qty - 1)}
+                    >
+                      <Minus />
+                    </button>
+                    <b>{qty}</b>
+                    <button
+                      aria-label={"Increase quantity of " + product.name}
+                      disabled={qty >= (product.stockQty ?? 0)}
+                      onClick={() => update(product.slug, qty + 1)}
+                    >
+                      <Plus />
+                    </button>
+                  </div>
                   <p>{product.note}</p>
-                  <button
-                    className="remove"
-                    onClick={() => remove(product.slug)}
-                  >
-                    REMOVE
-                  </button>
-                </div>
-                <div className="cart-qty">
-                  <button
-                    aria-label={"Decrease quantity of " + product.name}
-                    onClick={() => update(product.slug, qty - 1)}
-                  >
-                    <Minus />
-                  </button>
-                  <b>{qty}</b>
-                  <button
-                    aria-label={"Increase quantity of " + product.name}
-                    disabled={qty >= (product.stockQty ?? 0)}
-                    onClick={() => update(product.slug, qty + 1)}
-                  >
-                    <Plus />
-                  </button>
                 </div>
                 <strong>
                   {formatPrice(
                     (product.priceCents ?? money(product.price) * 100) * qty,
                   )}
                 </strong>
+                <button
+                  className="cart-remove"
+                  aria-label={"Remove " + product.name + " from bag"}
+                  title="Remove item"
+                  onClick={() => remove(product.slug)}
+                >
+                  <Trash2 aria-hidden="true" />
+                </button>
               </article>
             ))}
           </div>

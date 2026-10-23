@@ -236,10 +236,9 @@ export default function Header({
           <button
             className="account-btn"
             onClick={() => (user ? navTo("/orders") : onLogin())}
-            title={user ? "My Orders" : "Login"}
+            aria-label={user ? "My Orders" : "Login"}
           >
             <UserRound />
-            {user && <span>My Orders</span>}
           </button>
           <button
             aria-label="Shopping bag"

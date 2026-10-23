@@ -1,17 +1,14 @@
 import { pool, q } from "../../lib/db.js";
 import { bad } from "../../lib/errors.js";
 import { log, maskPhone } from "../../lib/logger.js";
-import { checkCode, sendCode, twilioReady } from "../../services/twilio.js";
+// SMS temporarily paused by owner, including on the live site.
+// import { checkCode, sendCode, twilioReady } from "../../services/twilio.js";
 
-// Phone OTP sign-in. Twilio Verify sends and checks real SMS codes. Without Twilio,
-// development falls back to a fixed demo code and sends nothing; production refuses
-// phone sign-in rather than accept a guessable code.
+// Temporary fixed-code customer login in every environment.
+// Restore SMS delivery and verification below when ending the temporary mode.
 const DEMO_CODE = "123456";
-export const demoMode = () => !twilioReady() && process.env.NODE_ENV !== "production";
-export const smsEnabled = () => twilioReady();
-
-const unavailable = () =>
-  bad("Phone sign-in is unavailable until an SMS provider is configured.", 503);
+export const demoMode = () => true;
+export const smsEnabled = () => false;
 
 export function parsePhone(value: unknown) {
   const phone = String(value || "");
@@ -25,8 +22,12 @@ async function recordSend(phone: string, ipHash: string) {
   const c = await pool.connect();
   try {
     await c.query("BEGIN");
-    await c.query("SELECT pg_advisory_xact_lock(hashtext('otp:' || $1))", [phone]);
-    await c.query("DELETE FROM otp_sends WHERE sent_at < now() - interval '1 day'");
+    await c.query("SELECT pg_advisory_xact_lock(hashtext('otp:' || $1))", [
+      phone,
+    ]);
+    await c.query(
+      "DELETE FROM otp_sends WHERE sent_at < now() - interval '1 day'",
+    );
     const { rows } = await c.query(
       `SELECT
          count(*) FILTER (WHERE phone = $1 AND sent_at > now() - interval '30 seconds')::int AS recent,
@@ -36,9 +37,13 @@ async function recordSend(phone: string, ipHash: string) {
       [phone, ipHash],
     );
     const { recent, phone_hour, ip_hour } = rows[0];
-    if (recent) throw bad("Please wait 30 seconds before requesting another code.", 429);
+    if (recent)
+      throw bad("Please wait 30 seconds before requesting another code.", 429);
     if (phone_hour >= 5 || ip_hour >= 10)
-      throw bad("Too many codes were requested. Please try again in an hour.", 429);
+      throw bad(
+        "Too many codes were requested. Please try again in an hour.",
+        429,
+      );
     const inserted = await c.query(
       "INSERT INTO otp_sends(phone, ip_hash) VALUES($1, $2) RETURNING id",
       [phone, ipHash],
@@ -53,11 +58,20 @@ async function recordSend(phone: string, ipHash: string) {
   }
 }
 
-// Sends a code to the phone. Returns the demo code in demo mode, otherwise nothing.
-export async function requestOtp(phone: string, ipHash: string, requestId?: string) {
-  if (!twilioReady() && !demoMode()) throw unavailable();
-  const sendId = await recordSend(phone, ipHash);
-  log.info("otp requested", { requestId, phone: maskPhone(phone), mode: demoMode() ? "demo" : "twilio" });
+// Records a throttled login request and returns the temporary code. No SMS is sent.
+export async function requestOtp(
+  phone: string,
+  ipHash: string,
+  requestId?: string,
+) {
+  await recordSend(phone, ipHash); // Restore `const sendId =` for SMS cleanup below.
+  log.info("otp requested", {
+    requestId,
+    phone: maskPhone(phone),
+    mode: demoMode() ? "demo" : "twilio",
+  });
+  return { demoCode: DEMO_CODE };
+  /* SMS delivery temporarily paused:
   if (demoMode()) return { demoCode: DEMO_CODE };
   try {
     await sendCode(phone);
@@ -67,24 +81,28 @@ export async function requestOtp(phone: string, ipHash: string, requestId?: stri
     throw error;
   }
   return {};
+  */
 }
 
 // Throws unless the code is valid for the phone.
 export async function verifyOtp(phone: string, code: unknown) {
   const otp = String(code || "");
-  if (!/^\d{4,10}$/.test(otp)) throw bad("Enter the code sent to your phone.");
+  if (!/^\d{4,10}$/.test(otp))
+    throw bad("Enter the six-digit verification code.");
+  /* SMS verification temporarily paused:
   if (twilioReady()) {
     // Twilio enforces expiry (10 minutes) and a maximum of 5 checks per code.
     if (!(await checkCode(phone, otp))) throw bad("That code is incorrect. Please try again.", 401);
     return;
   }
-  if (!demoMode()) throw unavailable();
+  */
   const recent = await q(
     "SELECT 1 FROM otp_sends WHERE phone = $1 AND sent_at > now() - interval '10 minutes' LIMIT 1",
     [phone],
   );
   if (!recent.rowCount) throw bad("Request a new verification code.", 401);
-  if (otp !== DEMO_CODE) throw bad("That code is incorrect. Please try again.", 401);
+  if (otp !== DEMO_CODE)
+    throw bad("That code is incorrect. Please try again.", 401);
 }
 
 // Finds or creates the customer account for a verified phone number.
@@ -93,5 +111,10 @@ export async function findOrCreateCustomer(phone: string) {
     "INSERT INTO users(phone) VALUES($1) ON CONFLICT(phone) DO UPDATE SET updated_at=now() RETURNING id,phone,name,email",
     [phone],
   );
-  return rows[0] as { id: number; phone: string; name: string | null; email: string | null };
+  return rows[0] as {
+    id: number;
+    phone: string;
+    name: string | null;
+    email: string | null;
+  };
 }
