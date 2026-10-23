@@ -1,4 +1,9 @@
-import { isDiscoverBlock, pageContent } from "../../shared/pageContent";
+import {
+  contentPageGroup,
+  contentPageGroups,
+  isDiscoverBlock,
+  pageContent,
+} from "../../shared/pageContent";
 import { listRecords, moveRecord } from "../../shared/adminLists";
 import {
   ArrowDown,
@@ -105,6 +110,11 @@ export default function AdminPage() {
   const reorderLock = useRef(false);
   const currentTab = useRef(tab);
   currentTab.current = tab;
+  const [pageGroup, setPageGroup] = useState("");
+  const contentList = tab === "discover" || tab === "content_blocks";
+  const pageGroups = contentPageGroups.filter(
+    (group) => tab !== "discover" || group.discover,
+  );
   const collectionList = tab === "products" || tab === "categories";
   const [filterField, setFilterField] = useState(""),
     [filterValue, setFilterValue] = useState(""),
@@ -222,6 +232,7 @@ export default function AdminPage() {
       setQuery("");
       setStatusFilter("");
       setCategoryFilter("");
+      setPageGroup("");
       setFilterField("");
       setFilterValue("");
       setSortField("list_priority");
@@ -252,7 +263,27 @@ export default function AdminPage() {
       defaults.stock_qty = 0;
       defaults.featured = false;
     }
-    if (tab === "discover") defaults.block_key = "about";
+    if (contentList) {
+      const available = pageContent.find(
+        (block) =>
+          (!pageGroup || contentPageGroup(block.block_key) === pageGroup) &&
+          !rows.some((row) => row.block_key === block.block_key),
+      );
+      defaults.block_key =
+        tab === "discover"
+          ? available?.block_key || "about"
+          : pageGroup === "home"
+            ? "hero-"
+            : pageGroup && pageGroup !== "other"
+              ? pageGroup
+              : "";
+      if (tab === "discover" && !record && !available) {
+        setNotice(
+          "All sections in this page group already exist. Edit an existing section to update its content.",
+        );
+        return;
+      }
+    }
     setEditing(
       record ? { ...record, images: undefined } : { ...defaults, images: [] },
     );
@@ -328,10 +359,26 @@ export default function AdminPage() {
     if (tab === "discover" && f.key === "block_key")
       return (
         <select value={value} onChange={(e) => change(e.target.value)}>
-          {pageContent.map((block) => (
-            <option key={block.block_key} value={block.block_key}>
-              {block.block_key}: {block.title}
-            </option>
+          {pageGroups.map((group) => (
+            <optgroup key={group.key} label={group.label}>
+              {pageContent
+                .filter(
+                  (block) => contentPageGroup(block.block_key) === group.key,
+                )
+                .map((block) => (
+                  <option
+                    key={block.block_key}
+                    value={block.block_key}
+                    disabled={rows.some(
+                      (row) =>
+                        row.block_key === block.block_key &&
+                        row.id !== editing.id,
+                    )}
+                  >
+                    {block.title}
+                  </option>
+                ))}
+            </optgroup>
           ))}
         </select>
       );
@@ -393,9 +440,7 @@ export default function AdminPage() {
               }
             }}
           />
-          <small>
-            JPEG, PNG or WebP · up to 8 MB · saved to cloud storage
-          </small>
+          <small>JPEG, PNG or WebP · up to 8 MB · saved to cloud storage</small>
           {value && (
             <img
               className="admin-image-preview"
@@ -493,7 +538,9 @@ export default function AdminPage() {
               ? String(row.category_id ?? "none")
               : row.type) === categoryFilter),
       )
-    : rows;
+    : contentList && pageGroup
+      ? rows.filter((row) => contentPageGroup(row.block_key) === pageGroup)
+      : rows;
   const toggleSort = (key: string) => {
     setSortDirection(
       sortField === key && sortDirection === "asc" ? "desc" : "asc",
@@ -531,6 +578,7 @@ export default function AdminPage() {
     !reordering &&
     !statusFilter &&
     !categoryFilter &&
+    !pageGroup &&
     !query &&
     !filterValue &&
     sortField === "list_priority" &&
@@ -724,6 +772,39 @@ export default function AdminPage() {
             {error}
           </p>
         )}
+        {contentList && (
+          <section className="admin-page-groups" aria-label="Content by page">
+            <p className="admin-note">
+              Choose a page to manage its content and banners.
+            </p>
+            <div className="admin-page-group-buttons">
+              {[{ key: "", label: "All pages" }, ...pageGroups].map((group) => (
+                <button
+                  type="button"
+                  key={group.key}
+                  aria-pressed={pageGroup === group.key}
+                  onClick={() => {
+                    setPageGroup(group.key);
+                    setQuery("");
+                    setFilterField("");
+                    setFilterValue("");
+                  }}
+                >
+                  {group.label}{" "}
+                  <span>
+                    {
+                      rows.filter(
+                        (row) =>
+                          !group.key ||
+                          contentPageGroup(row.block_key) === group.key,
+                      ).length
+                    }
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
         {collectionList ? (
           <div className="admin-list-controls">
             <label>
@@ -853,9 +934,9 @@ export default function AdminPage() {
           </>
         )}
         <p className="admin-note">
-          Drag a row or use the arrow buttons to save listing priority. Clear
-          filters and search, and sort by listing priority ascending first.
-          Discover section order can be changed in Storefront.
+          {contentList
+            ? "Select All pages in Storefront and clear filters and search to reorder content. Edit an existing section to update the content displayed on your website."
+            : "Drag a row or use the arrow buttons to save listing priority. Clear filters and search, and sort by listing priority ascending first."}
         </p>
         <div className="studio-toolbar">
           <label>
@@ -884,7 +965,7 @@ export default function AdminPage() {
                           : tab === "navigation"
                             ? "Add menu link"
                             : tab === "discover"
-                              ? "Add Discover page"
+                              ? "Add page section"
                               : "Add setting"}
             </button>
           )}
@@ -943,6 +1024,17 @@ export default function AdminPage() {
                       <div>
                         <b>{label(r)}</b>
                         {r.slug && <small>{r.slug}</small>}
+                        {contentList && (
+                          <small>
+                            {
+                              contentPageGroups.find(
+                                (group) =>
+                                  group.key === contentPageGroup(r.block_key),
+                              )?.label
+                            }{" "}
+                            · {r.block_key}
+                          </small>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -951,22 +1043,26 @@ export default function AdminPage() {
                     <td>{r.type === "gemstone" ? "Gemstones" : "Jewellery"}</td>
                   )}
                   <td>
-                    {tab === "site_settings" && r.setting_key === "meta_pixel_id" ? (r.setting_value || "Pixel ID not configured") : r.price_cents !== undefined
-                      ? "$" +
-                        (r.price_cents / 100).toLocaleString("en-US") +
-                        " · " +
-                        r.stock_qty +
-                        " in stock"
-                      : r.message ||
-                        r.description ||
-                        r.url ||
-                        r.value ||
-                        r.setting_value ||
-                        r.path ||
-                        r.phone ||
-                        r.product_id ||
-                        "—"}
-                    {tab === "site_settings" && r.setting_key === "meta_pixel_id" && <PixelEvents />}
+                    {tab === "site_settings" &&
+                    r.setting_key === "meta_pixel_id"
+                      ? r.setting_value || "Pixel ID not configured"
+                      : r.price_cents !== undefined
+                        ? "$" +
+                          (r.price_cents / 100).toLocaleString("en-US") +
+                          " · " +
+                          r.stock_qty +
+                          " in stock"
+                        : r.message ||
+                          r.description ||
+                          r.url ||
+                          r.value ||
+                          r.setting_value ||
+                          r.path ||
+                          r.phone ||
+                          r.product_id ||
+                          "—"}
+                    {tab === "site_settings" &&
+                      r.setting_key === "meta_pixel_id" && <PixelEvents />}
                   </td>
                   <td>
                     <span className="admin-pill">
@@ -983,7 +1079,11 @@ export default function AdminPage() {
                           href={"/product/" + r.slug}
                           target="_blank"
                           rel="noopener noreferrer"
-                          aria-label={"View " + label(r) + " in the store (opens in a new tab)"}
+                          aria-label={
+                            "View " +
+                            label(r) +
+                            " in the store (opens in a new tab)"
+                          }
                           title={
                             r.active === false
                               ? "View in store (hidden products show as unavailable)"
@@ -993,12 +1093,18 @@ export default function AdminPage() {
                           <ExternalLink />
                         </a>
                       )}
-                      <span className="admin-move" role="group" aria-label="Reorder">
+                      <span
+                        className="admin-move"
+                        role="group"
+                        aria-label="Reorder"
+                      >
                         <button
                           aria-label={"Move " + label(r) + " up"}
                           title="Move up"
                           disabled={!canReorder || index === 0}
-                          onClick={() => reorder(r.id, visibleRows[index - 1].id)}
+                          onClick={() =>
+                            reorder(r.id, visibleRows[index - 1].id)
+                          }
                         >
                           <ArrowUp />
                         </button>
@@ -1008,7 +1114,9 @@ export default function AdminPage() {
                           disabled={
                             !canReorder || index === visibleRows.length - 1
                           }
-                          onClick={() => reorder(r.id, visibleRows[index + 1].id)}
+                          onClick={() =>
+                            reorder(r.id, visibleRows[index + 1].id)
+                          }
                         >
                           <ArrowDown />
                         </button>
@@ -1097,28 +1205,30 @@ export default function AdminPage() {
                   const rich = tab === "products" && f.key === "description";
                   const Wrapper = rich ? "div" : "label";
                   return (
-                  <Wrapper
-                    key={f.key}
-                    className={
-                      f.type === "specs" ||
-                      (tab === "products" &&
-                        ["image_url", "note", "description"].includes(f.key))
-                        ? "full-width" + (rich ? " admin-rich-field" : "")
-                        : ""
-                    }
-                    role={rich ? "group" : undefined}
-                    aria-label={rich ? f.label : undefined}
-                  >
-                    {f.label}
-                    {f.required ? " *" : ""}
-                    {field(f)}
-                    {tab === "site_settings" && editing.setting_key === "meta_pixel_id" && f.key === "setting_value" && <PixelEvents />}
-                    {fieldErrors[f.key] && (
-                      <small className="field-error" role="alert">
-                        {fieldErrors[f.key]}
-                      </small>
-                    )}
-                  </Wrapper>
+                    <Wrapper
+                      key={f.key}
+                      className={
+                        f.type === "specs" ||
+                        (tab === "products" &&
+                          ["image_url", "note", "description"].includes(f.key))
+                          ? "full-width" + (rich ? " admin-rich-field" : "")
+                          : ""
+                      }
+                      role={rich ? "group" : undefined}
+                      aria-label={rich ? f.label : undefined}
+                    >
+                      {f.label}
+                      {f.required ? " *" : ""}
+                      {field(f)}
+                      {tab === "site_settings" &&
+                        editing.setting_key === "meta_pixel_id" &&
+                        f.key === "setting_value" && <PixelEvents />}
+                      {fieldErrors[f.key] && (
+                        <small className="field-error" role="alert">
+                          {fieldErrors[f.key]}
+                        </small>
+                      )}
+                    </Wrapper>
                   );
                 })}
             </div>
@@ -1352,8 +1462,7 @@ function ProductImages({
     setEditing((current: any) => ({
       ...current,
       // Listing cards and share previews need a photo, so a video never becomes the default.
-      image_url:
-        current.image_url || (media_type === "image" ? media_url : ""),
+      image_url: current.image_url || (media_type === "image" ? media_url : ""),
       images: [
         ...(current.images || []),
         { media_url, alt_text: current.name || "", media_type },
@@ -1439,7 +1548,10 @@ function ProductImages({
           disabled={busy || !url.trim() || editing.images === undefined}
           onClick={() => {
             const value = url.trim();
-            append(value, /\.(mp4|webm)(\?|$)/i.test(value) ? "video" : "image");
+            append(
+              value,
+              /\.(mp4|webm)(\?|$)/i.test(value) ? "video" : "image",
+            );
             setUrl("");
           }}
         >
@@ -1511,16 +1623,43 @@ function ProductImages({
 }
 
 function PixelEvents() {
-  return <div className="admin-pixel-events" style={{ marginTop: 16, whiteSpace: "normal", textTransform: "none", letterSpacing: "normal" }}>
-    <strong>Implemented Meta Pixel events</strong>
-    <ul style={{ paddingLeft: 20, lineHeight: 1.7 }}>
-      <li><b>PageView</b> — Storefront page loads and navigation.</li>
-      <li><b>ViewContent</b> — Product detail page opens.</li>
-      <li><b>AddToCart</b> — A signed-in customer adds a product to the bag.</li>
-      <li><b>InitiateCheckout</b> — Checkout opens.</li>
-      <li><b>Purchase</b> — An order is placed or PayPal capture completes.</li>
-    </ul>
-    <small>Events run after consent when required. This lists implemented events; it does not confirm delivery to Meta. Verify receipt in Meta Events Manager.</small>
-    <br /><small>PayPal Purchase currently includes currency but not order value.</small>
-  </div>;
+  return (
+    <div
+      className="admin-pixel-events"
+      style={{
+        marginTop: 16,
+        whiteSpace: "normal",
+        textTransform: "none",
+        letterSpacing: "normal",
+      }}
+    >
+      <strong>Implemented Meta Pixel events</strong>
+      <ul style={{ paddingLeft: 20, lineHeight: 1.7 }}>
+        <li>
+          <b>PageView</b> — Storefront page loads and navigation.
+        </li>
+        <li>
+          <b>ViewContent</b> — Product detail page opens.
+        </li>
+        <li>
+          <b>AddToCart</b> — A signed-in customer adds a product to the bag.
+        </li>
+        <li>
+          <b>InitiateCheckout</b> — Checkout opens.
+        </li>
+        <li>
+          <b>Purchase</b> — An order is placed or PayPal capture completes.
+        </li>
+      </ul>
+      <small>
+        Events run after consent when required. This lists implemented events;
+        it does not confirm delivery to Meta. Verify receipt in Meta Events
+        Manager.
+      </small>
+      <br />
+      <small>
+        PayPal Purchase currently includes currency but not order value.
+      </small>
+    </div>
+  );
 }
