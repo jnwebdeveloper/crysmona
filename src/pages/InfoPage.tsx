@@ -25,15 +25,15 @@ export default function InfoPage({ title }: { title: string }) {
     );
   return (
     <main className="page info-page">
-      <section
-        className={"editorial-hero " + (craft ? "craft-hero" : "about-hero")}
-      >
-        <div>
-          <span>{hero.subtitle}</span>
-          <h1>{hero.title}</h1>
-          <RichText value={hero.body} />
-        </div>
+      <section className="page-hero">
+        <span>{hero.subtitle}</span>
+        <h1>{hero.title}</h1>
+      </section>
+      <section className="info-feature">
         {hero.image_url && <img src={hero.image_url} alt={hero.title} />}
+        <article>
+          <RichText value={hero.body} />
+        </article>
       </section>
       {craft ? (
         <section className="craft-steps">

@@ -23,6 +23,8 @@ export default function Contact() {
       <section className="page-hero">
         <span>{block?.subtitle}</span>
         <h1>{block?.title || "Contact"}</h1>
+      </section>
+      <section className="contact-intro">
         <RichText className="product-description" value={block?.body} />
         {block?.image_url && (
           <img
