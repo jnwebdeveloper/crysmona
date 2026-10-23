@@ -1,4 +1,12 @@
-import { ArrowLeft, ArrowRight, Check, Gem, Heart, ShieldCheck, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Gem,
+  Heart,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "../lib/Store";
 export function LoginModal({
@@ -42,7 +50,7 @@ export function LoginModal({
     return () => {
       document.body.style.overflow = old;
       document.removeEventListener("keydown", key);
-      previous?.focus();
+      previous?.focus({ preventScroll: true });
     };
   }, []);
   const requestCode = async () => {
@@ -82,6 +90,7 @@ export function LoginModal({
         });
         onLogin(user);
         onClose();
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
       }
     } catch (e: any) {
       setError(e.message);

@@ -1,11 +1,5 @@
 import { lazy, useEffect, useLayoutEffect } from "react";
-import {
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-  useNavigationType,
-} from "react-router";
+import { Route, Routes, useLocation, useNavigate } from "react-router";
 import AdminLayout from "./components/AdminLayout";
 import RequireLogin from "./components/RequireLogin";
 import RequireStore from "./components/RequireStore";
@@ -30,22 +24,24 @@ const AdminPage = lazy(() => import("./pages/Admin"));
 const SUPPORT_PAGES = ["faq", "returns", "care", "privacy", "terms"];
 
 // Shared by both webapps: lets go() navigate through React Router, and scrolls to
-// the top on new pages (back/forward keeps the browser's scroll position).
+// the top on every navigation, including refresh and back/forward.
 function NavigationEffects() {
   const navigate = useNavigate();
-  const navigationType = useNavigationType();
   const { key } = useLocation();
   useEffect(() => {
     setNavigator((path) => navigate(path));
     return () => setNavigator(null);
   }, [navigate]);
   useLayoutEffect(() => {
-    if (navigationType !== "POP") {
-      // Reset before paint. An animated scroll can be interrupted when the new
-      // page changes the document height. The key also covers same-page links.
-      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-    }
-  }, [key, navigationType]);
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [key]);
+  useEffect(() => {
+    const previous = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    return () => {
+      window.history.scrollRestoration = previous;
+    };
+  }, []);
   return null;
 }
 

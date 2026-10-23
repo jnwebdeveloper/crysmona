@@ -64,6 +64,10 @@ const label = (r: any) =>
 const NAV_GROUPS: { title: string; items: [string, string, string, any][] }[] =
   [
     {
+      title: "OVERVIEW",
+      items: [["dashboard", "dashboard", "Dashboard", LayoutDashboard]],
+    },
+    {
       title: "STORE",
       items: [
         ["products", "products", "Products", Package],
@@ -95,7 +99,7 @@ const NAV_GROUPS: { title: string; items: [string, string, string, any][] }[] =
 const SECTION_TO_TAB = Object.fromEntries(
   NAV_GROUPS.flatMap((g) => g.items.map(([section, tab]) => [section, tab])),
 );
-const DEFAULT_SECTION = "products";
+const DEFAULT_SECTION = "dashboard";
 
 export default function AdminPage() {
   const { section = DEFAULT_SECTION } = useParams();
@@ -140,9 +144,12 @@ export default function AdminPage() {
       error: string;
     } | null>(null);
   const resource = tab;
-  const definition = contentList
-    ? { ...resources.content_blocks, label: "Pages & content" }
-    : resources[resource];
+  const dashboard = tab === "dashboard";
+  const definition = dashboard
+    ? { ...resources.products, label: "Dashboard", fields: [] }
+    : contentList
+      ? { ...resources.content_blocks, label: "Pages & content" }
+      : resources[resource];
   const request = async (path: string, options: RequestInit = {}) => {
     try {
       return await api("/admin/" + path, options);
@@ -173,6 +180,7 @@ export default function AdminPage() {
       });
       setPassword("");
       await load();
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -202,22 +210,26 @@ export default function AdminPage() {
     }
   };
   const load = async () => {
+    const sourceTab = tab;
     setBusy(true);
     setError("");
     try {
       const [data, summary, categoryRows] = await Promise.all([
-        request(resource),
-        request("dashboard"),
+        dashboard ? Promise.resolve([]) : request(resource),
+        dashboard || tab === "settings"
+          ? request("dashboard")
+          : Promise.resolve(null),
         tab === "products" ? request("categories") : Promise.resolve([]),
       ]);
+      if (currentTab.current !== sourceTab) return;
       setRows(data);
       setCategories(categoryRows);
       setStats(summary);
       setConnected(true);
     } catch (e: any) {
-      setError(e.message);
+      if (currentTab.current === sourceTab) setError(e.message);
     } finally {
-      setBusy(false);
+      if (currentTab.current === sourceTab) setBusy(false);
     }
   };
   useEffect(() => {
@@ -731,7 +743,7 @@ export default function AdminPage() {
             <RefreshCw /> Refresh
           </button>
         </header>
-        {stats && (
+        {dashboard && stats && (
           <div className="admin-stats">
             {[
               ["Products", stats.products],
@@ -769,428 +781,513 @@ export default function AdminPage() {
             {error}
           </p>
         )}
-        {contentList ? (
-          <div className="admin-list-controls">
-            <label>
-              Page
-              <select
-                value={pageFilter}
-                onChange={(e) => setPageFilter(e.target.value)}
-              >
-                <option value="">All pages</option>
-                {contentPageGroups.map((group) => (
-                  <option key={group.key} value={group.key}>
-                    {group.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              onClick={() => {
-                setPageFilter("");
-                setQuery("");
-              }}
-            >
-              Reset
-            </button>
-            {reordering && <span role="status">Saving order…</span>}
-          </div>
-        ) : collectionList ? (
-          <div className="admin-list-controls">
-            <label>
-              Status
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="">All statuses</option>
-                <option value="true">Active</option>
-                <option value="false">Hidden</option>
-              </select>
-            </label>
-            <label>
-              {tab === "products" ? "Category" : "Collection"}
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-              >
-                <option value="">
-                  {tab === "products" ? "All categories" : "All collections"}
-                </option>
-                {tab === "products" ? (
-                  <>
-                    <option value="none">Uncategorized</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
+        {dashboard ? (
+          stats && (
+            <>
+              <div className="admin-stats">
+                <article>
+                  <span>Paid revenue</span>
+                  <b>${(stats.revenueCents / 100).toFixed(2)}</b>
+                </article>
+                <article>
+                  <span>Average order</span>
+                  <b>${(stats.averageOrderCents / 100).toFixed(2)}</b>
+                </article>
+                <article>
+                  <span>Low stock products</span>
+                  <b>{stats.lowStock}</b>
+                </article>
+              </div>
+              <h2>Recent orders</h2>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Order</th>
+                      <th>Status</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.recentOrders.map((order: any) => (
+                      <tr key={order.order_number}>
+                        <td>
+                          <button onClick={() => navigate("/admin/orders")}>
+                            {order.order_number}
+                          </button>
+                        </td>
+                        <td>{order.status}</td>
+                        <td>${(order.total_cents / 100).toFixed(2)}</td>
+                      </tr>
                     ))}
-                  </>
-                ) : (
-                  <>
-                    <option value="gemstone">Gemstones</option>
-                    <option value="jewellery">Jewellery</option>
-                  </>
+                  </tbody>
+                </table>
+                {!stats.recentOrders.length && (
+                  <p className="admin-note">No orders yet.</p>
                 )}
-              </select>
-            </label>
-            <button
-              type="button"
-              onClick={() => {
-                setSortField("list_priority");
-                setSortDirection("asc");
-                setStatusFilter("");
-                setCategoryFilter("");
-                setQuery("");
-              }}
-            >
-              Reset
-            </button>
-            {reordering && <span role="status">Saving order…</span>}
-          </div>
+              </div>
+              <h2>Top products</h2>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Units ordered</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.topProducts.map((product: any) => (
+                      <tr key={product.product_name}>
+                        <td>{product.product_name}</td>
+                        <td>{product.units}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!stats.topProducts.length && (
+                  <p className="admin-note">No product sales yet.</p>
+                )}
+              </div>
+            </>
+          )
         ) : (
           <>
-            <div className="admin-list-controls">
-              <label>
-                Filter by
-                <select
-                  value={filterField}
-                  onChange={(e) => {
-                    setFilterField(e.target.value);
-                    setFilterValue("");
-                  }}
-                >
-                  <option value="">All records</option>
-                  {filterFields.map((f) => (
-                    <option key={f.key} value={f.key}>
-                      {f.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {filterField && (
+            {contentList ? (
+              <div className="admin-list-controls">
                 <label>
-                  Value
+                  Page
                   <select
-                    value={filterValue}
-                    onChange={(e) => setFilterValue(e.target.value)}
+                    value={pageFilter}
+                    onChange={(e) => setPageFilter(e.target.value)}
                   >
-                    <option value="">All values</option>
-                    {Array.from(
-                      new Set(
-                        rows.map((row) => String(row[filterField] ?? "")),
-                      ),
-                    )
-                      .filter(Boolean)
-                      .sort()
-                      .map((value) => (
-                        <option key={value} value={value}>
-                          {value === "true"
-                            ? "Yes"
-                            : value === "false"
-                              ? "No"
-                              : value}
-                        </option>
-                      ))}
+                    <option value="">All pages</option>
+                    {contentPageGroups.map((group) => (
+                      <option key={group.key} value={group.key}>
+                        {group.label}
+                      </option>
+                    ))}
                   </select>
                 </label>
-              )}
-              <label>
-                Sort by
-                <select
-                  value={sortField}
-                  onChange={(e) => setSortField(e.target.value)}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPageFilter("");
+                    setQuery("");
+                  }}
                 >
-                  <option value="list_priority">Listing priority</option>
-                  <option value="id">Date added</option>
-                  {filterFields.map((f) => (
-                    <option key={f.key} value={f.key}>
-                      {f.label}
+                  Reset
+                </button>
+                {reordering && <span role="status">Saving order…</span>}
+              </div>
+            ) : collectionList ? (
+              <div className="admin-list-controls">
+                <label>
+                  Status
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="">All statuses</option>
+                    <option value="true">Active</option>
+                    <option value="false">Hidden</option>
+                  </select>
+                </label>
+                <label>
+                  {tab === "products" ? "Category" : "Collection"}
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                  >
+                    <option value="">
+                      {tab === "products"
+                        ? "All categories"
+                        : "All collections"}
                     </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Direction
-                <select
-                  value={sortDirection}
-                  onChange={(e) => setSortDirection(e.target.value)}
+                    {tab === "products" ? (
+                      <>
+                        <option value="none">Uncategorized</option>
+                        {categories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        <option value="gemstone">Gemstones</option>
+                        <option value="jewellery">Jewellery</option>
+                      </>
+                    )}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSortField("list_priority");
+                    setSortDirection("asc");
+                    setStatusFilter("");
+                    setCategoryFilter("");
+                    setQuery("");
+                  }}
                 >
-                  <option value="asc">Ascending</option>
-                  <option value="desc">Descending</option>
-                </select>
+                  Reset
+                </button>
+                {reordering && <span role="status">Saving order…</span>}
+              </div>
+            ) : (
+              <>
+                <div className="admin-list-controls">
+                  <label>
+                    Filter by
+                    <select
+                      value={filterField}
+                      onChange={(e) => {
+                        setFilterField(e.target.value);
+                        setFilterValue("");
+                      }}
+                    >
+                      <option value="">All records</option>
+                      {filterFields.map((f) => (
+                        <option key={f.key} value={f.key}>
+                          {f.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {filterField && (
+                    <label>
+                      Value
+                      <select
+                        value={filterValue}
+                        onChange={(e) => setFilterValue(e.target.value)}
+                      >
+                        <option value="">All values</option>
+                        {Array.from(
+                          new Set(
+                            rows.map((row) => String(row[filterField] ?? "")),
+                          ),
+                        )
+                          .filter(Boolean)
+                          .sort()
+                          .map((value) => (
+                            <option key={value} value={value}>
+                              {value === "true"
+                                ? "Yes"
+                                : value === "false"
+                                  ? "No"
+                                  : value}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                  )}
+                  <label>
+                    Sort by
+                    <select
+                      value={sortField}
+                      onChange={(e) => setSortField(e.target.value)}
+                    >
+                      <option value="list_priority">Listing priority</option>
+                      <option value="id">Date added</option>
+                      {filterFields.map((f) => (
+                        <option key={f.key} value={f.key}>
+                          {f.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Direction
+                    <select
+                      value={sortDirection}
+                      onChange={(e) => setSortDirection(e.target.value)}
+                    >
+                      <option value="asc">Ascending</option>
+                      <option value="desc">Descending</option>
+                    </select>
+                  </label>
+                </div>
+              </>
+            )}
+            <p className="admin-note">
+              {contentList
+                ? "Content is grouped by page. Search by page name or content. Clear search to reorder sections within a page."
+                : "Drag a row or use the arrow buttons to save listing priority. Clear filters and search, and sort by listing priority ascending first."}
+            </p>
+            <div className="studio-toolbar">
+              <label>
+                <Search />
+                <input
+                  placeholder={
+                    contentList
+                      ? "Search pages and content…"
+                      : "Search records…"
+                  }
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
               </label>
+              {!["orders", "users"].includes(tab) && (
+                <button className="admin-new" onClick={() => open()}>
+                  <Plus />{" "}
+                  {tab === "products"
+                    ? "Add product"
+                    : tab === "categories"
+                      ? "Add category"
+                      : tab === "coupons"
+                        ? "Add discount"
+                        : tab === "content_blocks"
+                          ? "Add content"
+                          : tab === "seo_pages"
+                            ? "Add SEO page"
+                            : tab === "site_settings"
+                              ? "Add tracking setting"
+                              : tab === "navigation"
+                                ? "Add menu link"
+                                : "Add setting"}
+                </button>
+              )}
+            </div>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th aria-sort={ariaSort("name")}>
+                      {collectionList
+                        ? sortHeading(
+                            "name",
+                            tab === "products" ? "Product" : "Category",
+                          )
+                        : "Record"}
+                    </th>
+                    {tab === "products" && (
+                      <th aria-sort={ariaSort("category_name")}>
+                        {sortHeading("category_name", "Category")}
+                      </th>
+                    )}
+                    {tab === "categories" && (
+                      <th aria-sort={ariaSort("type")}>
+                        {sortHeading("type", "Collection")}
+                      </th>
+                    )}
+                    <th>{contentList ? "Page" : "Details"}</th>
+                    <th aria-sort={ariaSort("active")}>
+                      {collectionList
+                        ? sortHeading("active", "Status")
+                        : "Status"}
+                    </th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleRows.map((r, index) => (
+                    <React.Fragment key={r.id}>
+                      {contentList &&
+                        (index === 0 ||
+                          contentPageGroup(visibleRows[index - 1].block_key) !==
+                            contentPageGroup(r.block_key)) && (
+                          <tr className="admin-content-group">
+                            <th colSpan={4} scope="rowgroup">
+                              {r.page_name}{" "}
+                              <small>
+                                (
+                                {
+                                  visibleRows.filter(
+                                    (row) => row.page_name === r.page_name,
+                                  ).length
+                                }{" "}
+                                sections)
+                              </small>
+                            </th>
+                          </tr>
+                        )}
+                      <tr
+                        key={r.id}
+                        draggable={canReorder}
+                        onDragStart={(e) => {
+                          setDragId(r.id);
+                          e.dataTransfer.effectAllowed = "move";
+                          e.dataTransfer.setData("text/plain", String(r.id));
+                        }}
+                        onDragEnd={() => setDragId(null)}
+                        onDragOver={(e) => {
+                          if (canReorder) e.preventDefault();
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (dragId !== null) void reorder(dragId, r.id);
+                        }}
+                      >
+                        <td>
+                          <div className="admin-record">
+                            {r.image_url && <img src={r.image_url} alt="" />}
+                            <div>
+                              <b>{label(r)}</b>
+                              {r.slug && <small>{r.slug}</small>}
+                            </div>
+                          </div>
+                        </td>
+                        {tab === "products" && <td>{r.category_name}</td>}
+                        {tab === "categories" && (
+                          <td>
+                            {r.type === "gemstone" ? "Gemstones" : "Jewellery"}
+                          </td>
+                        )}
+                        <td>
+                          {contentList
+                            ? contentPageGroups.find(
+                                (group) =>
+                                  group.key === contentPageGroup(r.block_key),
+                              )?.label || "Other Content"
+                            : tab === "site_settings" &&
+                                r.setting_key === "meta_pixel_id"
+                              ? r.setting_value || "Pixel ID not configured"
+                              : r.price_cents !== undefined
+                                ? "$" +
+                                  (r.price_cents / 100).toLocaleString(
+                                    "en-US",
+                                  ) +
+                                  " · " +
+                                  r.stock_qty +
+                                  " in stock"
+                                : r.message ||
+                                  r.description ||
+                                  r.url ||
+                                  r.value ||
+                                  r.setting_value ||
+                                  r.path ||
+                                  r.phone ||
+                                  r.product_id ||
+                                  "—"}
+                          {tab === "site_settings" &&
+                            r.setting_key === "meta_pixel_id" && (
+                              <PixelEvents />
+                            )}
+                        </td>
+                        <td>
+                          <span className="admin-pill">
+                            {r.status ||
+                              r.payment_status ||
+                              (r.active === false ? "Hidden" : "Active")}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="admin-actions">
+                            {tab === "products" && r.slug && (
+                              <a
+                                className="admin-store-link"
+                                href={"/product/" + r.slug}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={
+                                  "View " +
+                                  label(r) +
+                                  " in the store (opens in a new tab)"
+                                }
+                                title={
+                                  r.active === false
+                                    ? "View in store (hidden products show as unavailable)"
+                                    : "View in store"
+                                }
+                              >
+                                <ExternalLink />
+                              </a>
+                            )}
+                            <span
+                              className="admin-move"
+                              role="group"
+                              aria-label="Reorder"
+                            >
+                              <button
+                                aria-label={"Move " + label(r) + " up"}
+                                title="Move up"
+                                disabled={
+                                  !canReorder ||
+                                  index === 0 ||
+                                  (contentList &&
+                                    visibleRows[index - 1].page_name !==
+                                      r.page_name)
+                                }
+                                onClick={() =>
+                                  reorder(r.id, visibleRows[index - 1].id)
+                                }
+                              >
+                                <ArrowUp />
+                              </button>
+                              <button
+                                aria-label={"Move " + label(r) + " down"}
+                                title="Move down"
+                                disabled={
+                                  !canReorder ||
+                                  index === visibleRows.length - 1 ||
+                                  (contentList &&
+                                    visibleRows[index + 1].page_name !==
+                                      r.page_name)
+                                }
+                                onClick={() =>
+                                  reorder(r.id, visibleRows[index + 1].id)
+                                }
+                              >
+                                <ArrowDown />
+                              </button>
+                            </span>
+                            {tab === "orders" && (
+                              <button
+                                onClick={async () => {
+                                  setError("");
+                                  try {
+                                    setOrderDetail(
+                                      await request(
+                                        "orders/" + r.id + "/detail",
+                                      ),
+                                    );
+                                  } catch (e: any) {
+                                    setError(e.message);
+                                  }
+                                }}
+                              >
+                                View details
+                              </button>
+                            )}
+                            <button
+                              aria-label={"Edit " + label(r)}
+                              onClick={() => open(r)}
+                            >
+                              <Pencil /> Edit
+                            </button>
+                            {!["orders", "users"].includes(tab) && (
+                              <button
+                                className="danger"
+                                aria-label={"Delete " + label(r)}
+                                onClick={() => {
+                                  setError("");
+                                  setRemoving(r);
+                                }}
+                              >
+                                <Trash2 /> Delete
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+              {!visibleRows.length && (
+                <div className="admin-empty">
+                  <LayoutDashboard />
+                  <h2>{busy ? "Loading records…" : "No matching records"}</h2>
+                  <p>
+                    {query || pageFilter
+                      ? "Try another search or page filter."
+                      : "Add the first record to this section."}
+                  </p>
+                </div>
+              )}
             </div>
           </>
         )}
-        <p className="admin-note">
-          {contentList
-            ? "Content is grouped by page. Search by page name or content. Clear search to reorder sections within a page."
-            : "Drag a row or use the arrow buttons to save listing priority. Clear filters and search, and sort by listing priority ascending first."}
-        </p>
-        <div className="studio-toolbar">
-          <label>
-            <Search />
-            <input
-              placeholder={
-                contentList ? "Search pages and content…" : "Search records…"
-              }
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
-          {!["orders", "users"].includes(tab) && (
-            <button className="admin-new" onClick={() => open()}>
-              <Plus />{" "}
-              {tab === "products"
-                ? "Add product"
-                : tab === "categories"
-                  ? "Add category"
-                  : tab === "coupons"
-                    ? "Add discount"
-                    : tab === "content_blocks"
-                      ? "Add content"
-                      : tab === "seo_pages"
-                        ? "Add SEO page"
-                        : tab === "site_settings"
-                          ? "Add tracking setting"
-                          : tab === "navigation"
-                            ? "Add menu link"
-                            : "Add setting"}
-            </button>
-          )}
-        </div>
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th aria-sort={ariaSort("name")}>
-                  {collectionList
-                    ? sortHeading(
-                        "name",
-                        tab === "products" ? "Product" : "Category",
-                      )
-                    : "Record"}
-                </th>
-                {tab === "products" && (
-                  <th aria-sort={ariaSort("category_name")}>
-                    {sortHeading("category_name", "Category")}
-                  </th>
-                )}
-                {tab === "categories" && (
-                  <th aria-sort={ariaSort("type")}>
-                    {sortHeading("type", "Collection")}
-                  </th>
-                )}
-                <th>{contentList ? "Page" : "Details"}</th>
-                <th aria-sort={ariaSort("active")}>
-                  {collectionList ? sortHeading("active", "Status") : "Status"}
-                </th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleRows.map((r, index) => (
-                <React.Fragment key={r.id}>
-                  {contentList &&
-                    (index === 0 ||
-                      contentPageGroup(visibleRows[index - 1].block_key) !==
-                        contentPageGroup(r.block_key)) && (
-                      <tr className="admin-content-group">
-                        <th colSpan={4} scope="rowgroup">
-                          {r.page_name}{" "}
-                          <small>
-                            (
-                            {
-                              visibleRows.filter(
-                                (row) => row.page_name === r.page_name,
-                              ).length
-                            }{" "}
-                            sections)
-                          </small>
-                        </th>
-                      </tr>
-                    )}
-                  <tr
-                    key={r.id}
-                    draggable={canReorder}
-                    onDragStart={(e) => {
-                      setDragId(r.id);
-                      e.dataTransfer.effectAllowed = "move";
-                      e.dataTransfer.setData("text/plain", String(r.id));
-                    }}
-                    onDragEnd={() => setDragId(null)}
-                    onDragOver={(e) => {
-                      if (canReorder) e.preventDefault();
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (dragId !== null) void reorder(dragId, r.id);
-                    }}
-                  >
-                    <td>
-                      <div className="admin-record">
-                        {r.image_url && <img src={r.image_url} alt="" />}
-                        <div>
-                          <b>{label(r)}</b>
-                          {r.slug && <small>{r.slug}</small>}
-                        </div>
-                      </div>
-                    </td>
-                    {tab === "products" && <td>{r.category_name}</td>}
-                    {tab === "categories" && (
-                      <td>
-                        {r.type === "gemstone" ? "Gemstones" : "Jewellery"}
-                      </td>
-                    )}
-                    <td>
-                      {contentList
-                        ? contentPageGroups.find(
-                            (group) =>
-                              group.key === contentPageGroup(r.block_key),
-                          )?.label || "Other Content"
-                        : tab === "site_settings" &&
-                            r.setting_key === "meta_pixel_id"
-                          ? r.setting_value || "Pixel ID not configured"
-                          : r.price_cents !== undefined
-                            ? "$" +
-                              (r.price_cents / 100).toLocaleString("en-US") +
-                              " · " +
-                              r.stock_qty +
-                              " in stock"
-                            : r.message ||
-                              r.description ||
-                              r.url ||
-                              r.value ||
-                              r.setting_value ||
-                              r.path ||
-                              r.phone ||
-                              r.product_id ||
-                              "—"}
-                      {tab === "site_settings" &&
-                        r.setting_key === "meta_pixel_id" && <PixelEvents />}
-                    </td>
-                    <td>
-                      <span className="admin-pill">
-                        {r.status ||
-                          r.payment_status ||
-                          (r.active === false ? "Hidden" : "Active")}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="admin-actions">
-                        {tab === "products" && r.slug && (
-                          <a
-                            className="admin-store-link"
-                            href={"/product/" + r.slug}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label={
-                              "View " +
-                              label(r) +
-                              " in the store (opens in a new tab)"
-                            }
-                            title={
-                              r.active === false
-                                ? "View in store (hidden products show as unavailable)"
-                                : "View in store"
-                            }
-                          >
-                            <ExternalLink />
-                          </a>
-                        )}
-                        <span
-                          className="admin-move"
-                          role="group"
-                          aria-label="Reorder"
-                        >
-                          <button
-                            aria-label={"Move " + label(r) + " up"}
-                            title="Move up"
-                            disabled={
-                              !canReorder ||
-                              index === 0 ||
-                              (contentList &&
-                                visibleRows[index - 1].page_name !==
-                                  r.page_name)
-                            }
-                            onClick={() =>
-                              reorder(r.id, visibleRows[index - 1].id)
-                            }
-                          >
-                            <ArrowUp />
-                          </button>
-                          <button
-                            aria-label={"Move " + label(r) + " down"}
-                            title="Move down"
-                            disabled={
-                              !canReorder ||
-                              index === visibleRows.length - 1 ||
-                              (contentList &&
-                                visibleRows[index + 1].page_name !==
-                                  r.page_name)
-                            }
-                            onClick={() =>
-                              reorder(r.id, visibleRows[index + 1].id)
-                            }
-                          >
-                            <ArrowDown />
-                          </button>
-                        </span>
-                        {tab === "orders" && (
-                          <button
-                            onClick={async () => {
-                              setError("");
-                              try {
-                                setOrderDetail(
-                                  await request("orders/" + r.id + "/detail"),
-                                );
-                              } catch (e: any) {
-                                setError(e.message);
-                              }
-                            }}
-                          >
-                            View details
-                          </button>
-                        )}
-                        <button
-                          aria-label={"Edit " + label(r)}
-                          onClick={() => open(r)}
-                        >
-                          <Pencil /> Edit
-                        </button>
-                        {!["orders", "users"].includes(tab) && (
-                          <button
-                            className="danger"
-                            aria-label={"Delete " + label(r)}
-                            onClick={() => {
-                              setError("");
-                              setRemoving(r);
-                            }}
-                          >
-                            <Trash2 /> Delete
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-          {!visibleRows.length && (
-            <div className="admin-empty">
-              <LayoutDashboard />
-              <h2>{busy ? "Loading records…" : "No matching records"}</h2>
-              <p>
-                {query || pageFilter
-                  ? "Try another search or page filter."
-                  : "Add the first record to this section."}
-              </p>
-            </div>
-          )}
-        </div>
       </section>
       {editing && (
         <div className="admin-modal">

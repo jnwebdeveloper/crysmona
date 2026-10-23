@@ -29,40 +29,87 @@ export const go = (path: string) => {
   if (navigator) navigator(path);
   else window.location.assign(path);
 };
+// Cache public catalog/content only. Account, bag and wishlist stay server-backed.
+const SNAPSHOT_KEY = "crysmona:store:v1";
+const SNAPSHOT_TTL = 15 * 60 * 1000;
+function readSnapshot() {
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(SNAPSHOT_KEY) || "null");
+    if (
+      cached &&
+      Date.now() - cached.savedAt < SNAPSHOT_TTL &&
+      Array.isArray(cached.products) &&
+      Array.isArray(cached.site?.content) &&
+      Array.isArray(cached.site.navigation) &&
+      Array.isArray(cached.site.categories) &&
+      Array.isArray(cached.site.reviews) &&
+      cached.site.settings
+    )
+      return cached;
+  } catch {
+    /* Storage may be disabled or full. Network loading still works. */
+  }
+  return null;
+}
 const Context = createContext<any>(null);
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [catalog, setCatalog] = useState<Product[]>([]),
+  const [snapshot] = useState(readSnapshot);
+  const hasCatalog = useRef(Boolean(snapshot));
+  const inFlight = useRef<Promise<void> | null>(null);
+  const [catalog, setCatalog] = useState<Product[]>(snapshot?.products || []),
     [wishlist, setWishlist] = useState<string[]>([]),
     [user, setUser] = useState<any>(null),
-    [store, setStore] = useState<any>({
-      content: [],
-      navigation: [],
-      categories: [],
-      settings: {},
-      reviews: [],
-    }),
+    [store, setStore] = useState<any>(
+      snapshot?.site || {
+        content: [],
+        navigation: [],
+        categories: [],
+        settings: {},
+        reviews: [],
+      },
+    ),
     [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(true),
+  const [loading, setLoading] = useState(!snapshot),
     [catalogError, setCatalogError] = useState("");
   const [ready, setReady] = useState(false);
   const queue = useRef(Promise.resolve());
-  const refresh = async () => {
-    try {
-      const [products, site] = await Promise.all([
-        api("/products"),
-        api("/storefront"),
-      ]);
-      setCatalog(products);
-      setStore(site);
-      setCatalogError("");
-    } catch (e) {
-      setCatalog([]);
-      setCatalogError(
-        e instanceof Error ? e.message : "Unable to load the store.",
-      );
-    } finally {
-      setLoading(false);
-    }
+  const refresh = (): Promise<void> => {
+    if (inFlight.current) return inFlight.current;
+    const pending = (async () => {
+      try {
+        const [products, site] = await Promise.all([
+          api("/products"),
+          api("/storefront"),
+        ]);
+        setCatalog(products);
+        setStore(site);
+        setCatalogError("");
+        hasCatalog.current = true;
+        try {
+          sessionStorage.setItem(
+            SNAPSHOT_KEY,
+            JSON.stringify({
+              savedAt: Date.now(),
+              products,
+              site,
+            }),
+          );
+        } catch {
+          /* Rendering does not depend on storage availability. */
+        }
+      } catch (e) {
+        // A failed background update must not blank a usable page.
+        if (!hasCatalog.current)
+          setCatalogError(
+            e instanceof Error ? e.message : "Unable to load the store.",
+          );
+      } finally {
+        setLoading(false);
+        inFlight.current = null;
+      }
+    })();
+    inFlight.current = pending;
+    return pending;
   };
   useEffect(() => {
     refresh();
@@ -79,15 +126,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setReady(false);
     let valid = true;
-    api("/wishlist").then((remote) => { if(valid){ synced.current = JSON.stringify(remote); setWishlist(remote); setReady(true); } }).catch((e:Error)=>setMessage(e.message));
-    return () => { valid=false; };
+    api("/wishlist")
+      .then((remote) => {
+        if (valid) {
+          synced.current = JSON.stringify(remote);
+          setWishlist(remote);
+          setReady(true);
+        }
+      })
+      .catch((e: Error) => setMessage(e.message));
+    return () => {
+      valid = false;
+    };
   }, [user?.id]);
   useEffect(() => {
     if (!ready) return;
     const body = JSON.stringify(wishlist);
     if (body === synced.current) return;
     synced.current = body;
-    queue.current = queue.current.then(() => api("/wishlist", { method:"PUT", body:JSON.stringify({slugs:wishlist}) })).catch((e:Error)=>setMessage(e.message));
+    queue.current = queue.current
+      .then(() =>
+        api("/wishlist", {
+          method: "PUT",
+          body: JSON.stringify({ slugs: wishlist }),
+        }),
+      )
+      .catch((e: Error) => setMessage(e.message));
   }, [wishlist, ready]);
   const toggle = (slug: string) =>
     setWishlist((current) =>
