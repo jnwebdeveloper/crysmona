@@ -2,18 +2,18 @@ import express from "express";
 import { pool, q } from "../lib/db.js";
 import { dto } from "../services/catalog.js";
 import { bad } from "../lib/errors.js";
-import { customer } from "../auth/customer/session.js";
+import { owner } from "../auth/customer/guest.js";
 const app = express.Router();
-app.get("/api/cart", customer, async (req: any, res) => {
-  const key = `user:${req.customer.id}`;
+app.get("/api/cart", async (req: any, res) => {
+  const key = await owner(req, res);
   const { rows } = await q(
     "SELECT p.*,c.quantity FROM carts c JOIN products p ON p.id=c.product_id WHERE c.owner_key=$1 AND p.active=true ORDER BY c.updated_at",
     [key],
   );
   res.json(rows.map((r: any) => ({ product: dto(r), qty: r.quantity })));
 });
-app.put("/api/cart", customer, async (req: any, res) => {
-  const key = `user:${req.customer.id}`;
+app.put("/api/cart", async (req: any, res) => {
+  const key = await owner(req, res);
   const items = req.body.items;
   if (!Array.isArray(items) || items.length > 100) throw bad("Invalid bag.");
   const normalized = new Map<string, number>();

@@ -12,9 +12,11 @@ import { api } from "../lib/Store";
 export function LoginModal({
   onClose,
   onLogin,
+  beforeLogin,
 }: {
   onClose: () => void;
   onLogin: (user: any) => void;
+  beforeLogin?: () => Promise<void>;
 }) {
   const [phone, setPhone] = useState(""),
     [otp, setOtp] = useState(""),
@@ -84,6 +86,8 @@ export function LoginModal({
         await requestCode();
         setStep("otp");
       } else {
+        // Finish saving the guest bag before the server merges it into the account.
+        await beforeLogin?.();
         const user = await api("/auth/verify-otp", {
           method: "POST",
           body: JSON.stringify({ phone, otp }),

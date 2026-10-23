@@ -72,6 +72,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(!snapshot),
     [catalogError, setCatalogError] = useState("");
   const [ready, setReady] = useState(false);
+  const [authLoaded, setAuthLoaded] = useState(false);
+  const [guestIdentityLoaded, setGuestIdentityLoaded] = useState(false);
   const queue = useRef(Promise.resolve());
   const refresh = (): Promise<void> => {
     if (inFlight.current) return inFlight.current;
@@ -115,7 +117,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     refresh();
     api("/auth/me")
       .then(setUser)
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setAuthLoaded(true));
     // Page changes also refresh the catalog (see StoreLayout) so stock stays current.
     const listener = () => refresh();
     window.addEventListener("focus", listener);
@@ -134,7 +137,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           setReady(true);
         }
       })
-      .catch((e: Error) => setMessage(e.message));
+      .catch((e: Error) => setMessage(e.message))
+      // Wait for the first guest cookie before loading a guest bag, so parallel
+      // wishlist/bag requests cannot create two different guest identities.
+      .finally(() => {
+        if (valid) setGuestIdentityLoaded(true);
+      });
     return () => {
       valid = false;
     };
@@ -168,6 +176,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   return (
     <Context.Provider
       value={{
+        identityReady: authLoaded && guestIdentityLoaded,
         catalog,
         wishlist,
         toggle,
@@ -190,6 +199,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 }
 export const useStore = () =>
   useContext(Context) as {
+    identityReady: boolean;
     loading: boolean;
     catalogError: string;
     catalog: Product[];

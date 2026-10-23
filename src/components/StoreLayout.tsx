@@ -56,7 +56,7 @@ function StoreEffects() {
 // Header, page, footer, login dialog and bag toast.
 function StoreShell() {
   const { user, setUser, refresh } = useStore();
-  const { count } = useCart();
+  const { count, flush } = useCart();
   const { toast, loginOpen, openLogin, closeLogin } = useUi();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -77,7 +77,13 @@ function StoreShell() {
       <Header cart={count} user={user?.phone || null} onLogin={openLogin} />
       <Outlet />
       <Footer />
-      {loginOpen && <LoginModal onClose={closeLogin} onLogin={setUser} />}
+      {loginOpen && (
+        <LoginModal
+          onClose={closeLogin}
+          onLogin={setUser}
+          beforeLogin={flush}
+        />
+      )}
       {toast && (
         <div className="cart-toast" role="status">
           <ShoppingBag />

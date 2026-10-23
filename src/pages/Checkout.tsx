@@ -202,17 +202,17 @@ export default function Checkout() {
             )}
             <button
               className="place-order"
+              type={user ? "submit" : "button"}
+              onClick={!user ? onLogin : undefined}
               disabled={
                 busy || !quote || (method === "paypal" && !config?.available)
               }
             >
               {busy
                 ? "PLEASE WAIT…"
-                : !user
-                  ? "SIGN IN TO CONTINUE"
-                  : method === "paypal"
-                    ? "CONTINUE TO PAYPAL"
-                    : "PLACE ORDER"}
+                : method === "paypal"
+                  ? "CONTINUE TO PAYPAL"
+                  : "PLACE ORDER"}
               {quote && " · " + formatPrice(quote.total)}
               <ArrowRight />
             </button>

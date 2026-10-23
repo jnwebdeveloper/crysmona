@@ -20,6 +20,7 @@ type Cart = {
   update: (slug: string, qty: number) => void;
   remove: (slug: string) => void;
   clear: () => void;
+  flush: () => Promise<void>;
 };
 
 const CartContext = createContext<Cart | null>(null);
@@ -27,34 +28,33 @@ const serialize = (items: CartItem[]) =>
   JSON.stringify(items.map((i) => ({ slug: i.product.slug, qty: i.qty })));
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const { catalog, user, loading, catalogError } = useStore();
-  const { showToast, openLogin } = useUi();
+  const { catalog, user, loading, catalogError, identityReady } = useStore();
+  const { showToast } = useUi();
   const [items, setItems] = useState<CartItem[]>([]),
     [ready, setReady] = useState(false),
     [error, setError] = useState("");
   const queue = useRef(Promise.resolve());
-  const currentUser = useRef(user?.id);
-  currentUser.current = user?.id;
-  const loadedFor = useRef<number | undefined>(undefined);
+  const ownerId: number | string = user?.id ?? "guest";
+  const currentUser = useRef(ownerId);
+  currentUser.current = ownerId;
+  const loadedFor = useRef<number | string | null>(null);
+  const saveError = useRef<Error | null>(null);
   // What the server already has; saves are skipped when nothing changed, so
   // loading the bag or refreshing the catalog does not write it straight back.
   const synced = useRef("");
 
   useEffect(() => {
+    if (!identityReady) return;
     let live = true;
-    loadedFor.current = undefined;
+    loadedFor.current = null;
+    saveError.current = null;
     setItems([]);
     synced.current = "[]";
-    if (!user) {
-      setReady(true);
-      setError("");
-      return;
-    }
     setReady(false);
     api("/cart")
       .then((data: CartItem[]) => {
         if (!live) return;
-        loadedFor.current = user.id;
+        loadedFor.current = ownerId;
         synced.current = serialize(data);
         setItems(data);
         setError("");
@@ -65,14 +65,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           synced.current = "[]";
           setItems([]);
           setError(e.message);
-          setReady(true);
+          setReady(false);
         }
         showToast(e.message);
       });
     return () => {
       live = false;
     };
-  }, [user?.id]);
+  }, [ownerId, identityReady]);
 
   // Re-bind bag lines to fresh catalog data (prices, stock) and drop vanished products.
   useEffect(() => {
@@ -88,11 +88,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [catalog, loading, catalogError]);
 
   useEffect(() => {
-    if (!ready || !user || loadedFor.current !== user.id) return;
+    if (!ready || loadedFor.current !== ownerId) return;
     const body = serialize(items);
     if (body === synced.current) return;
     synced.current = body;
-    const ownerId = user.id;
     queue.current = queue.current
       .then(() =>
         currentUser.current === ownerId
@@ -102,15 +101,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             })
           : undefined,
       )
-      .catch((e) => showToast(e.message));
-  }, [items, ready]);
+      .then(() => {
+        saveError.current = null;
+      })
+      .catch((e) => {
+        saveError.current = e;
+        showToast(e.message);
+      });
+  }, [items, ready, ownerId]);
 
   const add = (product: Product, qty = 1) => {
-    if (!user) {
-      openLogin();
-      return;
-    }
-    if (!ready || loadedFor.current !== user.id) {
+    if (!ready || loadedFor.current !== ownerId) {
       showToast("Your bag is still loading. Please try again.");
       return;
     }
@@ -164,14 +165,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   return (
     <CartContext.Provider
       value={{
-        items: user ? items : [],
-        count: (user ? items : []).reduce((n, i) => n + i.qty, 0),
+        items,
+        count: items.reduce((n, i) => n + i.qty, 0),
         ready,
         error,
         add,
         update,
         remove,
         clear: () => setItems([]),
+        flush: async () => {
+          await queue.current;
+          if (saveError.current) throw saveError.current;
+        },
       }}
     >
       {children}

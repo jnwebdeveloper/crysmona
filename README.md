@@ -33,7 +33,7 @@ The database is named `crysmona` (lowercase). An older local database named `"Cr
 - `shared/`: code used by both the storefront and the server — `adminSchema.ts`/`adminValidation.ts` (admin model fields and forms), `product.ts` (product type and price helpers).
 - `database`: schema, transactional migrations and development seed records.
 
-The browser fetches the catalog, inventory, pricing, navigation, page content and settings from PostgreSQL. An unavailable database shows an explicit retry state, never a fabricated preview catalog. Guest and authenticated bag/wishlist state is stored in PostgreSQL. Anonymous continuity uses an HttpOnly guest-session cookie; product data and final order totals are always checked against the database.
+The browser fetches the catalog, inventory, pricing, navigation, page content and settings from PostgreSQL. An unavailable database shows an explicit retry state, never a fabricated preview catalog. Guest and authenticated bag/wishlist state is stored in PostgreSQL. Visitors can add items, open the bag, and fill checkout without signing in. Clicking Continue to PayPal asks guests to sign in; pending bag saves finish before login merges the guest bag into the account. Creating an order and starting payment still require a customer session. Anonymous continuity uses an HttpOnly guest-session cookie; product data and final order totals are always checked against the database.
 
 The 15 business tables use integer identity primary keys beginning at 1. Foreign keys preserve relations and are indexed. Existing UUIDs remain in `legacy_id` columns for traceability. Sessions use a hashed token primary key and an integer user foreign key. Identity sequences can contain gaps; IDs are never recycled.
 

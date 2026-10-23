@@ -63,22 +63,8 @@ export default function App() {
             <Route path="jewellery" element={<Listing kind="Jewellery" />} />
             <Route path="product/:slug" element={<ProductPage />} />
             <Route path="wishlist" element={<WishlistPage />} />
-            <Route
-              path="cart"
-              element={
-                <RequireLogin>
-                  <CartPage />
-                </RequireLogin>
-              }
-            />
-            <Route
-              path="checkout"
-              element={
-                <RequireLogin>
-                  <Checkout />
-                </RequireLogin>
-              }
-            />
+            <Route path="cart" element={<CartPage />} />
+            <Route path="checkout" element={<Checkout />} />
             <Route path="checkout/paypal" element={<PayPalReturn />} />
             <Route path="our-craft" element={<InfoPage title="Our Craft" />} />
             <Route path="about" element={<InfoPage title="About Crysmona" />} />
