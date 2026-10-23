@@ -1871,6 +1871,9 @@ footer section a {
 }
 .nav.site-nav.is-scrolled {
   height: 72px;
+  background: #faf6ef;
+  border-bottom: 1px solid #e5d8c7;
+  box-shadow: 0 3px 18px #321c1512;
 }
 .site-nav.is-scrolled .brand {
   width: 170px;
