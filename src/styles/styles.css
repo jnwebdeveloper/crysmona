@@ -4894,3 +4894,14 @@ html {
     max-width: 220px;
   }
 }
+
+.admin-content-group th {
+  background: #eee5d6;
+  text-align: left;
+  padding: 18px 20px;
+}
+.admin-content-group small {
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: normal;
+}

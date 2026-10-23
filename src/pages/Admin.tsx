@@ -1,7 +1,6 @@
 import {
   contentPageGroup,
   contentPageGroups,
-  isDiscoverBlock,
   pageContent,
 } from "../../shared/pageContent";
 import { listRecords, moveRecord } from "../../shared/adminLists";
@@ -69,9 +68,8 @@ const NAV_GROUPS: { title: string; items: [string, string, string, any][] }[] =
       items: [
         ["products", "products", "Products", Package],
         ["categories", "categories", "Categories", Tags],
-        ["storefront", "content_blocks", "Storefront", PanelsTopLeft],
+        ["storefront", "content_blocks", "Pages & content", PanelsTopLeft],
         ["navigation", "navigation", "Header menu & submenus", PanelsTopLeft],
-        ["discover", "discover", "Discover pages", PanelsTopLeft],
       ],
     },
     {
@@ -102,7 +100,10 @@ const DEFAULT_SECTION = "products";
 export default function AdminPage() {
   const { section = DEFAULT_SECTION } = useParams();
   const navigate = useNavigate();
-  const tab = SECTION_TO_TAB[section] || SECTION_TO_TAB[DEFAULT_SECTION];
+  const tab =
+    section === "discover"
+      ? "content_blocks"
+      : SECTION_TO_TAB[section] || SECTION_TO_TAB[DEFAULT_SECTION];
   const [statusFilter, setStatusFilter] = useState(""),
     [categoryFilter, setCategoryFilter] = useState(""),
     [categories, setCategories] = useState<any[]>([]),
@@ -110,10 +111,8 @@ export default function AdminPage() {
   const reorderLock = useRef(false);
   const currentTab = useRef(tab);
   currentTab.current = tab;
-  const contentList = tab === "discover" || tab === "content_blocks";
-  const pageGroups = contentPageGroups.filter(
-    (group) => tab !== "discover" || group.discover,
-  );
+  const contentList = tab === "content_blocks";
+  const [pageFilter, setPageFilter] = useState("");
   const collectionList = tab === "products" || tab === "categories";
   const [filterField, setFilterField] = useState(""),
     [filterValue, setFilterValue] = useState(""),
@@ -141,11 +140,10 @@ export default function AdminPage() {
       error: string;
     } | null>(null);
   const { refresh } = useStore();
-  const resource = tab === "discover" ? "content_blocks" : tab;
-  const definition =
-    tab === "discover"
-      ? { ...resources.content_blocks, label: "Discover pages" }
-      : resources[resource];
+  const resource = tab;
+  const definition = contentList
+    ? { ...resources.content_blocks, label: "Pages & content" }
+    : resources[resource];
   const request = async (path: string, options: RequestInit = {}) => {
     try {
       return await api("/admin/" + path, options);
@@ -161,7 +159,9 @@ export default function AdminPage() {
   }, []);
   // Unknown section in the URL (e.g. /admin/xyz): replace it with the default.
   useEffect(() => {
-    if (!SECTION_TO_TAB[section])
+    if (section === "discover")
+      navigate("/admin/storefront", { replace: true });
+    else if (!SECTION_TO_TAB[section])
       navigate("/admin/" + DEFAULT_SECTION, { replace: true });
   }, [section]);
   const login = async () => {
@@ -211,11 +211,7 @@ export default function AdminPage() {
         request("dashboard"),
         tab === "products" ? request("categories") : Promise.resolve([]),
       ]);
-      setRows(
-        tab === "discover"
-          ? data.filter((r: any) => isDiscoverBlock(r.block_key))
-          : data,
-      );
+      setRows(data);
       setCategories(categoryRows);
       setStats(summary);
       setConnected(true);
@@ -231,6 +227,7 @@ export default function AdminPage() {
       setQuery("");
       setStatusFilter("");
       setCategoryFilter("");
+      setPageFilter("");
       setFilterField("");
       setFilterValue("");
       setSortField("list_priority");
@@ -263,16 +260,17 @@ export default function AdminPage() {
     }
     if (contentList) {
       const available = pageContent.find(
-        (block) => !rows.some((row) => row.block_key === block.block_key),
+        (block) =>
+          contentPageGroup(block.block_key) === pageFilter &&
+          !rows.some((row) => row.block_key === block.block_key),
       );
       defaults.block_key =
-        tab === "discover" ? available?.block_key || "about" : "";
-      if (tab === "discover" && !record && !available) {
-        setNotice(
-          "All Discover sections already exist. Edit an existing section to update its content.",
-        );
-        return;
-      }
+        available?.block_key ||
+        (pageFilter === "home"
+          ? "hero-"
+          : pageFilter === "other"
+            ? ""
+            : pageFilter);
     }
     setEditing(
       record ? { ...record, images: undefined } : { ...defaults, images: [] },
@@ -346,32 +344,6 @@ export default function AdminPage() {
     const value = editing[f.key];
     const change = (v: any) =>
       setEditing((current: any) => ({ ...current, [f.key]: v }));
-    if (tab === "discover" && f.key === "block_key")
-      return (
-        <select value={value} onChange={(e) => change(e.target.value)}>
-          {pageGroups.map((group) => (
-            <optgroup key={group.key} label={group.label}>
-              {pageContent
-                .filter(
-                  (block) => contentPageGroup(block.block_key) === group.key,
-                )
-                .map((block) => (
-                  <option
-                    key={block.block_key}
-                    value={block.block_key}
-                    disabled={rows.some(
-                      (row) =>
-                        row.block_key === block.block_key &&
-                        row.id !== editing.id,
-                    )}
-                  >
-                    {block.title}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-        </select>
-      );
     if (tab === "products" && f.key === "description")
       return (
         <RichTextEditor
@@ -514,6 +486,14 @@ export default function AdminPage() {
   };
   const preparedRows = rows.map((row) => ({
     ...row,
+    ...(contentList
+      ? {
+          page_name:
+            contentPageGroups.find(
+              (group) => group.key === contentPageGroup(row.block_key),
+            )?.label || "Other Content",
+        }
+      : {}),
     category_name:
       categories.find(
         (category) => Number(category.id) === Number(row.category_id),
@@ -528,7 +508,12 @@ export default function AdminPage() {
               ? String(row.category_id ?? "none")
               : row.type) === categoryFilter),
       )
-    : rows;
+    : contentList
+      ? preparedRows.filter(
+          (row) =>
+            !pageFilter || contentPageGroup(row.block_key) === pageFilter,
+        )
+      : rows;
   const toggleSort = (key: string) => {
     setSortDirection(
       sortField === key && sortDirection === "asc" ? "desc" : "asc",
@@ -550,7 +535,7 @@ export default function AdminPage() {
         ? "ascending"
         : "descending"
       : "none";
-  const visibleRows = listRecords(
+  const sortedRows = listRecords(
     filteredRows,
     query,
     filterField,
@@ -558,6 +543,13 @@ export default function AdminPage() {
     sortField,
     sortDirection,
   );
+  const visibleRows = contentList
+    ? contentPageGroups.flatMap((group) =>
+        sortedRows.filter(
+          (row) => contentPageGroup(row.block_key) === group.key,
+        ),
+      )
+    : sortedRows;
   const filterFields = definition.fields.filter(
     (f) => f.type !== "specs" && f.type !== "textarea",
   );
@@ -569,13 +561,24 @@ export default function AdminPage() {
     !query &&
     !filterValue &&
     sortField === "list_priority" &&
-    sortDirection === "asc" &&
-    tab !== "discover";
+    sortDirection === "asc";
   const reorder = async (from: number, to: number) => {
     if (!canReorder || reorderLock.current || from === to) return;
     const previous = rows,
       sourceTab = tab;
-    const next = moveRecord(visibleRows, from, to);
+    if (
+      contentList &&
+      contentPageGroup(rows.find((row) => row.id === from)?.block_key) !==
+        contentPageGroup(rows.find((row) => row.id === to)?.block_key)
+    )
+      return;
+    const next = moveRecord(
+      contentList
+        ? listRecords(rows, "", "", "", "list_priority", "asc")
+        : visibleRows,
+      from,
+      to,
+    );
     reorderLock.current = true;
     setReordering(true);
     setRows(next.map((row, list_priority) => ({ ...row, list_priority })));
@@ -759,7 +762,34 @@ export default function AdminPage() {
             {error}
           </p>
         )}
-        {collectionList ? (
+        {contentList ? (
+          <div className="admin-list-controls">
+            <label>
+              Page
+              <select
+                value={pageFilter}
+                onChange={(e) => setPageFilter(e.target.value)}
+              >
+                <option value="">All pages</option>
+                {contentPageGroups.map((group) => (
+                  <option key={group.key} value={group.key}>
+                    {group.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setPageFilter("");
+                setQuery("");
+              }}
+            >
+              Reset
+            </button>
+            {reordering && <span role="status">Saving order…</span>}
+          </div>
+        ) : collectionList ? (
           <div className="admin-list-controls">
             <label>
               Status
@@ -889,14 +919,16 @@ export default function AdminPage() {
         )}
         <p className="admin-note">
           {contentList
-            ? "Clear filters and search in Storefront to reorder content. Edit an existing section to update the content displayed on your website."
+            ? "Content is grouped by page. Search by page name or content. Clear search to reorder sections within a page."
             : "Drag a row or use the arrow buttons to save listing priority. Clear filters and search, and sort by listing priority ascending first."}
         </p>
         <div className="studio-toolbar">
           <label>
             <Search />
             <input
-              placeholder="Search records…"
+              placeholder={
+                contentList ? "Search pages and content…" : "Search records…"
+              }
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -918,9 +950,7 @@ export default function AdminPage() {
                           ? "Add tracking setting"
                           : tab === "navigation"
                             ? "Add menu link"
-                            : tab === "discover"
-                              ? "Add page section"
-                              : "Add setting"}
+                            : "Add setting"}
             </button>
           )}
         </div>
@@ -955,157 +985,190 @@ export default function AdminPage() {
             </thead>
             <tbody>
               {visibleRows.map((r, index) => (
-                <tr
-                  key={r.id}
-                  draggable={canReorder}
-                  onDragStart={(e) => {
-                    setDragId(r.id);
-                    e.dataTransfer.effectAllowed = "move";
-                    e.dataTransfer.setData("text/plain", String(r.id));
-                  }}
-                  onDragEnd={() => setDragId(null)}
-                  onDragOver={(e) => {
-                    if (canReorder) e.preventDefault();
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (dragId !== null) void reorder(dragId, r.id);
-                  }}
-                >
-                  <td>
-                    <div className="admin-record">
-                      {r.image_url && <img src={r.image_url} alt="" />}
-                      <div>
-                        <b>{label(r)}</b>
-                        {r.slug && <small>{r.slug}</small>}
+                <React.Fragment key={r.id}>
+                  {contentList &&
+                    (index === 0 ||
+                      contentPageGroup(visibleRows[index - 1].block_key) !==
+                        contentPageGroup(r.block_key)) && (
+                      <tr className="admin-content-group">
+                        <th colSpan={4} scope="rowgroup">
+                          {r.page_name}{" "}
+                          <small>
+                            (
+                            {
+                              visibleRows.filter(
+                                (row) => row.page_name === r.page_name,
+                              ).length
+                            }{" "}
+                            sections)
+                          </small>
+                        </th>
+                      </tr>
+                    )}
+                  <tr
+                    key={r.id}
+                    draggable={canReorder}
+                    onDragStart={(e) => {
+                      setDragId(r.id);
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", String(r.id));
+                    }}
+                    onDragEnd={() => setDragId(null)}
+                    onDragOver={(e) => {
+                      if (canReorder) e.preventDefault();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragId !== null) void reorder(dragId, r.id);
+                    }}
+                  >
+                    <td>
+                      <div className="admin-record">
+                        {r.image_url && <img src={r.image_url} alt="" />}
+                        <div>
+                          <b>{label(r)}</b>
+                          {r.slug && <small>{r.slug}</small>}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  {tab === "products" && <td>{r.category_name}</td>}
-                  {tab === "categories" && (
-                    <td>{r.type === "gemstone" ? "Gemstones" : "Jewellery"}</td>
-                  )}
-                  <td>
-                    {contentList
-                      ? contentPageGroups.find(
-                          (group) =>
-                            group.key === contentPageGroup(r.block_key),
-                        )?.label || "Other Content"
-                      : tab === "site_settings" &&
-                          r.setting_key === "meta_pixel_id"
-                        ? r.setting_value || "Pixel ID not configured"
-                        : r.price_cents !== undefined
-                          ? "$" +
-                            (r.price_cents / 100).toLocaleString("en-US") +
-                            " · " +
-                            r.stock_qty +
-                            " in stock"
-                          : r.message ||
-                            r.description ||
-                            r.url ||
-                            r.value ||
-                            r.setting_value ||
-                            r.path ||
-                            r.phone ||
-                            r.product_id ||
-                            "—"}
-                    {tab === "site_settings" &&
-                      r.setting_key === "meta_pixel_id" && <PixelEvents />}
-                  </td>
-                  <td>
-                    <span className="admin-pill">
-                      {r.status ||
-                        r.payment_status ||
-                        (r.active === false ? "Hidden" : "Active")}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="admin-actions">
-                      {tab === "products" && r.slug && (
-                        <a
-                          className="admin-store-link"
-                          href={"/product/" + r.slug}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label={
-                            "View " +
-                            label(r) +
-                            " in the store (opens in a new tab)"
-                          }
-                          title={
-                            r.active === false
-                              ? "View in store (hidden products show as unavailable)"
-                              : "View in store"
-                          }
-                        >
-                          <ExternalLink />
-                        </a>
-                      )}
-                      <span
-                        className="admin-move"
-                        role="group"
-                        aria-label="Reorder"
-                      >
-                        <button
-                          aria-label={"Move " + label(r) + " up"}
-                          title="Move up"
-                          disabled={!canReorder || index === 0}
-                          onClick={() =>
-                            reorder(r.id, visibleRows[index - 1].id)
-                          }
-                        >
-                          <ArrowUp />
-                        </button>
-                        <button
-                          aria-label={"Move " + label(r) + " down"}
-                          title="Move down"
-                          disabled={
-                            !canReorder || index === visibleRows.length - 1
-                          }
-                          onClick={() =>
-                            reorder(r.id, visibleRows[index + 1].id)
-                          }
-                        >
-                          <ArrowDown />
-                        </button>
+                    </td>
+                    {tab === "products" && <td>{r.category_name}</td>}
+                    {tab === "categories" && (
+                      <td>
+                        {r.type === "gemstone" ? "Gemstones" : "Jewellery"}
+                      </td>
+                    )}
+                    <td>
+                      {contentList
+                        ? contentPageGroups.find(
+                            (group) =>
+                              group.key === contentPageGroup(r.block_key),
+                          )?.label || "Other Content"
+                        : tab === "site_settings" &&
+                            r.setting_key === "meta_pixel_id"
+                          ? r.setting_value || "Pixel ID not configured"
+                          : r.price_cents !== undefined
+                            ? "$" +
+                              (r.price_cents / 100).toLocaleString("en-US") +
+                              " · " +
+                              r.stock_qty +
+                              " in stock"
+                            : r.message ||
+                              r.description ||
+                              r.url ||
+                              r.value ||
+                              r.setting_value ||
+                              r.path ||
+                              r.phone ||
+                              r.product_id ||
+                              "—"}
+                      {tab === "site_settings" &&
+                        r.setting_key === "meta_pixel_id" && <PixelEvents />}
+                    </td>
+                    <td>
+                      <span className="admin-pill">
+                        {r.status ||
+                          r.payment_status ||
+                          (r.active === false ? "Hidden" : "Active")}
                       </span>
-                      {tab === "orders" && (
-                        <button
-                          onClick={async () => {
-                            setError("");
-                            try {
-                              setOrderDetail(
-                                await request("orders/" + r.id + "/detail"),
-                              );
-                            } catch (e: any) {
-                              setError(e.message);
+                    </td>
+                    <td>
+                      <div className="admin-actions">
+                        {tab === "products" && r.slug && (
+                          <a
+                            className="admin-store-link"
+                            href={"/product/" + r.slug}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={
+                              "View " +
+                              label(r) +
+                              " in the store (opens in a new tab)"
                             }
-                          }}
+                            title={
+                              r.active === false
+                                ? "View in store (hidden products show as unavailable)"
+                                : "View in store"
+                            }
+                          >
+                            <ExternalLink />
+                          </a>
+                        )}
+                        <span
+                          className="admin-move"
+                          role="group"
+                          aria-label="Reorder"
                         >
-                          View details
-                        </button>
-                      )}
-                      <button
-                        aria-label={"Edit " + label(r)}
-                        onClick={() => open(r)}
-                      >
-                        <Pencil /> Edit
-                      </button>
-                      {!["orders", "users"].includes(tab) && (
+                          <button
+                            aria-label={"Move " + label(r) + " up"}
+                            title="Move up"
+                            disabled={
+                              !canReorder ||
+                              index === 0 ||
+                              (contentList &&
+                                visibleRows[index - 1].page_name !==
+                                  r.page_name)
+                            }
+                            onClick={() =>
+                              reorder(r.id, visibleRows[index - 1].id)
+                            }
+                          >
+                            <ArrowUp />
+                          </button>
+                          <button
+                            aria-label={"Move " + label(r) + " down"}
+                            title="Move down"
+                            disabled={
+                              !canReorder ||
+                              index === visibleRows.length - 1 ||
+                              (contentList &&
+                                visibleRows[index + 1].page_name !==
+                                  r.page_name)
+                            }
+                            onClick={() =>
+                              reorder(r.id, visibleRows[index + 1].id)
+                            }
+                          >
+                            <ArrowDown />
+                          </button>
+                        </span>
+                        {tab === "orders" && (
+                          <button
+                            onClick={async () => {
+                              setError("");
+                              try {
+                                setOrderDetail(
+                                  await request("orders/" + r.id + "/detail"),
+                                );
+                              } catch (e: any) {
+                                setError(e.message);
+                              }
+                            }}
+                          >
+                            View details
+                          </button>
+                        )}
                         <button
-                          className="danger"
-                          aria-label={"Delete " + label(r)}
-                          onClick={() => {
-                            setError("");
-                            setRemoving(r);
-                          }}
+                          aria-label={"Edit " + label(r)}
+                          onClick={() => open(r)}
                         >
-                          <Trash2 /> Delete
+                          <Pencil /> Edit
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                        {!["orders", "users"].includes(tab) && (
+                          <button
+                            className="danger"
+                            aria-label={"Delete " + label(r)}
+                            onClick={() => {
+                              setError("");
+                              setRemoving(r);
+                            }}
+                          >
+                            <Trash2 /> Delete
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -1113,7 +1176,11 @@ export default function AdminPage() {
             <div className="admin-empty">
               <LayoutDashboard />
               <h2>{busy ? "Loading records…" : "No matching records"}</h2>
-              <p>Add the first record to this section.</p>
+              <p>
+                {query || pageFilter
+                  ? "Try another search or page filter."
+                  : "Add the first record to this section."}
+              </p>
             </div>
           )}
         </div>
