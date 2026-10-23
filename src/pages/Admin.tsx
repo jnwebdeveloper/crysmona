@@ -110,7 +110,6 @@ export default function AdminPage() {
   const reorderLock = useRef(false);
   const currentTab = useRef(tab);
   currentTab.current = tab;
-  const [pageGroup, setPageGroup] = useState("");
   const contentList = tab === "discover" || tab === "content_blocks";
   const pageGroups = contentPageGroups.filter(
     (group) => tab !== "discover" || group.discover,
@@ -232,7 +231,6 @@ export default function AdminPage() {
       setQuery("");
       setStatusFilter("");
       setCategoryFilter("");
-      setPageGroup("");
       setFilterField("");
       setFilterValue("");
       setSortField("list_priority");
@@ -265,21 +263,13 @@ export default function AdminPage() {
     }
     if (contentList) {
       const available = pageContent.find(
-        (block) =>
-          (!pageGroup || contentPageGroup(block.block_key) === pageGroup) &&
-          !rows.some((row) => row.block_key === block.block_key),
+        (block) => !rows.some((row) => row.block_key === block.block_key),
       );
       defaults.block_key =
-        tab === "discover"
-          ? available?.block_key || "about"
-          : pageGroup === "home"
-            ? "hero-"
-            : pageGroup && pageGroup !== "other"
-              ? pageGroup
-              : "";
+        tab === "discover" ? available?.block_key || "about" : "";
       if (tab === "discover" && !record && !available) {
         setNotice(
-          "All sections in this page group already exist. Edit an existing section to update its content.",
+          "All Discover sections already exist. Edit an existing section to update its content.",
         );
         return;
       }
@@ -538,9 +528,7 @@ export default function AdminPage() {
               ? String(row.category_id ?? "none")
               : row.type) === categoryFilter),
       )
-    : contentList && pageGroup
-      ? rows.filter((row) => contentPageGroup(row.block_key) === pageGroup)
-      : rows;
+    : rows;
   const toggleSort = (key: string) => {
     setSortDirection(
       sortField === key && sortDirection === "asc" ? "desc" : "asc",
@@ -578,7 +566,6 @@ export default function AdminPage() {
     !reordering &&
     !statusFilter &&
     !categoryFilter &&
-    !pageGroup &&
     !query &&
     !filterValue &&
     sortField === "list_priority" &&
@@ -772,39 +759,6 @@ export default function AdminPage() {
             {error}
           </p>
         )}
-        {contentList && (
-          <section className="admin-page-groups" aria-label="Content by page">
-            <p className="admin-note">
-              Choose a page to manage its content and banners.
-            </p>
-            <div className="admin-page-group-buttons">
-              {[{ key: "", label: "All pages" }, ...pageGroups].map((group) => (
-                <button
-                  type="button"
-                  key={group.key}
-                  aria-pressed={pageGroup === group.key}
-                  onClick={() => {
-                    setPageGroup(group.key);
-                    setQuery("");
-                    setFilterField("");
-                    setFilterValue("");
-                  }}
-                >
-                  {group.label}{" "}
-                  <span>
-                    {
-                      rows.filter(
-                        (row) =>
-                          !group.key ||
-                          contentPageGroup(row.block_key) === group.key,
-                      ).length
-                    }
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
         {collectionList ? (
           <div className="admin-list-controls">
             <label>
@@ -935,7 +889,7 @@ export default function AdminPage() {
         )}
         <p className="admin-note">
           {contentList
-            ? "Select All pages in Storefront and clear filters and search to reorder content. Edit an existing section to update the content displayed on your website."
+            ? "Clear filters and search in Storefront to reorder content. Edit an existing section to update the content displayed on your website."
             : "Drag a row or use the arrow buttons to save listing priority. Clear filters and search, and sort by listing priority ascending first."}
         </p>
         <div className="studio-toolbar">
@@ -992,7 +946,7 @@ export default function AdminPage() {
                     {sortHeading("type", "Collection")}
                   </th>
                 )}
-                <th>Details</th>
+                <th>{contentList ? "Page" : "Details"}</th>
                 <th aria-sort={ariaSort("active")}>
                   {collectionList ? sortHeading("active", "Status") : "Status"}
                 </th>
@@ -1024,17 +978,6 @@ export default function AdminPage() {
                       <div>
                         <b>{label(r)}</b>
                         {r.slug && <small>{r.slug}</small>}
-                        {contentList && (
-                          <small>
-                            {
-                              contentPageGroups.find(
-                                (group) =>
-                                  group.key === contentPageGroup(r.block_key),
-                              )?.label
-                            }{" "}
-                            · {r.block_key}
-                          </small>
-                        )}
                       </div>
                     </div>
                   </td>
@@ -1043,24 +986,29 @@ export default function AdminPage() {
                     <td>{r.type === "gemstone" ? "Gemstones" : "Jewellery"}</td>
                   )}
                   <td>
-                    {tab === "site_settings" &&
-                    r.setting_key === "meta_pixel_id"
-                      ? r.setting_value || "Pixel ID not configured"
-                      : r.price_cents !== undefined
-                        ? "$" +
-                          (r.price_cents / 100).toLocaleString("en-US") +
-                          " · " +
-                          r.stock_qty +
-                          " in stock"
-                        : r.message ||
-                          r.description ||
-                          r.url ||
-                          r.value ||
-                          r.setting_value ||
-                          r.path ||
-                          r.phone ||
-                          r.product_id ||
-                          "—"}
+                    {contentList
+                      ? contentPageGroups.find(
+                          (group) =>
+                            group.key === contentPageGroup(r.block_key),
+                        )?.label || "Other Content"
+                      : tab === "site_settings" &&
+                          r.setting_key === "meta_pixel_id"
+                        ? r.setting_value || "Pixel ID not configured"
+                        : r.price_cents !== undefined
+                          ? "$" +
+                            (r.price_cents / 100).toLocaleString("en-US") +
+                            " · " +
+                            r.stock_qty +
+                            " in stock"
+                          : r.message ||
+                            r.description ||
+                            r.url ||
+                            r.value ||
+                            r.setting_value ||
+                            r.path ||
+                            r.phone ||
+                            r.product_id ||
+                            "—"}
                     {tab === "site_settings" &&
                       r.setting_key === "meta_pixel_id" && <PixelEvents />}
                   </td>
