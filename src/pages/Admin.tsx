@@ -344,6 +344,16 @@ export default function AdminPage() {
     const value = editing[f.key];
     const change = (v: any) =>
       setEditing((current: any) => ({ ...current, [f.key]: v }));
+    if (contentList && f.key === "body")
+      return (
+        <RichTextEditor
+          value={value}
+          onChange={change}
+          label="Page content body"
+          placeholder="Write the content for this page…"
+          disabled={busy}
+        />
+      );
     if (tab === "products" && f.key === "description")
       return (
         <RichTextEditor

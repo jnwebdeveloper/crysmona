@@ -1,3 +1,4 @@
+import RichText from "../components/RichText";
 import HeroCarousel from "../components/HeroCarousel";
 
 import {
@@ -143,7 +144,12 @@ export default function Home() {
           Timeless designs for every occasion. Find the perfect piece to express
           your style.
         </p>
-        <div className="jewellery-row" role="region" aria-label="Jewellery categories, scroll to explore" tabIndex={0}>
+        <div
+          className="jewellery-row"
+          role="region"
+          aria-label="Jewellery categories, scroll to explore"
+          tabIndex={0}
+        >
           {(store.categories.length
             ? store.categories
                 .filter((c: any) => c.type === "jewellery")
@@ -183,10 +189,12 @@ export default function Home() {
               <h2 style={{ whiteSpace: "pre-line" }}>
                 {signature.title || "Purple Copper\nTurquoise Pendant"}
               </h2>
-              <p>
-                {signature.body ||
-                  "A rare blend of vibrant colour and natural artistry."}
-              </p>
+              <RichText
+                value={
+                  signature.body ||
+                  "A rare blend of vibrant colour and natural artistry."
+                }
+              />
               <div className="sig-points">
                 <b>
                   <Gem />
@@ -278,10 +286,12 @@ export default function Home() {
             <h2 style={{ whiteSpace: "pre-line" }}>
               {story.title || "Wear the Stone\nThat Speaks to You"}
             </h2>
-            <p>
-              {story.body ||
-                "Jewellery with meaning. For every chapter of your story."}
-            </p>
+            <RichText
+              value={
+                story.body ||
+                "Jewellery with meaning. For every chapter of your story."
+              }
+            />
             <button onClick={() => navTo(story.cta_url || "/gemstones")}>
               {story.cta_label || "EXPLORE NOW"} <ArrowRight />
             </button>

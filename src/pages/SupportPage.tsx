@@ -1,3 +1,4 @@
+import RichText from "../components/RichText";
 import { Link } from "react-router";
 import { useStore } from "../lib/Store";
 export default function SupportPage({ page }: { page: string }) {
@@ -12,10 +13,12 @@ export default function SupportPage({ page }: { page: string }) {
         <h1>{block?.title || "We’re here to help"}</h1>
       </section>
       <article className="support-copy">
-        <p style={{ whiteSpace: "pre-line" }}>
-          {block?.body ||
-            "Please contact our team for the latest information before placing your order."}
-        </p>
+        <RichText
+          value={
+            block?.body ||
+            "Please contact our team for the latest information before placing your order."
+          }
+        />
         <Link to="/contact">Contact Crysmona →</Link>
       </article>
     </main>

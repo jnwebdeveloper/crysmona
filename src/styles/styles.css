@@ -473,7 +473,8 @@ button {
   line-height: 0.95;
   margin: 14px 0;
 }
-.signature article > p {
+.signature article > p,
+.signature article > .rich-text {
   font-size: 12px;
   line-height: 1.65;
   color: var(--muted);
@@ -1032,7 +1033,8 @@ footer > section span {
 .signature h2 {
   font-size: 45px;
 }
-.signature article > p {
+.signature article > p,
+.signature article > .rich-text {
   font-family: "Cormorant Garamond", serif;
   font-size: 15px;
 }
@@ -1247,7 +1249,8 @@ footer p {
   margin: 9px 0 10px;
   font-weight: 600;
 }
-.signature article > p {
+.signature article > p,
+.signature article > .rich-text {
   font-family: Montserrat, Arial, sans-serif;
   font-size: 11px;
   line-height: 1.5;
