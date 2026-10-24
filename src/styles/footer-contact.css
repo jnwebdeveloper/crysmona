@@ -1,0 +1,65 @@
+#footer .footer-contact-details {
+  max-width: 340px;
+  border-top: 1px solid #cebea880;
+  padding-top: 18px;
+  margin: 0 0 24px;
+}
+#footer .footer-company-address {
+  font-style: normal;
+  margin-bottom: 18px;
+}
+#footer .footer-detail-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #6b5136;
+  margin-bottom: 7px;
+}
+#footer .footer-company-address .rich-text {
+  color: #726354;
+  font-size: 11px;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+#footer .footer-company-address p {
+  margin: 0;
+  max-width: none;
+  font-size: 11px;
+  line-height: 1.85;
+}
+#footer .footer-people {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+#footer .footer-people li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 14px;
+  align-items: baseline;
+}
+#footer .footer-person-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: #493420;
+}
+#footer .footer-people a {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1.8;
+  color: #726354;
+  text-decoration: underline;
+  text-decoration-color: #cebea8;
+  text-underline-offset: 4px;
+  overflow-wrap: anywhere;
+}
+#footer .footer-people a:hover {
+  color: #9e7a4b;
+}

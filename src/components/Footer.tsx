@@ -1,5 +1,7 @@
 import { ArrowUpRight, Facebook, Instagram } from "lucide-react";
 import { Link } from "react-router";
+import RichText from "./RichText";
+import "../styles/footer-contact.css";
 import { useStore } from "../lib/Store";
 
 const collectionLinks = [
@@ -21,6 +23,20 @@ function footerPath(url: string) {
 
 export default function Footer() {
   const { store } = useStore();
+  const companyAddress = store.content.find(
+    (item: any) =>
+      item.block_key === "contact-company-address" && item.active !== false,
+  )?.body;
+  const contacts = [1, 2]
+    .map((slot) =>
+      store.content.find(
+        (item: any) => item.block_key === `contact-info-${slot}`,
+      ),
+    )
+    .filter(
+      (item: any) =>
+        item && item.active !== false && (item.title || item.subtitle),
+    );
   const links = [...collectionLinks];
   for (const item of store.navigation) {
     if (
@@ -59,6 +75,39 @@ export default function Footer() {
             Natural gemstones. Thoughtfully crafted jewellery. Stories for a
             more meaningful you.
           </p>
+          {(companyAddress || contacts.length > 0) && (
+            <section
+              className="footer-contact-details"
+              aria-label="Company address and contacts"
+            >
+              {companyAddress && (
+                <address className="footer-company-address">
+                  <span className="footer-detail-label">Company address</span>
+                  <RichText value={companyAddress} />
+                </address>
+              )}
+              {contacts.length > 0 && (
+                <ul className="footer-people">
+                  {contacts.map((contact: any) => (
+                    <li key={contact.block_key}>
+                      {contact.title && (
+                        <span className="footer-person-name">
+                          {contact.title}
+                        </span>
+                      )}
+                      {contact.subtitle && (
+                        <a
+                          href={`tel:${contact.subtitle.replace(/[^+0-9]/g, "")}`}
+                        >
+                          {contact.subtitle}
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
           {(store.settings.instagram_url || store.settings.facebook_url) && (
             <div className="footer-socials">
               {store.settings.instagram_url && (

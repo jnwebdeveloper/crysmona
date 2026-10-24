@@ -2,27 +2,13 @@ import RichText from "../components/RichText";
 import { useState } from "react";
 
 import "../styles/contact.css";
-import { ArrowRight, MapPin, Phone, Globe2, Gem } from "lucide-react";
+import { ArrowRight, Globe2, Gem } from "lucide-react";
 
 import { api, useStore } from "../lib/Store";
 
 export default function Contact() {
   const { store } = useStore();
   const block = store.content.find((b: any) => b.block_key === "contact");
-  const companyAddress = store.content.find(
-    (item: any) =>
-      item.block_key === "contact-company-address" && item.active !== false,
-  )?.body;
-  const contacts = [1, 2]
-    .map((slot) =>
-      store.content.find(
-        (item: any) => item.block_key === `contact-info-${slot}`,
-      ),
-    )
-    .filter(
-      (item: any) =>
-        item && item.active !== false && (item.title || item.subtitle),
-    );
   const [notice, setNotice] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
@@ -49,36 +35,6 @@ export default function Contact() {
           />
         )}
       </section>
-      <div className="contact-information">
-        {companyAddress && (
-          <section className="contact-company" aria-label="Company address">
-            <div className="contact-card-icon">
-              <MapPin size={20} strokeWidth={1.4} />
-            </div>
-            <span className="contact-eyebrow">OUR ADDRESS</span>
-            <h2>Company address</h2>
-            <RichText className="contact-address" value={companyAddress} />
-          </section>
-        )}
-        {contacts.length > 0 && (
-          <section className="contact-details" aria-label="Contact information">
-            {contacts.map((contact: any) => (
-              <article key={contact.block_key}>
-                <div className="contact-card-icon">
-                  <Phone size={19} strokeWidth={1.4} />
-                </div>
-                <span className="contact-eyebrow">PERSONAL ASSISTANCE</span>
-                {contact.title && <h2>{contact.title}</h2>}
-                {contact.subtitle && (
-                  <a href={`tel:${contact.subtitle.replace(/[^+0-9]/g, "")}`}>
-                    {contact.subtitle}
-                  </a>
-                )}
-              </article>
-            ))}
-          </section>
-        )}
-      </div>
       <div className="contact-layout">
         <section
           className="contact-markets"
