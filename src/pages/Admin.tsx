@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   ArrowUp,
   ExternalLink,
+  Download,
   LayoutDashboard,
   Package,
   Tags,
@@ -147,16 +148,49 @@ export default function AdminPage() {
     } | null>(null);
   const resource = tab;
   const dashboard = tab === "dashboard";
-  const contactInfo = contentList && /^contact-info-[12]$/.test(editing?.block_key || "");
+  const contactInfo =
+    contentList && /^contact-info-[12]$/.test(editing?.block_key || "");
+  const contactPage = contentList && editing?.block_key === "contact";
+  const contactFields: Field[] = [
+    { key: "company_address", label: "Company address", type: "textarea" },
+    { key: "contact_1_name", label: "Contact 1 name" },
+    { key: "contact_1_phone", label: "Contact 1 phone number" },
+    { key: "contact_2_name", label: "Contact 2 name" },
+    { key: "contact_2_phone", label: "Contact 2 phone number" },
+  ];
   const definition = contactInfo
-    ? { label: "Contact information", fields: resources.content_blocks.fields
-        .filter((f) => ["block_key", "title", "subtitle", "body", "active"].includes(f.key))
-        .map((f) => ({ ...f, label: ({ title: "Contact name", subtitle: "Phone number", body: "Address" } as Record<string, string>)[f.key] || f.label })) }
+    ? {
+        label: "Contact information",
+        fields: resources.content_blocks.fields
+          .filter((f) =>
+            ["block_key", "title", "subtitle", "body", "active"].includes(
+              f.key,
+            ),
+          )
+          .map((f) => ({
+            ...f,
+            label:
+              (
+                {
+                  title: "Contact name",
+                  subtitle: "Phone number",
+                  body: "Address",
+                } as Record<string, string>
+              )[f.key] || f.label,
+          })),
+      }
     : dashboard
-    ? { ...resources.products, label: "Dashboard", fields: [] }
-    : contentList
-      ? { ...resources.content_blocks, label: "Pages & content" }
-      : resources[resource];
+      ? { ...resources.products, label: "Dashboard", fields: [] }
+      : contentList
+        ? {
+            ...resources.content_blocks,
+            label: "Pages & content",
+            fields: [
+              ...resources.content_blocks.fields,
+              ...(contactPage ? contactFields : []),
+            ],
+          }
+        : resources[resource];
   const request = async (path: string, options: RequestInit = {}) => {
     try {
       return await api("/admin/" + path, options);
@@ -290,9 +324,28 @@ export default function AdminPage() {
             ? ""
             : pageFilter);
     }
-    setEditing(
-      record ? { ...record, images: undefined } : { ...defaults, images: [] },
-    );
+    const contactDefaults = {
+      company_address:
+        rows.find((row) => row.block_key === "contact-company-address")?.body ||
+        "",
+      ...Object.fromEntries(
+        [1, 2].flatMap((slot) => {
+          const contact = rows.find(
+            (row) => row.block_key === `contact-info-${slot}`,
+          );
+          return [
+            [`contact_${slot}_name`, contact?.title || ""],
+            [`contact_${slot}_phone`, contact?.subtitle || ""],
+          ];
+        }),
+      ),
+    };
+    setEditing({
+      ...contactDefaults,
+      ...(record
+        ? { ...record, images: undefined }
+        : { ...defaults, images: [] }),
+    });
     try {
       if (tab === "products" && record) {
         const gallery = await request("products/" + record.id + "/images");
@@ -326,8 +379,35 @@ export default function AdminPage() {
     setBusy(true);
     try {
       const body: any = {};
-      for (const f of definition.fields)
+      for (const f of resources[resource].fields)
         body[f.key] = editing[f.key] ?? (f.type === "specs" ? {} : null);
+      if (contactPage) {
+        for (const detail of [
+          {
+            block_key: "contact-company-address",
+            title: "Company address",
+            body: editing.company_address || "",
+            active: true,
+          },
+          ...[1, 2].map((slot) => ({
+            block_key: `contact-info-${slot}`,
+            title: editing[`contact_${slot}_name`] || "",
+            subtitle: editing[`contact_${slot}_phone`] || "",
+            active: true,
+          })),
+        ]) {
+          const existing = rows.find(
+            (row) => row.block_key === detail.block_key,
+          );
+          await request(
+            "content_blocks" + (existing ? "/" + existing.id : ""),
+            {
+              method: existing ? "PUT" : "POST",
+              body: JSON.stringify(detail),
+            },
+          );
+        }
+      }
       if (tab === "products") body.images = editing.images;
       await request(resource + (editing.id ? "/" + editing.id : ""), {
         method: editing.id ? "PUT" : "POST",
@@ -1035,29 +1115,46 @@ export default function AdminPage() {
                 />
               </label>
               {tab === "products" && (
-                <button type="button" disabled={exporting} onClick={async () => {
-                  setExporting(true);
-                  setError("");
-                  try {
-                    const products = await request("products/export");
-                    const url = URL.createObjectURL(new Blob(["\uFEFF", productsCsv(products, window.location.origin)], { type: "text/csv;charset=utf-8" }));
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.download = `crysmona-products-${new Date().toISOString().slice(0, 10)}.csv`;
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    setNotice(`Exported ${products.length} products with all details and media references.`);
-                  } catch (e: any) { setError(e.message); }
-                  finally { setExporting(false); }
-                }}>{exporting ? "Exporting…" : "Export all products (CSV)"}</button>
+                <button
+                  type="button"
+                  className="admin-new"
+                  disabled={exporting}
+                  onClick={async () => {
+                    setExporting(true);
+                    setError("");
+                    try {
+                      const products = await request("products/export");
+                      const url = URL.createObjectURL(
+                        new Blob(
+                          [
+                            "\uFEFF",
+                            productsCsv(products, window.location.origin),
+                          ],
+                          { type: "text/csv;charset=utf-8" },
+                        ),
+                      );
+                      const link = document.createElement("a");
+                      link.href = url;
+                      link.download = `crysmona-products-${new Date().toISOString().slice(0, 10)}.csv`;
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+                      setNotice(
+                        `Exported ${products.length} products with all details and media references.`,
+                      );
+                    } catch (e: any) {
+                      setError(e.message);
+                    } finally {
+                      setExporting(false);
+                    }
+                  }}
+                >
+                  <Download />
+                  {exporting ? "Exporting…" : "Export all products (CSV)"}
+                </button>
               )}
-              {contentList && (!pageFilter || pageFilter === "contact") && [1, 2].map((slot) => (
-                <button type="button" key={slot} onClick={() => open(rows.find((row) => row.block_key === `contact-info-${slot}`) || {
-                  block_key: `contact-info-${slot}`, title: "", subtitle: "", body: "", active: true,
-                })}>{rows.some((row) => row.block_key === `contact-info-${slot}`) ? "Edit" : "Add"} contact {slot}</button>
-              ))}
+
               {!["orders", "users"].includes(tab) && (
                 <button className="admin-new" onClick={() => open()}>
                   <Plus />{" "}
@@ -1286,31 +1383,7 @@ export default function AdminPage() {
                             >
                               <Pencil /> Edit
                             </button>
-                            {tab === "products" && (
-                <button type="button" disabled={exporting} onClick={async () => {
-                  setExporting(true);
-                  setError("");
-                  try {
-                    const products = await request("products/export");
-                    const url = URL.createObjectURL(new Blob(["\uFEFF", productsCsv(products, window.location.origin)], { type: "text/csv;charset=utf-8" }));
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.download = `crysmona-products-${new Date().toISOString().slice(0, 10)}.csv`;
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    setNotice(`Exported ${products.length} products with all details and media references.`);
-                  } catch (e: any) { setError(e.message); }
-                  finally { setExporting(false); }
-                }}>{exporting ? "Exporting…" : "Export all products (CSV)"}</button>
-              )}
-              {contentList && (!pageFilter || pageFilter === "contact") && [1, 2].map((slot) => (
-                <button type="button" key={slot} onClick={() => open(rows.find((row) => row.block_key === `contact-info-${slot}`) || {
-                  block_key: `contact-info-${slot}`, title: "", subtitle: "", body: "", active: true,
-                })}>{rows.some((row) => row.block_key === `contact-info-${slot}`) ? "Edit" : "Add"} contact {slot}</button>
-              ))}
-              {!["orders", "users"].includes(tab) && (
+                            {!["orders", "users"].includes(tab) && (
                               <button
                                 className="danger"
                                 aria-label={"Delete " + label(r)}
@@ -1371,40 +1444,42 @@ export default function AdminPage() {
               </p>
             )}
             <div className="admin-form-grid">
-              {definition.fields
-                .filter((f) => !(tab === "products" && f.key === "slug"))
-                .map((f) => {
-                  // A rich text field holds buttons, so it can't sit inside a
-                  // <label> (clicking the text would press the first button).
-                  const rich = tab === "products" && f.key === "description";
-                  const Wrapper = rich ? "div" : "label";
-                  return (
-                    <Wrapper
-                      key={f.key}
-                      className={
-                        f.type === "specs" ||
-                        (tab === "products" &&
-                          ["image_url", "note", "description"].includes(f.key))
-                          ? "full-width" + (rich ? " admin-rich-field" : "")
-                          : ""
-                      }
-                      role={rich ? "group" : undefined}
-                      aria-label={rich ? f.label : undefined}
-                    >
-                      {f.label}
-                      {f.required ? " *" : ""}
-                      {contactInfo && f.key === "block_key" ? <input value={editing.block_key} readOnly /> : field(f)}
-                      {tab === "site_settings" &&
-                        editing.setting_key === "meta_pixel_id" &&
-                        f.key === "setting_value" && <PixelEvents />}
-                      {fieldErrors[f.key] && (
-                        <small className="field-error" role="alert">
-                          {fieldErrors[f.key]}
-                        </small>
-                      )}
-                    </Wrapper>
-                  );
-                })}
+              {definition.fields.map((f) => {
+                // A rich text field holds buttons, so it can't sit inside a
+                // <label> (clicking the text would press the first button).
+                const rich = tab === "products" && f.key === "description";
+                const Wrapper = rich ? "div" : "label";
+                return (
+                  <Wrapper
+                    key={f.key}
+                    className={
+                      f.type === "specs" ||
+                      (tab === "products" &&
+                        ["image_url", "note", "description"].includes(f.key))
+                        ? "full-width" + (rich ? " admin-rich-field" : "")
+                        : ""
+                    }
+                    role={rich ? "group" : undefined}
+                    aria-label={rich ? f.label : undefined}
+                  >
+                    {f.label}
+                    {f.required ? " *" : ""}
+                    {contactInfo && f.key === "block_key" ? (
+                      <input value={editing.block_key} readOnly />
+                    ) : (
+                      field(f)
+                    )}
+                    {tab === "site_settings" &&
+                      editing.setting_key === "meta_pixel_id" &&
+                      f.key === "setting_value" && <PixelEvents />}
+                    {fieldErrors[f.key] && (
+                      <small className="field-error" role="alert">
+                        {fieldErrors[f.key]}
+                      </small>
+                    )}
+                  </Wrapper>
+                );
+              })}
             </div>
             <button className="login-submit" disabled={busy}>
               {busy ? "SAVING…" : "SAVE CHANGES"}
