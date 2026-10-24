@@ -12,7 +12,11 @@ test("export retains unpublished products, all fields, specifications, and order
         active: false,
         stock_qty: 0,
         image_url: "/assets/main.jpg",
-        specifications: { Origin: "India" },
+        specifications: {
+          "Stone Name": "Rainbow Moonstone",
+          "Gemstone Size": "20X9 29X11 mm",
+          "Number Of Pieces": "20",
+        },
         description: "First line\nSecond line",
         custom_field: "retained",
         gallery: [
@@ -40,7 +44,12 @@ test("export retains unpublished products, all fields, specifications, and order
   assert.ok(csv.includes("https://crysmona.example/assets/main.jpg"));
   assert.ok(csv.includes("https://crysmona.example/assets/detail.jpg"));
   assert.ok(csv.includes("https://cdn.example.com/video.mp4"));
-  assert.ok(csv.includes('""Origin"":""India""'));
+  assert.ok(
+    csv.includes(
+      '"Stone Name: Rainbow Moonstone\nGemstone Size: 20X9 29X11 mm\nNumber Of Pieces: 20"',
+    ),
+  );
+  assert.ok(!csv.includes('{""Stone Name""'));
   assert.ok(csv.includes('"First line\nSecond line"'));
 });
 

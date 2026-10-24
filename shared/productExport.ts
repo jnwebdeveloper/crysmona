@@ -1,4 +1,4 @@
-// Preserve every database field; structured specifications and galleries use JSON.
+// Preserve every database field; format specifications as readable lines.
 // Neutralize formula prefixes so catalog text is safe to open in spreadsheet apps.
 export function csvCell(value: unknown): string {
   let text =
@@ -17,6 +17,9 @@ export function productsCsv(
   const absolute = (url: string) => (url ? new URL(url, origin).href : "");
   const rows = products.map((product) => ({
     ...product,
+    specifications: Object.entries(product.specifications || {})
+      .map(([label, value]) => `${label}: ${value ?? ""}`)
+      .join("\n"),
     product_url: product.slug
       ? new URL(`/product/${encodeURIComponent(product.slug)}`, origin).href
       : "",
