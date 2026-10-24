@@ -1,0 +1,341 @@
+/* Contact page: warm ivory, antique gold and an editorial serif hierarchy. */
+.contact-page {
+  --contact-line: #e5d9c8;
+  --contact-gold: #98703b;
+}
+.contact-page .page-hero {
+  padding-bottom: 20px;
+}
+.contact-page .page-hero h1 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(48px, 6vw, 76px);
+  letter-spacing: -0.035em;
+}
+.contact-page .page-hero span {
+  color: var(--contact-gold);
+  letter-spacing: 0.24em;
+}
+.contact-page .contact-intro {
+  max-width: 680px;
+  margin: 0 auto 48px;
+  text-align: center;
+  color: #776a5d;
+  line-height: 1.9;
+}
+.contact-page .contact-information {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 1fr;
+  border: 1px solid var(--contact-line);
+  background: #fffdf9;
+  margin: 0 0 48px;
+  box-shadow: 0 12px 36px #5a3b1710;
+}
+.contact-page .contact-details {
+  display: contents;
+}
+.contact-page .contact-company,
+.contact-page .contact-details article {
+  margin: 0;
+  padding: 32px 30px;
+  background: transparent;
+  border: 0;
+  min-width: 0;
+}
+.contact-page .contact-details article {
+  border-left: 1px solid var(--contact-line);
+}
+.contact-page .contact-card-icon {
+  color: var(--contact-gold);
+  margin-bottom: 20px;
+}
+.contact-page .contact-eyebrow {
+  display: block;
+  color: var(--contact-gold);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  line-height: 1.7;
+}
+.contact-page .contact-information h2 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.15;
+  margin: 10px 0 14px;
+}
+.contact-page .contact-address {
+  font-size: 12px;
+  line-height: 1.9;
+  margin: 0;
+  color: #76685b;
+}
+.contact-page .contact-address p {
+  margin: 0;
+}
+.contact-page .contact-details a {
+  font-size: 13px;
+  line-height: 1.8;
+  text-decoration: none;
+  border-bottom: 1px solid #c5ae8c;
+  padding-bottom: 3px;
+  transition: color 0.2s;
+}
+.contact-page .contact-details a:hover {
+  color: var(--contact-gold);
+}
+.contact-page .contact-layout {
+  gap: 0;
+  margin: 0 0 80px;
+  border: 1px solid var(--contact-line);
+  box-shadow: 0 20px 60px #5a3b1710;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+}
+.contact-page .contact-layout .contact-markets {
+  position: relative;
+  overflow: hidden;
+  padding: 44px 30px 26px;
+  background: radial-gradient(ellipse at 50% 55%, #46392d 0, #2d261f 70%);
+  color: #f5ead8;
+  text-align: center;
+  justify-content: center;
+}
+.contact-page .contact-markets::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border: 1px solid #cbae6d30;
+  pointer-events: none;
+}
+.contact-page .contact-map-emblem {
+  display: flex;
+  justify-content: center;
+  color: #d5b784;
+  margin-bottom: 22px;
+}
+.contact-page .contact-markets-eyebrow {
+  color: #d5b784;
+  font-size: 9px;
+  letter-spacing: 0.23em;
+}
+.contact-page .contact-markets h2 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(32px, 3.1vw, 46px);
+  font-weight: 500;
+  line-height: 1.1;
+  margin: 18px 0;
+}
+.contact-page .contact-markets > p:not(.contact-map-note) {
+  max-width: 330px;
+  margin: 0 auto;
+  font-size: 11px;
+  line-height: 1.9;
+  color: #d0c1ac;
+}
+.contact-page .contact-world-map {
+  color: #dbc89e;
+  margin: 30px 0 18px;
+}
+.contact-page .contact-region-list {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: #ead7b4;
+}
+.contact-page .contact-region-list i {
+  height: 4px;
+  width: 4px;
+  border-radius: 50%;
+  background: #c9a66b;
+}
+.contact-page .contact-map-note {
+  font-size: 9px;
+  color: #b9a78d;
+  margin: 16px 0 0;
+}
+.contact-page .contact-layout .contact-form {
+  background: #fffdf9;
+  padding: 44px 40px 28px;
+  gap: 20px 18px;
+  align-content: center;
+}
+.contact-page .contact-form-heading {
+  grid-column: 1/-1;
+  margin-bottom: 6px;
+}
+.contact-page .contact-form-heading .contact-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.contact-page .contact-form-heading h2 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(30px, 3vw, 42px);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  margin: 14px 0;
+}
+.contact-page .contact-form-heading p {
+  font-size: 11px;
+  line-height: 1.9;
+  color: #7b6d5f;
+  max-width: 380px;
+  margin: 0;
+}
+.contact-page .contact-field {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.035em;
+  font-weight: 500;
+  line-height: 1.7;
+  color: #554535;
+}
+.contact-page .contact-field > span:not(.contact-optional) {
+  color: #98703b;
+}
+.contact-page .contact-field-wide {
+  grid-column: 1/-1;
+}
+.contact-page .contact-optional {
+  color: #8b7e70;
+  font-weight: 400;
+}
+.contact-page .contact-layout .contact-form input,
+.contact-page .contact-layout .contact-form textarea {
+  display: block;
+  background: #faf7f1;
+  border: 1px solid #e7dece;
+  border-radius: 0;
+  padding: 13px 14px;
+  margin-top: 7px;
+  font-size: 12px;
+  color: #36281c;
+  line-height: 1.5;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.contact-page .contact-form input::placeholder,
+.contact-page .contact-form textarea::placeholder {
+  color: #948879;
+}
+.contact-page .contact-form input:focus,
+.contact-page .contact-form textarea:focus {
+  outline: none;
+  border-color: #aa8754;
+  box-shadow: 0 0 0 3px #b7955f18;
+}
+.contact-page .contact-form textarea {
+  resize: vertical;
+  min-height: 106px;
+}
+.contact-page .contact-form button {
+  padding: 16px 22px;
+  justify-content: space-between;
+  background: #846137;
+  color: #fffaf1;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  transition: background 0.2s;
+}
+.contact-page .contact-form button:hover {
+  background: #654724;
+}
+.contact-page .contact-form button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.contact-page .contact-form button:focus-visible,
+.contact-page .contact-details a:focus-visible {
+  outline: 2px solid #b7955f;
+  outline-offset: 4px;
+}
+.contact-page .contact-form-note {
+  grid-column: 1/-1;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: #8b7b68;
+  margin: 0;
+}
+.contact-page .contact-form [role="alert"],
+.contact-page .contact-form [role="status"] {
+  grid-column: 1/-1;
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 12px;
+  margin: 0;
+  background: #f4eee4;
+}
+.contact-page .contact-form [role="alert"] {
+  color: #9a372b;
+}
+@media (min-width: 1500px) {
+  .contact-page .contact-information,
+  .contact-page .contact-layout {
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+@media (max-width: 1000px) {
+  .contact-page .contact-layout .contact-form {
+    padding: 32px 26px;
+  }
+  .contact-page .contact-company,
+  .contact-page .contact-details article {
+    padding: 26px 22px;
+  }
+}
+@media (max-width: 900px) {
+  .contact-page .contact-layout {
+    grid-template-columns: 1fr;
+  }
+  .contact-page .contact-information {
+    grid-template-columns: 1fr 1fr;
+  }
+  .contact-page .contact-company {
+    grid-column: 1/-1;
+    border-bottom: 1px solid var(--contact-line);
+  }
+  .contact-page .contact-details article:first-child {
+    border-left: 0;
+  }
+  .contact-page .contact-layout .contact-markets {
+    padding: 40px 30px 28px;
+  }
+  .contact-page .contact-world-map {
+    max-width: 580px;
+    margin: 22px auto;
+  }
+}
+@media (max-width: 540px) {
+  .contact-page .contact-information {
+    grid-template-columns: 1fr;
+    margin-bottom: 28px;
+  }
+  .contact-page .contact-details article {
+    border-left: 0;
+    border-top: 1px solid var(--contact-line);
+  }
+  .contact-page .contact-company {
+    border-bottom: 0;
+  }
+  .contact-page .contact-layout .contact-form {
+    grid-template-columns: 1fr;
+    padding: 30px 22px;
+  }
+  .contact-page .contact-intro {
+    margin-bottom: 30px;
+  }
+  .contact-page .contact-information h2 {
+    font-size: 28px;
+  }
+  .contact-page .contact-map-emblem {
+    margin-bottom: 16px;
+  }
+}

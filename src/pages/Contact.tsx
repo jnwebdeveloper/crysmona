@@ -1,7 +1,8 @@
 import RichText from "../components/RichText";
 import { useState } from "react";
 
-import { ArrowRight } from "lucide-react";
+import "../styles/contact.css";
+import { ArrowRight, MapPin, Phone, Globe2, Gem } from "lucide-react";
 
 import { api, useStore } from "../lib/Store";
 
@@ -33,7 +34,7 @@ export default function Contact() {
       </main>
     );
   return (
-    <main className="page info-page">
+    <main className="page info-page contact-page">
       <section className="page-hero">
         <span>{block?.subtitle}</span>
         <h1>{block?.title || "Contact"}</h1>
@@ -48,33 +49,52 @@ export default function Contact() {
           />
         )}
       </section>
-      {companyAddress && (
-        <section className="contact-company" aria-label="Company address">
-          <h2>Company address</h2>
-          <RichText className="contact-address" value={companyAddress} />
-        </section>
-      )}
-      {contacts.length > 0 && (
-        <section className="contact-details" aria-label="Contact information">
-          {contacts.map((contact: any) => (
-            <article key={contact.block_key}>
-              {contact.title && <h2>{contact.title}</h2>}
-              {contact.subtitle && (
-                <a href={`tel:${contact.subtitle.replace(/[^+0-9]/g, "")}`}>
-                  {contact.subtitle}
-                </a>
-              )}
-            </article>
-          ))}
-        </section>
-      )}
+      <div className="contact-information">
+        {companyAddress && (
+          <section className="contact-company" aria-label="Company address">
+            <div className="contact-card-icon">
+              <MapPin size={20} strokeWidth={1.4} />
+            </div>
+            <span className="contact-eyebrow">OUR ADDRESS</span>
+            <h2>Company address</h2>
+            <RichText className="contact-address" value={companyAddress} />
+          </section>
+        )}
+        {contacts.length > 0 && (
+          <section className="contact-details" aria-label="Contact information">
+            {contacts.map((contact: any) => (
+              <article key={contact.block_key}>
+                <div className="contact-card-icon">
+                  <Phone size={19} strokeWidth={1.4} />
+                </div>
+                <span className="contact-eyebrow">PERSONAL ASSISTANCE</span>
+                {contact.title && <h2>{contact.title}</h2>}
+                {contact.subtitle && (
+                  <a href={`tel:${contact.subtitle.replace(/[^+0-9]/g, "")}`}>
+                    {contact.subtitle}
+                  </a>
+                )}
+              </article>
+            ))}
+          </section>
+        )}
+      </div>
       <div className="contact-layout">
         <section
           className="contact-markets"
           aria-labelledby="contact-markets-title"
         >
-          <span className="contact-markets-eyebrow">ACROSS BORDERS</span>
-          <h2 id="contact-markets-title">Serving the US & Europe</h2>
+          <div className="contact-map-emblem">
+            <Globe2 size={24} strokeWidth={1} />
+          </div>
+          <span className="contact-markets-eyebrow">
+            FROM JAIPUR, WITH LOVE
+          </span>
+          <h2 id="contact-markets-title">
+            Exceptional stones.
+            <br />
+            Across borders.
+          </h2>
           <p>
             Our products are available to customers in the United States and
             Europe.
@@ -125,12 +145,12 @@ export default function Contact() {
                   cx={pin.x}
                   cy={pin.y}
                   r="24"
-                  fill="#a77845"
+                  fill="#d6b77c"
                   opacity=".15"
                 />
                 <path
                   d={`M ${pin.x} ${pin.y + 12} C ${pin.x - 32} ${pin.y - 20}, ${pin.x + 32} ${pin.y - 20}, ${pin.x} ${pin.y + 12}`}
-                  fill="#865a31"
+                  fill="#d6b77c"
                 />
                 <circle cx={pin.x} cy={pin.y - 7} r="4" fill="white" />
                 <rect
@@ -139,20 +159,25 @@ export default function Contact() {
                   width="146"
                   height="32"
                   rx="16"
-                  fill="#fffdf8"
+                  fill="#382e27"
                 />
                 <text
                   x={pin.x}
                   y={pin.y + 46}
                   textAnchor="middle"
                   fontSize="16"
-                  fill="#342b25"
+                  fill="#f4e7d1"
                 >
                   {pin.label}
                 </text>
               </g>
             ))}
           </svg>
+          <div className="contact-region-list">
+            <span>United States</span>
+            <i aria-hidden="true" />
+            <span>Europe</span>
+          </div>
           <p className="contact-map-note">Pins indicate sales regions.</p>
         </section>
         <form
@@ -162,6 +187,7 @@ export default function Contact() {
             const form = e.currentTarget;
             setBusy(true);
             setError("");
+            setNotice("");
             try {
               await api("/enquiries", {
                 method: "POST",
@@ -176,28 +202,62 @@ export default function Contact() {
             }
           }}
         >
-          <input name="name" required aria-label="Name" placeholder="Name" />
-          <input
-            name="email"
-            required
-            type="email"
-            aria-label="Email"
-            placeholder="Email"
-          />
-          <input name="phone" aria-label="Phone" placeholder="Phone" />
-          <textarea
-            name="message"
-            required
-            aria-label="Message"
-            placeholder="How can we help?"
-            rows={6}
-          />
+          <div className="contact-form-heading">
+            <span className="contact-eyebrow">
+              <Gem size={14} strokeWidth={1.3} /> A PERSONAL CONNECTION
+            </span>
+            <h2>Let’s begin a conversation.</h2>
+            <p>
+              For a special stone, a thoughtful gift, or a question about your
+              order. We’re here to help.
+            </p>
+          </div>
+          <label className="contact-field">
+            Your name <span aria-hidden="true">*</span>
+            <input
+              name="name"
+              required
+              autoComplete="name"
+              placeholder="Full name"
+            />
+          </label>
+          <label className="contact-field">
+            Email address <span aria-hidden="true">*</span>
+            <input
+              name="email"
+              required
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+            />
+          </label>
+          <label className="contact-field contact-field-wide">
+            Phone number <span className="contact-optional">(optional)</span>
+            <input
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="Include your country code"
+            />
+          </label>
+          <label className="contact-field contact-field-wide">
+            Your message <span aria-hidden="true">*</span>
+            <textarea
+              name="message"
+              required
+              placeholder="Tell us what you have in mind…"
+              rows={4}
+            />
+          </label>
           {error && <p role="alert">{error}</p>}
           {notice && <p role="status">{notice}</p>}
           <button disabled={busy}>
             {busy ? "SENDING…" : block?.cta_label || "SEND MESSAGE"}{" "}
             <ArrowRight />
           </button>
+          <p className="contact-form-note">
+            Thoughtful pieces. Personal attention.
+          </p>
         </form>
       </div>
     </main>
