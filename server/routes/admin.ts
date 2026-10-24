@@ -77,6 +77,15 @@ function validUrl(value: any) {
         /^https:\/\//.test(value)))
   );
 }
+// Export every product, including unpublished items and the complete gallery.
+app.get("/api/admin/products/export", admin, async (_req, res) => {
+  const { rows } = await q(`SELECT p.*, c.name AS category_name, c.slug AS category_slug,
+    COALESCE((SELECT json_agg(i ORDER BY i.sort_order,i.id) FROM product_images i WHERE i.product_id=p.id), '[]'::json) AS gallery
+    FROM products p LEFT JOIN categories c ON c.id=p.category_id ORDER BY p.id`);
+  res.set("Cache-Control", "no-store");
+  res.json(rows);
+});
+
 app.get("/api/admin/products/:id/images", admin, async (req, res) => {
   res.json(
     (

@@ -3,6 +3,7 @@ import {
   contentPageGroups,
   pageContent,
 } from "../../shared/pageContent";
+import { productsCsv } from "../../shared/productExport";
 import { listRecords, moveRecord } from "../../shared/adminLists";
 import {
   ArrowDown,
@@ -116,6 +117,7 @@ export default function AdminPage() {
   const currentTab = useRef(tab);
   currentTab.current = tab;
   const contentList = tab === "content_blocks";
+  const [exporting, setExporting] = useState(false);
   const [pageFilter, setPageFilter] = useState("");
   const collectionList = tab === "products" || tab === "categories";
   const [filterField, setFilterField] = useState(""),
@@ -145,7 +147,12 @@ export default function AdminPage() {
     } | null>(null);
   const resource = tab;
   const dashboard = tab === "dashboard";
-  const definition = dashboard
+  const contactInfo = contentList && /^contact-info-[12]$/.test(editing?.block_key || "");
+  const definition = contactInfo
+    ? { label: "Contact information", fields: resources.content_blocks.fields
+        .filter((f) => ["block_key", "title", "subtitle", "body", "active"].includes(f.key))
+        .map((f) => ({ ...f, label: ({ title: "Contact name", subtitle: "Phone number", body: "Address" } as Record<string, string>)[f.key] || f.label })) }
+    : dashboard
     ? { ...resources.products, label: "Dashboard", fields: [] }
     : contentList
       ? { ...resources.content_blocks, label: "Pages & content" }
@@ -353,7 +360,7 @@ export default function AdminPage() {
     const value = editing[f.key];
     const change = (v: any) =>
       setEditing((current: any) => ({ ...current, [f.key]: v }));
-    if (contentList && f.key === "body")
+    if (contentList && !contactInfo && f.key === "body")
       return (
         <RichTextEditor
           value={value}
@@ -1027,6 +1034,30 @@ export default function AdminPage() {
                   onChange={(e) => setQuery(e.target.value)}
                 />
               </label>
+              {tab === "products" && (
+                <button type="button" disabled={exporting} onClick={async () => {
+                  setExporting(true);
+                  setError("");
+                  try {
+                    const products = await request("products/export");
+                    const url = URL.createObjectURL(new Blob(["\uFEFF", productsCsv(products, window.location.origin)], { type: "text/csv;charset=utf-8" }));
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = `crysmona-products-${new Date().toISOString().slice(0, 10)}.csv`;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    setNotice(`Exported ${products.length} products with all details and media references.`);
+                  } catch (e: any) { setError(e.message); }
+                  finally { setExporting(false); }
+                }}>{exporting ? "Exporting…" : "Export all products (CSV)"}</button>
+              )}
+              {contentList && (!pageFilter || pageFilter === "contact") && [1, 2].map((slot) => (
+                <button type="button" key={slot} onClick={() => open(rows.find((row) => row.block_key === `contact-info-${slot}`) || {
+                  block_key: `contact-info-${slot}`, title: "", subtitle: "", body: "", active: true,
+                })}>{rows.some((row) => row.block_key === `contact-info-${slot}`) ? "Edit" : "Add"} contact {slot}</button>
+              ))}
               {!["orders", "users"].includes(tab) && (
                 <button className="admin-new" onClick={() => open()}>
                   <Plus />{" "}
@@ -1255,7 +1286,31 @@ export default function AdminPage() {
                             >
                               <Pencil /> Edit
                             </button>
-                            {!["orders", "users"].includes(tab) && (
+                            {tab === "products" && (
+                <button type="button" disabled={exporting} onClick={async () => {
+                  setExporting(true);
+                  setError("");
+                  try {
+                    const products = await request("products/export");
+                    const url = URL.createObjectURL(new Blob(["\uFEFF", productsCsv(products, window.location.origin)], { type: "text/csv;charset=utf-8" }));
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = `crysmona-products-${new Date().toISOString().slice(0, 10)}.csv`;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    setNotice(`Exported ${products.length} products with all details and media references.`);
+                  } catch (e: any) { setError(e.message); }
+                  finally { setExporting(false); }
+                }}>{exporting ? "Exporting…" : "Export all products (CSV)"}</button>
+              )}
+              {contentList && (!pageFilter || pageFilter === "contact") && [1, 2].map((slot) => (
+                <button type="button" key={slot} onClick={() => open(rows.find((row) => row.block_key === `contact-info-${slot}`) || {
+                  block_key: `contact-info-${slot}`, title: "", subtitle: "", body: "", active: true,
+                })}>{rows.some((row) => row.block_key === `contact-info-${slot}`) ? "Edit" : "Add"} contact {slot}</button>
+              ))}
+              {!["orders", "users"].includes(tab) && (
                               <button
                                 className="danger"
                                 aria-label={"Delete " + label(r)}
@@ -1338,7 +1393,7 @@ export default function AdminPage() {
                     >
                       {f.label}
                       {f.required ? " *" : ""}
-                      {field(f)}
+                      {contactInfo && f.key === "block_key" ? <input value={editing.block_key} readOnly /> : field(f)}
                       {tab === "site_settings" &&
                         editing.setting_key === "meta_pixel_id" &&
                         f.key === "setting_value" && <PixelEvents />}
