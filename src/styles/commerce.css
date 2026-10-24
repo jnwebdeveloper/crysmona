@@ -1376,6 +1376,7 @@ button:disabled {
   line-height: 1.9;
 }
 .support-copy > a {
+  text-decoration: none;
   display: inline-block;
   margin-top: 20px;
   border-bottom: 1px solid #ac8d5d;

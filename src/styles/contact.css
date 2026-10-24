@@ -18,7 +18,9 @@
 }
 .contact-page .contact-intro {
   max-width: 680px;
-  margin: 0 auto 48px;
+  margin: 0 auto;
+  padding: clamp(28px, 4vw, 48px) 6%;
+  display: flow-root;
   text-align: center;
   color: #776a5d;
   line-height: 1.9;
@@ -330,7 +332,8 @@
     padding: 30px 22px;
   }
   .contact-page .contact-intro {
-    margin-bottom: 30px;
+    padding-top: 28px;
+    padding-bottom: 28px;
   }
   .contact-page .contact-information h2 {
     font-size: 28px;
@@ -338,4 +341,11 @@
   .contact-page .contact-map-emblem {
     margin-bottom: 16px;
   }
+}
+
+.contact-page .contact-intro .product-description > :first-child {
+  margin-top: 0;
+}
+.contact-page .contact-intro .product-description > :last-child {
+  margin-bottom: 0;
 }
