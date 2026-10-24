@@ -8,7 +8,6 @@ import {
   Plus,
   ShieldCheck,
   ShoppingBag,
-  Star,
 } from "lucide-react";
 
 import { go as navTo, useStore } from "../lib/Store";
@@ -274,33 +273,6 @@ export default function ProductDetail({ product }: { product: Product }) {
             DISCOVER OUR CRAFT <ArrowRight />
           </button>
         </article>
-      </section>
-      <section className="reviews">
-        <div>
-          <span>REVIEWS</span>
-          <h2>Stories from our customers</h2>
-        </div>
-        {store.reviews.filter((r: any) => r.product_id === product.id)
-          .length ? (
-          store.reviews
-            .filter((r: any) => r.product_id === product.id)
-            .map((r: any) => (
-              <blockquote key={r.id}>
-                <div
-                  className="rating"
-                  aria-label={r.rating + " out of 5 stars"}
-                >
-                  {Array.from({ length: r.rating }, (_, i) => (
-                    <Star key={i} />
-                  ))}
-                </div>
-                {r.body}
-                <footer>— {r.author}</footer>
-              </blockquote>
-            ))
-        ) : (
-          <p>Be the first to share the story of your piece.</p>
-        )}
       </section>
       <section className="newsletter">
         <div>
