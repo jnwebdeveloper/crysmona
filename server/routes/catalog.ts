@@ -9,7 +9,7 @@ const app = express.Router();
 app.get("/api/products", async (_req, res) => {
   await expireUnpaidOrders();
   const { rows } = await q(
-    `SELECT p.*, COALESCE((SELECT json_agg(i ORDER BY i.sort_order,i.id) FROM product_images i WHERE i.product_id=p.id), '[]'::json) images
+    `SELECT p.*, COALESCE((SELECT json_agg(i ORDER BY i.sort_order,i.id) FROM product_media i WHERE i.product_id=p.id), '[]'::json) images
      FROM products p LEFT JOIN admin_record_order o ON o.resource='products' AND o.record_id=p.id
      WHERE p.active=true ORDER BY o.position NULLS LAST,p.created_at,p.name`,
   );
@@ -23,7 +23,7 @@ app.get("/api/products/:slug", async (req, res) => {
   );
   if (!rows[0]) throw bad("Product not found.", 404);
   const images = await q(
-    "SELECT media_url,alt_text,media_type FROM product_images WHERE product_id=$1 ORDER BY sort_order,id",
+    "SELECT media_url,alt_text,media_type FROM product_media WHERE product_id=$1 ORDER BY sort_order,id",
     [rows[0].id],
   );
   res.json({ ...dto(rows[0]), images: images.rows });

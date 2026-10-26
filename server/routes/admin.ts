@@ -80,7 +80,7 @@ function validUrl(value: any) {
 // Export every product, including unpublished items and the complete gallery.
 app.get("/api/admin/products/export", admin, async (_req, res) => {
   const { rows } = await q(`SELECT p.*, c.name AS category_name, c.slug AS category_slug,
-    COALESCE((SELECT json_agg(i ORDER BY i.sort_order,i.id) FROM product_images i WHERE i.product_id=p.id), '[]'::json) AS gallery
+    COALESCE((SELECT json_agg(i ORDER BY i.sort_order,i.id) FROM product_media i WHERE i.product_id=p.id), '[]'::json) AS gallery
     FROM products p LEFT JOIN categories c ON c.id=p.category_id ORDER BY p.id`);
   res.set("Cache-Control", "no-store");
   res.json(rows);
@@ -90,7 +90,7 @@ app.get("/api/admin/products/:id/images", admin, async (req, res) => {
   res.json(
     (
       await q(
-        "SELECT media_url, alt_text, media_type FROM product_images WHERE product_id=$1 ORDER BY sort_order,id",
+        "SELECT media_url, alt_text, media_type FROM product_media WHERE product_id=$1 ORDER BY sort_order,id",
         [req.params.id],
       )
     ).rows,
@@ -176,7 +176,7 @@ export async function saveProduct(
         )
       ).rows[0];
     if (Array.isArray(images)) {
-      await client.query("DELETE FROM product_images WHERE product_id=$1", [
+      await client.query("DELETE FROM product_media WHERE product_id=$1", [
         product.id,
       ]);
       const gallery: any[] = [
@@ -191,7 +191,7 @@ export async function saveProduct(
         if (seen.has(image.media_url)) continue;
         seen.add(image.media_url);
         await client.query(
-          "INSERT INTO product_images(product_id,media_url,alt_text,sort_order,media_type) VALUES($1,$2,$3,$4,$5)",
+          "INSERT INTO product_media(product_id,media_url,alt_text,sort_order,media_type) VALUES($1,$2,$3,$4,$5)",
           [
             product.id,
             image.media_url,

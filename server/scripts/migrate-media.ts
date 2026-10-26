@@ -6,7 +6,7 @@ import { storageConfig, uploadImage } from "../services/storage.js";
 // Table → column holding the file URL.
 const tables = {
   products: "image_url",
-  product_images: "media_url",
+  product_media: "media_url",
   categories: "image_url",
   content_blocks: "image_url",
 };

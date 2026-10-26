@@ -45,7 +45,7 @@ export const resources: Record<string, { label: string; fields: Field[] }> = {
       f("active", "Published", "boolean"),
     ],
   },
-  product_images: {
+  product_media: {
     label: "Product gallery",
     fields: [
       f("product_id", "Product ID", "text", true),

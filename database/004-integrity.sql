@@ -1,5 +1,5 @@
 CREATE INDEX IF NOT EXISTS products_category_idx ON products(category_id);
-CREATE INDEX IF NOT EXISTS product_images_product_idx ON product_images(product_id);
+CREATE INDEX IF NOT EXISTS product_media_product_idx ON product_media(product_id);
 CREATE INDEX IF NOT EXISTS addresses_user_idx ON addresses(user_id);
 CREATE INDEX IF NOT EXISTS orders_user_idx ON orders(user_id);
 CREATE INDEX IF NOT EXISTS order_items_order_idx ON order_items(order_id);

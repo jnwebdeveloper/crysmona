@@ -33,7 +33,7 @@ Only the form changes. Nothing is written to the database or to storage yet.
 
 | Where | Result |
 |---|---|
-| Database (`product_images`) | All gallery rows for the product are deleted and the remaining list is saved again, in its current order. This runs in one transaction, so if anything fails the previous gallery is kept. |
+| Database (`product_media`) | All gallery rows for the product are deleted and the remaining list is saved again, in its current order. This runs in one transaction, so if anything fails the previous gallery is kept. |
 | Database (`products.image_url`) | Updated if the default image changed. |
 | Product page | The removed image or video no longer appears in the gallery or thumbnails. |
 | R2 storage | **The file is not deleted.** It stays in the bucket and its URL keeps working. |

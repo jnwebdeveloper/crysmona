@@ -43,7 +43,7 @@ test("gallery saves include the default once and generate distinct valid product
   ]);
   assert.match(first.slug, /^moonstone-[a-f0-9]{8}$/);
   assert.equal(
-    calls.filter((c) => c.sql.startsWith("INSERT INTO product_images")).length,
+    calls.filter((c) => c.sql.startsWith("INSERT INTO product_media")).length,
     2,
   );
   assert.equal(calls.at(-1)?.sql, "COMMIT");
@@ -67,7 +67,7 @@ test("failed gallery writes roll back the product and release the connection", a
   t.mock.method(pool, "connect", async () => ({
     query: async (sql: string) => {
       calls.push(sql);
-      if (sql.startsWith("INSERT INTO product_images"))
+      if (sql.startsWith("INSERT INTO product_media"))
         throw new Error("storage failure");
       return { rows: [{ id: 7, name: "Moonstone", image_url: "/stone.jpg" }] };
     },
