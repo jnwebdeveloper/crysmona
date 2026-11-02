@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useRef, type FormEvent } from "react";
 import { NavLink, useParams } from "react-router";
 import {
   Boxes,
@@ -8,13 +8,22 @@ import {
   ClipboardList,
   RefreshCw,
   LogOut,
+  Pencil,
+  Trash2,
+  Archive,
+  RotateCcw,
+  X,
+  Plus,
+  Search,
+  Download,
+  ArrowUpDown,
 } from "lucide-react";
 import "../styles/inventory.css";
 type Row = Record<string, any>;
-async function api(path: string, body?: unknown) {
+async function api(path: string, body?: unknown, method?: string) {
   const r = await fetch("/api/inventory" + path, {
     credentials: "include",
-    method: body === undefined ? "GET" : "POST",
+    method: method || (body === undefined ? "GET" : "POST"),
     headers: body === undefined ? {} : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -40,7 +49,13 @@ export default function Inventory() {
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
-    [search, setSearch] = useState("");
+    [search, setSearch] = useState(""),
+    [stockFilter, setStockFilter] = useState("active"),
+    [editing, setEditing] = useState<{
+      type: "item" | "mapping";
+      row: Row;
+    } | null>(null),
+    [adding, setAdding] = useState(false);
   useEffect(() => {
     const previous = document.title;
     document.title = "Crysmona Inventory";
@@ -143,7 +158,8 @@ export default function Inventory() {
         </form>
       </main>
     );
-  const items: Row[] = data?.items || [];
+  const allItems: Row[] = data?.items || [];
+  const items = allItems.filter((i) => !i.archived);
   const selected = sections.find((s) => s[0] === section);
   const itemOptions = (
     <>
@@ -235,79 +251,122 @@ export default function Inventory() {
             </div>
             {section === "stock" && (
               <>
-                <section className="inv-card">
-                  <h2>Add inventory item</h2>
-                  <form
-                    className="inv-form"
-                    onSubmit={(e) =>
-                      submit(
-                        e,
-                        "/items",
-                        "Inventory item created. Receive opening stock in Stock movements.",
-                      )
-                    }
-                  >
-                    <label>
-                      SKU
-                      <input name="sku" maxLength={100} required />
-                    </label>
-                    <label>
-                      Item name
-                      <input name="name" maxLength={180} required />
-                    </label>
-                    <label>
-                      Website reference
-                      <select name="product_id">
-                        <option value="">No reference</option>
-                        {data.products.map((p: Row) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({p.sku})
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Location
-                      <input
-                        name="location"
-                        maxLength={120}
-                        placeholder="Shelf / bin"
-                      />
-                    </label>
-                    <label>
-                      Low stock threshold
-                      <input
-                        name="reorder_level"
-                        type="number"
-                        min="0"
-                        max="1000000"
-                        defaultValue="5"
-                        required
-                      />
-                    </label>
-                    <button disabled={busy}>Add item</button>
-                  </form>
-                </section>
-                <section className="inv-card">
+                <div className="inv-section-heading">
+                  <div>
+                    <h2>Inventory catalog</h2>
+                    <p>
+                      Website products are added automatically. Manage stock and
+                      reorder thresholds here.
+                    </p>
+                  </div>
+                  <button onClick={() => setAdding(!adding)}>
+                    <Plus size={16} />
+                    {adding ? "Close form" : "Add item"}
+                  </button>
+                </div>
+                {adding && (
+                  <section className="inv-card">
+                    <h2>Add inventory item</h2>
+                    <form
+                      className="inv-form"
+                      onSubmit={(e) =>
+                        submit(
+                          e,
+                          "/items",
+                          "Inventory item created. Receive opening stock in Stock movements.",
+                        )
+                      }
+                    >
+                      <label>
+                        SKU
+                        <input name="sku" maxLength={100} required />
+                      </label>
+                      <label>
+                        Item name
+                        <input name="name" maxLength={180} required />
+                      </label>
+                      <label>
+                        Website reference
+                        <select name="product_id">
+                          <option value="">No reference</option>
+                          {data.products.map((p: Row) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} ({p.sku})
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Location
+                        <input
+                          name="location"
+                          maxLength={120}
+                          placeholder="Shelf / bin"
+                        />
+                      </label>
+                      <label>
+                        Low stock threshold
+                        <input
+                          name="reorder_level"
+                          type="number"
+                          min="0"
+                          max="1000000"
+                          defaultValue="5"
+                          required
+                        />
+                      </label>
+                      <button disabled={busy}>Add item</button>
+                    </form>
+                  </section>
+                )}
+                <section className="inv-card inv-stock-card">
                   <div className="inv-card-heading">
                     <h2>Stock on hand</h2>
-                    <input
-                      aria-label="Search inventory"
-                      placeholder="Search SKU or item…"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                    />
+                    <div className="inv-controls">
+                      <select
+                        aria-label="Filter stock"
+                        value={stockFilter}
+                        onChange={(e) => setStockFilter(e.target.value)}
+                      >
+                        <option value="active">Active items</option>
+                        <option value="low">Low stock</option>
+                        <option value="out">Out of stock</option>
+                        <option value="archived">Archived items</option>
+                        <option value="all">All items</option>
+                      </select>
+                      <input
+                        aria-label="Search inventory"
+                        placeholder="Search SKU or item…"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                      />
+                    </div>
                   </div>
                   <Table
+                    searchable={false}
                     headers={[
-                      "Item / SKU",
+                      "Product / SKU",
                       "Location",
                       "Physical",
                       "Reserved",
                       "Available",
+                      "Low stock",
                       "Stock status",
+                      "Actions",
                     ]}
-                    rows={items
+                    rows={allItems
+                      .filter(
+                        (i) =>
+                          stockFilter === "all" ||
+                          (stockFilter === "archived"
+                            ? i.archived
+                            : !i.archived &&
+                              (stockFilter === "low"
+                                ? i.available <= i.reorder_level
+                                : stockFilter === "out"
+                                  ? i.available === 0
+                                  : true)),
+                      )
                       .filter((i) =>
                         (i.name + " " + i.sku)
                           .toLowerCase()
@@ -318,23 +377,107 @@ export default function Inventory() {
                           {i.image_url && <img src={i.image_url} alt="" />}
                           <div>
                             <b>{i.name}</b>
-                            <small>{i.sku}</small>
+                            <small>
+                              {i.sku}
+                            </small>
                           </div>
                         </div>,
                         i.location || "—",
                         i.physical,
                         i.reserved,
                         i.available,
+                        <span title="Low stock alert threshold">
+                          {i.reorder_level}
+                        </span>,
                         <span
                           className={
                             "inv-badge " +
-                            (i.available <= i.reorder_level ? "inv-low" : "")
+                            (i.archived
+                              ? "inv-archived"
+                              : i.available === 0
+                                ? "inv-out"
+                                : i.available <= i.reorder_level
+                                  ? "inv-low"
+                                  : "")
                           }
                         >
-                          {i.available <= i.reorder_level
-                            ? "Low stock"
-                            : "In stock"}
+                          {i.archived
+                            ? "Archived"
+                            : i.available === 0
+                              ? "Out of stock"
+                              : i.available <= i.reorder_level
+                                ? "Low stock"
+                                : "In stock"}
                         </span>,
+                        <div className="inv-actions">
+                          <button
+                            className="inv-icon"
+                            title="Edit item"
+                            aria-label={`Edit ${i.sku}`}
+                            disabled={busy}
+                            onClick={() => setEditing({ type: "item", row: i })}
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            className="inv-icon"
+                            title={i.archived ? "Restore item" : "Archive item"}
+                            aria-label={`${i.archived ? "Restore" : "Archive"} ${i.sku}`}
+                            disabled={busy}
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  i.archived
+                                    ? "Restore this item and make its stock available for sale?"
+                                    : "Archive this item? Its stock will be unavailable on the website.",
+                                )
+                              )
+                                void run(
+                                  () =>
+                                    api(
+                                      `/items/${i.id}/archive`,
+                                      { archived: !i.archived },
+                                      "PATCH",
+                                    ),
+                                  i.archived
+                                    ? "Item restored."
+                                    : "Item archived.",
+                                );
+                            }}
+                          >
+                            {i.archived ? (
+                              <RotateCcw size={15} />
+                            ) : (
+                              <Archive size={15} />
+                            )}
+                          </button>
+                          <button
+                            className="inv-icon inv-danger"
+                            title={
+                              i.product_id || i.physical || i.reserved
+                                ? "Archive linked or stocked items instead"
+                                : "Delete unused item"
+                            }
+                            aria-label={`Delete ${i.sku}`}
+                            disabled={
+                              busy ||
+                              Boolean(i.product_id || i.physical || i.reserved)
+                            }
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  "Permanently delete this unused item? Items with stock, links or history must be archived instead.",
+                                )
+                              )
+                                void run(
+                                  () => api(`/items/${i.id}`, {}, "DELETE"),
+                                  "Item deleted.",
+                                );
+                            }}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>,
                       ])}
                   />
                 </section>
@@ -467,12 +610,42 @@ export default function Inventory() {
                       "Channel",
                       "Channel SKU",
                       "Listing ID",
+                      "Actions",
                     ]}
                     rows={data.mappings.map((m: Row) => [
                       m.sku,
                       m.channel,
                       m.external_sku,
                       m.listing_id || "—",
+                      <div className="inv-actions">
+                        <button
+                          className="inv-icon"
+                          aria-label={`Edit mapping ${m.external_sku}`}
+                          onClick={() =>
+                            setEditing({ type: "mapping", row: m })
+                          }
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          className="inv-icon inv-danger"
+                          aria-label={`Delete mapping ${m.external_sku}`}
+                          disabled={busy}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "Delete this channel SKU mapping? Future imports for this SKU will need a mapping.",
+                              )
+                            )
+                              void run(
+                                () => api(`/mappings/${m.id}`, {}, "DELETE"),
+                                "Mapping deleted.",
+                              );
+                          }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>,
                     ])}
                   />
                 </section>
@@ -603,44 +776,385 @@ export default function Inventory() {
           </>
         )}
       </main>
+      {editing && (
+        <Editor
+          key={`${editing.type}-${editing.row.id}`}
+          editing={editing}
+          items={allItems}
+          busy={busy}
+          error={error}
+          close={() => setEditing(null)}
+          save={(values) =>
+            void run(async () => {
+              await api(
+                `/${editing.type === "item" ? "items" : "mappings"}/${editing.row.id}`,
+                values,
+                "PUT",
+              );
+              setEditing(null);
+            }, "Changes saved.")
+          }
+        />
+      )}
     </div>
   );
 }
 function date(value: string) {
   return new Date(value).toLocaleString();
 }
-function Table({ headers, rows }: { headers: string[]; rows: any[][] }) {
+function Table({
+  headers,
+  rows,
+  searchable = true,
+}: {
+  headers: string[];
+  rows: any[][];
+  searchable?: boolean;
+}) {
+  const [page, setPage] = useState(1),
+    [size, setSize] = useState(20),
+    [sort, setSort] = useState<{ index: number; dir: number } | null>(null),
+    [query, setQuery] = useState("");
+  function plain(cell: any): string {
+    if (cell == null || typeof cell === "boolean") return "";
+    if (typeof cell !== "object") return String(cell);
+    if (Array.isArray(cell)) return cell.map(plain).join(" ");
+    return cell.props ? plain(cell.props.children) : "";
+  }
+  const filtered = rows.filter((row) =>
+    row.some(
+      (cell, i) =>
+        headers[i] !== "Actions" &&
+        plain(cell).toLowerCase().includes(query.toLowerCase()),
+    ),
+  );
+  const sorted = sort
+    ? [...filtered].sort(
+        (a, b) =>
+          plain(a[sort.index]).localeCompare(plain(b[sort.index]), undefined, {
+            numeric: true,
+          }) * sort.dir,
+      )
+    : filtered;
+  const total = Math.max(1, Math.ceil(sorted.length / size)),
+    current = Math.min(page, total),
+    shown = sorted.slice((current - 1) * size, current * size);
+  function download() {
+    const csv = [
+      headers.filter((h) => h !== "Actions"),
+      ...sorted.map((row) =>
+        row.filter((_, i) => headers[i] !== "Actions").map(plain),
+      ),
+    ]
+      .map((row) =>
+        row
+          .map((value) => {
+            const safe = /^[=+@\-\t\r]/.test(String(value))
+              ? "'" + value
+              : String(value);
+            return '"' + safe.replace(/"/g, '""') + '"';
+          })
+          .join(","),
+      )
+      .join("\r\n");
+    const url = URL.createObjectURL(
+      new Blob([csv], { type: "text/csv;charset=utf-8" }),
+    );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "crysmona-inventory.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   return (
-    <div className="inv-table-wrap">
-      <table>
-        <thead>
-          <tr>
-            {headers.map((h) => (
-              <th key={h}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length ? (
-            rows.map((row, i) => (
-              <tr key={i}>
-                {row.map((cell, j) => (
-                  <td key={j}>{cell}</td>
-                ))}
-              </tr>
-            ))
-          ) : (
+    <>
+      <div className="inv-table-toolbar">
+        {searchable && (
+          <label className="inv-table-search">
+            <Search size={15} />
+            <input
+              aria-label="Search table"
+              placeholder="Search this table…"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+            />
+          </label>
+        )}
+        <button
+          className="inv-secondary"
+          onClick={download}
+          disabled={!rows.length}
+        >
+          <Download size={14} /> Export CSV
+        </button>
+      </div>
+      <div className="inv-table-wrap">
+        <table>
+          <thead>
             <tr>
-              <td colSpan={headers.length}>
-                <div className="inv-empty">
-                  <Package size={26} />
-                  <p>No records yet.</p>
-                </div>
-              </td>
+              {headers.map((h, index) => (
+                <th
+                  key={h}
+                  aria-sort={
+                    sort?.index === index
+                      ? sort.dir === 1
+                        ? "ascending"
+                        : "descending"
+                      : undefined
+                  }
+                >
+                  {h === "Actions" ? (
+                    h
+                  ) : (
+                    <button
+                      className="inv-sort"
+                      onClick={() =>
+                        setSort({
+                          index,
+                          dir: sort?.index === index ? -sort.dir : 1,
+                        })
+                      }
+                    >
+                      {h}
+                      <ArrowUpDown size={11} />
+                    </button>
+                  )}
+                </th>
+              ))}
             </tr>
+          </thead>
+          <tbody>
+            {shown.length ? (
+              shown.map((row, i) => (
+                <tr key={i}>
+                  {row.map((cell, j) => (
+                    <td key={j}>{cell}</td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={headers.length}>
+                  <div className="inv-empty">
+                    <Package size={26} />
+                    <p>{query ? "No matching records." : "No records yet."}</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <div className="inv-pagination">
+        <span>
+          {filtered.length
+            ? `${(current - 1) * size + 1}–${Math.min(current * size, filtered.length)}`
+            : "0"}{" "}
+          of {filtered.length} records
+        </span>
+        <label>
+          Rows
+          <select
+            aria-label="Rows per page"
+            value={size}
+            onChange={(e) => {
+              setSize(Number(e.target.value));
+              setPage(1);
+            }}
+          >
+            {[10, 20, 50, 100].map((n) => (
+              <option key={n}>{n}</option>
+            ))}
+          </select>
+        </label>
+        <button
+          className="inv-secondary"
+          disabled={current === 1}
+          onClick={() => setPage(current - 1)}
+        >
+          Previous
+        </button>
+        <span>
+          {current} / {total}
+        </span>
+        <button
+          className="inv-secondary"
+          disabled={current === total}
+          onClick={() => setPage(current + 1)}
+        >
+          Next
+        </button>
+      </div>
+    </>
+  );
+}
+function Editor({
+  editing,
+  items,
+  busy,
+  error,
+  close,
+  save,
+}: {
+  editing: { type: "item" | "mapping"; row: Row };
+  items: Row[];
+  busy: boolean;
+  error: string;
+  close: () => void;
+  save: (v: Row) => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    dialog.current?.showModal();
+  }, []);
+  const row = editing.row;
+  return (
+    <dialog
+      ref={dialog}
+      className="inv-editor"
+      onCancel={(e) => {
+        e.preventDefault();
+        if (!busy) close();
+      }}
+      aria-labelledby="inv-edit-title"
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          save(Object.fromEntries(new FormData(e.currentTarget)));
+        }}
+      >
+        <header>
+          <div>
+            <p className="inv-eyebrow">INVENTORY / EDIT RECORD</p>
+            <h2 id="inv-edit-title">
+              {editing.type === "item"
+                ? "Edit inventory item"
+                : "Edit SKU mapping"}
+            </h2>
+          </div>
+          <button
+            type="button"
+            className="inv-icon"
+            disabled={busy}
+            onClick={close}
+            aria-label="Close editor"
+          >
+            <X size={18} />
+          </button>
+        </header>
+        {error && (
+          <p className="inv-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="inv-edit-grid">
+          {editing.type === "item" ? (
+            <>
+              <label>
+                Internal SKU
+                <input
+                  name="sku"
+                  defaultValue={row.sku}
+                  maxLength={100}
+                  required
+                />
+              </label>
+              <label>
+                Item name
+                <input
+                  name="name"
+                  defaultValue={row.name}
+                  maxLength={180}
+                  required
+                />
+              </label>
+              <label>
+                Location
+                <input
+                  name="location"
+                  defaultValue={row.location}
+                  maxLength={120}
+                  placeholder="Shelf / bin"
+                />
+              </label>
+              <label>
+                Low stock threshold
+                <input
+                  type="number"
+                  name="reorder_level"
+                  min="0"
+                  max="1000000"
+                  defaultValue={row.reorder_level}
+                  required
+                />
+              </label>
+              <p className="inv-form-note">
+                Physical and reserved quantities are managed through stock
+                movements. Changing the internal SKU keeps website mappings
+                intact.
+              </p>
+            </>
+          ) : (
+            <>
+              <label>
+                Inventory item
+                <select name="item_id" defaultValue={row.item_id} required>
+                  {items.map((i) => (
+                    <option value={i.id} key={i.id}>
+                      {i.sku} · {i.name}
+                      {i.archived ? " (archived)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Channel
+                <select name="channel" defaultValue={row.channel}>
+                  <option value="website">Website</option>
+                  <option value="etsy">Etsy</option>
+                </select>
+              </label>
+              <label>
+                Channel SKU
+                <input
+                  name="external_sku"
+                  defaultValue={row.external_sku}
+                  maxLength={100}
+                  required
+                />
+              </label>
+              <label>
+                Etsy listing ID
+                <input
+                  name="listing_id"
+                  defaultValue={row.listing_id || ""}
+                  maxLength={100}
+                />
+              </label>
+              <p className="inv-form-note">
+                Website product SKU changes belong in admin. Reassigning a
+                mapping affects future orders; existing orders retain their
+                original stock items.
+              </p>
+            </>
           )}
-        </tbody>
-      </table>
-    </div>
+        </div>
+        <footer>
+          <button
+            type="button"
+            className="inv-secondary"
+            disabled={busy}
+            onClick={close}
+          >
+            Cancel
+          </button>
+          <button disabled={busy}>{busy ? "Saving…" : "Save changes"}</button>
+        </footer>
+      </form>
+    </dialog>
   );
 }

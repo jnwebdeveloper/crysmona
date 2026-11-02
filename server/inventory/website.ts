@@ -3,7 +3,7 @@ import { bad } from "../lib/errors.js";
 import { move } from "./stock.js";
 
 // A website SKU must be explicitly mapped. No legacy product-stock fallback.
-export const WEBSITE_STOCK_SQL = `COALESCE((SELECT i.physical-i.reserved FROM inv_mappings m JOIN inv_items i ON i.id=m.item_id WHERE m.channel='website' AND m.external_sku=p.sku),0)`;
+export const WEBSITE_STOCK_SQL = `COALESCE((SELECT i.physical-i.reserved FROM inv_mappings m JOIN inv_items i ON i.id=m.item_id WHERE m.channel='website' AND m.external_sku=p.sku AND i.archived=false),0)`;
 
 // Caller holds a transaction. Lock the website order first on every code path,
 // then inventory order and item IDs in a stable order to prevent racing syncs.

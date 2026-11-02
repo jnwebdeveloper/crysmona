@@ -118,6 +118,140 @@ router.post("/items", async (req, res) => {
   );
   res.status(201).json(result.rows[0]);
 });
+// Metadata can be edited; quantity changes must go through the stock ledger.
+router.put("/items/:id", async (req, res) => {
+  const b = req.body;
+  const result = await q(
+    `UPDATE inv_items SET sku=$2,name=$3,location=$4,reorder_level=$5 WHERE id=$1 RETURNING *`,
+    [
+      integer(req.params.id),
+      text(b.sku, 100),
+      text(b.name),
+      typeof b.location === "string" ? b.location.slice(0, 120) : "",
+      integer(b.reorder_level),
+    ],
+  );
+  if (!result.rowCount) throw bad("Inventory item not found.", 404);
+  res.json(result.rows[0]);
+});
+router.patch("/items/:id/archive", async (req, res) => {
+  if (typeof req.body.archived !== "boolean")
+    throw bad("Choose archive or restore.");
+  const result = await q(
+    "UPDATE inv_items SET archived=$2 WHERE id=$1 AND (reserved=0 OR $2=false) RETURNING *",
+    [integer(req.params.id), req.body.archived],
+  );
+  if (!result.rowCount)
+    throw bad(
+      "Item is missing or has reservations. Fulfill or cancel open orders before archiving.",
+      409,
+    );
+  res.json(result.rows[0]);
+});
+router.delete("/items/:id", async (req, res) => {
+  const c = await pool.connect();
+  try {
+    await c.query("BEGIN");
+    const id = integer(req.params.id);
+    const item = (
+      await c.query("SELECT * FROM inv_items WHERE id=$1 FOR UPDATE", [id])
+    ).rows[0];
+    if (!item) throw bad("Inventory item not found.", 404);
+    if (item.product_id || item.physical || item.reserved)
+      throw bad(
+        "Only empty, unlinked items can be deleted. Archive this item instead.",
+        409,
+      );
+    const used = await c.query(
+      "SELECT 1 FROM inv_movements WHERE item_id=$1 UNION ALL SELECT 1 FROM inv_mappings WHERE item_id=$1 UNION ALL SELECT 1 FROM inv_order_lines WHERE item_id=$1 LIMIT 1",
+      [id],
+    );
+    if (used.rowCount)
+      throw bad(
+        "This item has mappings or history. Archive it to preserve records.",
+        409,
+      );
+    await c.query("DELETE FROM inv_items WHERE id=$1", [id]);
+    await c.query("COMMIT");
+    res.json({ ok: true });
+  } catch (e) {
+    await c.query("ROLLBACK");
+    throw e;
+  } finally {
+    c.release();
+  }
+});
+router.put("/mappings/:id", async (req, res) => {
+  const b = req.body;
+  if (!["website", "etsy"].includes(b.channel)) throw bad("Invalid channel.");
+  const c = await pool.connect();
+  try {
+    await c.query("BEGIN");
+    const old = (
+      await c.query("SELECT * FROM inv_mappings WHERE id=$1 FOR UPDATE", [
+        integer(req.params.id),
+      ])
+    ).rows[0];
+    if (!old) throw bad("Mapping not found.", 404);
+    if (
+      old.channel === "website" &&
+      (b.channel !== old.channel ||
+        text(b.external_sku, 100) !== old.external_sku) &&
+      (await c.query("SELECT 1 FROM products WHERE sku=$1", [old.external_sku]))
+        .rowCount
+    )
+      throw bad(
+        "Change the website SKU in admin. This product mapping is automatic.",
+        409,
+      );
+    const result = await c.query(
+      "UPDATE inv_mappings SET item_id=$2,channel=$3,external_sku=$4,listing_id=$5 WHERE id=$1 RETURNING *",
+      [
+        old.id,
+        integer(b.item_id),
+        b.channel,
+        text(b.external_sku, 100),
+        b.listing_id ? text(b.listing_id, 100) : null,
+      ],
+    );
+    await c.query("COMMIT");
+    res.json(result.rows[0]);
+  } catch (e) {
+    await c.query("ROLLBACK");
+    throw e;
+  } finally {
+    c.release();
+  }
+});
+router.delete("/mappings/:id", async (req, res) => {
+  const c = await pool.connect();
+  try {
+    await c.query("BEGIN");
+    const old = (
+      await c.query("SELECT * FROM inv_mappings WHERE id=$1 FOR UPDATE", [
+        integer(req.params.id),
+      ])
+    ).rows[0];
+    if (!old) throw bad("Mapping not found.", 404);
+    if (
+      old.channel === "website" &&
+      (await c.query("SELECT 1 FROM products WHERE sku=$1", [old.external_sku]))
+        .rowCount
+    )
+      throw bad(
+        "Website products are mapped automatically. Archive the inventory item to stop sales, or edit the mapping to select another item.",
+        409,
+      );
+    await c.query("DELETE FROM inv_mappings WHERE id=$1", [old.id]);
+    await c.query("COMMIT");
+    res.json({ ok: true });
+  } catch (e) {
+    await c.query("ROLLBACK");
+    throw e;
+  } finally {
+    c.release();
+  }
+});
 router.post("/mappings", async (req, res) => {
   const b = req.body;
   if (!["website", "etsy"].includes(b.channel)) throw bad("Invalid channel.");

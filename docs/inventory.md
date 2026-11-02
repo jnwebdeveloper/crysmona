@@ -49,3 +49,17 @@ Connect Etsy from Integrations and approve order read access. OAuth uses PKCE, s
 Deploy the updated code normally. Existing inventory tables are reused. Automatic initialization also installs the `012-inventory-auto-products.sql` product-linking triggers and backfills missing website mappings. Deploying is sufficient; no separate command is required. The additive explicit installer remains available as `npm run db:migrate:inventory`.
 
 Checks: `npm run build`, `npm run check:server`, `node --import tsx --test tests/inventory.test.ts`. Against an isolated test database with the existing schema/seed and an active development admin, run `INV_TEST_DATABASE=1 DATABASE_URL=... node --import tsx --test tests/inventory-checkout-db.test.ts tests/inventory-db.test.ts`. Never point fixture tests at production.
+
+
+## Inventory management and refined tables
+
+Inventory uses the admin palette (brown sidebar, cream workspace, gold controls), Montserrat body text and Georgia headings. Stock overview columns are Product/SKU, Location, Physical, Reserved, Available, Low stock, Stock status and Actions. **Low stock** is the editable alert threshold; available units at or below it trigger a low-stock alert, while zero units display Out of stock.
+
+- **Create/read/update items:** Add inventory-only items or edit name, internal SKU, location and threshold. Website products continue to appear automatically. Editing internal SKUs does not rename website/channel SKUs.
+- **Archive/restore:** Archive an item to remove it from active stock and make its website availability zero while retaining physical units and history. Clear reservations by fulfilling or cancelling orders first. Restore makes its unreserved stock available again.
+- **Delete:** Permanently delete only empty items without website links, mappings, movements or order history. Archive used items instead.
+- **Mappings:** Create, edit/reassign and delete standalone channel mappings. Active website product mappings cannot be deleted or have their channel/SKU renamed from inventory; change the website SKU in admin or archive the item. Existing orders keep the item they originally reserved.
+- **Audit records:** Stock quantities change through documented movements. Movements, order records and sync history remain retained records rather than editable/deletable rows.
+- **Tables:** Search, sortable columns, pagination (10/20/50/100 rows) and CSV export operate on the records loaded in the current view. The stock filter offers active, low stock, out of stock, archived and all items. Exports omit action buttons and respect the current filter/search.
+
+The automatic installer adds `inv_items.archived` using `013-inventory-refinements.sql`. Tests for edit/delete protections, archiving and availability are in `tests/inventory-crud-db.test.ts` and require the same isolated database opt-in as other database tests.

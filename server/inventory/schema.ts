@@ -77,6 +77,9 @@ async function install(): Promise<void> {
     await client.query("SELECT pg_advisory_xact_lock(183621591, 1)");
     await client.query(INVENTORY_SCHEMA_SQL);
     await client.query(INVENTORY_AUTO_PRODUCTS_SQL);
+    await client.query(
+      "ALTER TABLE inv_items ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT false",
+    );
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");

@@ -38,7 +38,7 @@ export async function move(
   )
     return;
   const result = await c.query(
-    `UPDATE inv_items SET physical=physical+$2,reserved=reserved+$3 WHERE id=$1 AND physical+$2>=0 AND reserved+$3>=0 AND reserved+$3<=physical+$2 RETURNING id`,
+    `UPDATE inv_items SET physical=physical+$2,reserved=reserved+$3 WHERE id=$1 AND physical+$2>=0 AND reserved+$3>=0 AND reserved+$3<=physical+$2 AND archived=false RETURNING id`,
     [id, physical, reserved],
   );
   if (!result.rowCount)
