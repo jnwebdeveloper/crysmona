@@ -52,7 +52,7 @@ export default function Inventory() {
     [search, setSearch] = useState(""),
     [stockFilter, setStockFilter] = useState("active"),
     [editing, setEditing] = useState<{
-      type: "item" | "mapping";
+      type: "item" | "mapping" | "stock";
       row: Row;
     } | null>(null),
     [adding, setAdding] = useState(false);
@@ -377,9 +377,7 @@ export default function Inventory() {
                           {i.image_url && <img src={i.image_url} alt="" />}
                           <div>
                             <b>{i.name}</b>
-                            <small>
-                              {i.sku}
-                            </small>
+                            <small>{i.sku}</small>
                           </div>
                         </div>,
                         i.location || "—",
@@ -410,6 +408,23 @@ export default function Inventory() {
                                 : "In stock"}
                         </span>,
                         <div className="inv-actions">
+                          <button
+                            className="inv-add-stock"
+                            title={
+                              i.archived
+                                ? "Restore this item before receiving stock"
+                                : "Add physical stock"
+                            }
+                            aria-label={`Add physical stock for ${i.sku}`}
+                            disabled={busy || i.archived}
+                            onClick={() => {
+                              setError("");
+                              setEditing({ type: "stock", row: i });
+                            }}
+                          >
+                            <Plus size={15} />
+                            <span>Add stock</span>
+                          </button>
                           <button
                             className="inv-icon"
                             title="Edit item"
@@ -785,14 +800,28 @@ export default function Inventory() {
           error={error}
           close={() => setEditing(null)}
           save={(values) =>
-            void run(async () => {
-              await api(
-                `/${editing.type === "item" ? "items" : "mappings"}/${editing.row.id}`,
-                values,
-                "PUT",
-              );
-              setEditing(null);
-            }, "Changes saved.")
+            void run(
+              async () => {
+                if (editing.type === "stock") {
+                  await api("/movements", {
+                    item_id: editing.row.id,
+                    action: "receive",
+                    quantity: values.quantity,
+                    reason: values.reason,
+                  });
+                } else {
+                  await api(
+                    `/${editing.type === "item" ? "items" : "mappings"}/${editing.row.id}`,
+                    values,
+                    "PUT",
+                  );
+                }
+                setEditing(null);
+              },
+              editing.type === "stock"
+                ? "Physical stock added. Movement history updated."
+                : "Changes saved.",
+            )
           }
         />
       )}
@@ -999,7 +1028,7 @@ function Editor({
   close,
   save,
 }: {
-  editing: { type: "item" | "mapping"; row: Row };
+  editing: { type: "item" | "mapping" | "stock"; row: Row };
   items: Row[];
   busy: boolean;
   error: string;
@@ -1031,9 +1060,11 @@ function Editor({
           <div>
             <p className="inv-eyebrow">INVENTORY / EDIT RECORD</p>
             <h2 id="inv-edit-title">
-              {editing.type === "item"
-                ? "Edit inventory item"
-                : "Edit SKU mapping"}
+              {editing.type === "stock"
+                ? "Add physical stock"
+                : editing.type === "item"
+                  ? "Edit inventory item"
+                  : "Edit SKU mapping"}
             </h2>
           </div>
           <button
@@ -1052,7 +1083,52 @@ function Editor({
           </p>
         )}
         <div className="inv-edit-grid">
-          {editing.type === "item" ? (
+          {editing.type === "stock" ? (
+            <>
+              <div className="inv-stock-receipt">
+                <strong>{row.name}</strong>
+                <small>{row.sku}</small>
+                <div>
+                  <span>
+                    Physical: <b>{row.physical}</b>
+                  </span>
+                  <span>
+                    Reserved: <b>{row.reserved}</b>
+                  </span>
+                  <span>
+                    Available: <b>{row.available}</b>
+                  </span>
+                </div>
+              </div>
+              <label>
+                Quantity to add
+                <input
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  max="1000000"
+                  step="1"
+                  defaultValue="1"
+                  required
+                  autoFocus
+                />
+              </label>
+              <label>
+                Reason
+                <input
+                  name="reason"
+                  maxLength={500}
+                  placeholder="Opening stock or delivery reference"
+                  required
+                />
+              </label>
+              <p className="inv-form-note">
+                This adds units to the current physical stock; it does not
+                replace the total. Reserved stock stays unchanged. The addition
+                is recorded in movement history.
+              </p>
+            </>
+          ) : editing.type === "item" ? (
             <>
               <label>
                 Internal SKU
@@ -1152,7 +1228,13 @@ function Editor({
           >
             Cancel
           </button>
-          <button disabled={busy}>{busy ? "Saving…" : "Save changes"}</button>
+          <button disabled={busy}>
+            {busy
+              ? "Saving…"
+              : editing.type === "stock"
+                ? "Add physical stock"
+                : "Save changes"}
+          </button>
         </footer>
       </form>
     </dialog>

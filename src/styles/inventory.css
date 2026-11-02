@@ -781,3 +781,37 @@
 .inv-stock-card table:has(.inv-actions) td:nth-child(2) {
   white-space: normal;
 }
+
+.inv-shell .inv-add-stock {
+  padding: 8px 9px;
+  font-size: 10px;
+  white-space: nowrap;
+  gap: 4px;
+}
+.inv-stock-card table:has(.inv-actions) th:last-child,
+.inv-stock-card table:has(.inv-actions) td:last-child {
+  min-width: 200px !important;
+}
+.inv-stock-receipt {
+  grid-column: 1/-1;
+  background: #f7f1e8;
+  border: 1px solid #e6d9c9;
+  padding: 16px;
+  border-radius: 6px;
+}
+.inv-stock-receipt strong,
+.inv-stock-receipt small {
+  display: block;
+}
+.inv-stock-receipt small {
+  margin-top: 6px;
+  color: #8b7566;
+}
+.inv-stock-receipt > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: #76675e;
+}
