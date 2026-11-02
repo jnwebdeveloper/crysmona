@@ -1,3 +1,4 @@
+import { ensureInventorySchema } from "../inventory/schema.js";
 import express from "express";
 import { randomBytes, createHash } from "node:crypto";
 import { pool, q } from "../lib/db.js";
@@ -8,6 +9,10 @@ import { clientIp } from "../lib/http.js";
 import { move } from "../inventory/stock.js";
 import * as etsy from "../inventory/etsy.js";
 const router = express.Router();
+router.use(async (_req, _res, next) => {
+  await ensureInventorySchema();
+  next();
+});
 const cookie = "crysmona_inventory";
 const cookieOptions = {
   httpOnly: true,

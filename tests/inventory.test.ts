@@ -53,3 +53,24 @@ test("OAuth tokens are encrypted with authentication and reject tampering", () =
   delete process.env.INV_ENCRYPTION_KEY;
   assert.throws(() => encrypt(plain));
 });
+
+import { readFile } from "node:fs/promises";
+import { INVENTORY_SCHEMA_SQL } from "../server/inventory/schema.js";
+test("serverless inventory schema matches the standalone migration", async () => {
+  const migration = (
+    await readFile(
+      new URL("../database/011-inventory.sql", import.meta.url),
+      "utf8",
+    )
+  )
+    .trim()
+    .replace(/^BEGIN;/, "")
+    .replace(/COMMIT;$/, "")
+    .trim();
+  assert.equal(INVENTORY_SCHEMA_SQL.trim(), migration);
+  assert.ok(
+    [...migration.matchAll(/CREATE TABLE IF NOT EXISTS (\w+)/g)].every(
+      (match) => match[1].startsWith("inv_"),
+    ),
+  );
+});

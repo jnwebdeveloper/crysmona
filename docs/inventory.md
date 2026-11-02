@@ -4,7 +4,7 @@ Visit `/inventory` and sign in with an active staff account. Inventory has its o
 
 ## Installation
 
-Use the existing `DATABASE_URL` pointing to `crysmona`. Run `npm run db:migrate:inventory` before deploying. This additive migration creates only `inv_` tables; it does not modify existing tables or seed inventory stock. Deploy the application normally to expose `/inventory` on the existing domain.
+Use the existing `DATABASE_URL` pointing to `crysmona`. Inventory automatically creates its missing `inv_` tables on the first inventory API request, including on Vercel. You may also run `npm run db:migrate:inventory` explicitly before deployment. This additive migration creates only `inv_` tables; it does not modify existing tables or seed inventory stock. Deploy the application normally to expose `/inventory` on the existing domain.
 
 1. Add inventory items. Optionally link existing website products to display their description/image without copying prices or customer details.
 2. Receive opening physical quantities from Stock movements. Set a shelf/bin and reorder threshold on creation.
@@ -33,4 +33,4 @@ Official reference: https://developer.etsy.com/documentation/essentials/authenti
 
 `npm run build`, `npm run check:server`, `npm run test:inventory`. To run tests where the tsx CLI cannot open its local IPC pipe: `node --import tsx --test tests/inventory.test.ts`.
 
-Back up before deployment and run the migration against your normal database. Inventory schema installation is intentionally separate from existing `db:setup` so existing setup behavior stays unchanged.
+Back up before deployment and run the migration against your normal database. Inventory schema installation runs only on inventory API requests and remains separate from existing `db:setup`; existing setup behavior stays unchanged.

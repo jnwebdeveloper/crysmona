@@ -1,0 +1,38 @@
+import { pool } from "../lib/db.js";
+
+// Embedded so serverless bundles do not depend on a runtime SQL file.
+// Keep aligned with database/011-inventory.sql. Only inventory tables are created.
+export const INVENTORY_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS inv_items(id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,sku VARCHAR(100) UNIQUE NOT NULL,name VARCHAR(180) NOT NULL,product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,physical INTEGER NOT NULL DEFAULT 0 CHECK(physical>=0),reserved INTEGER NOT NULL DEFAULT 0 CHECK(reserved>=0 AND reserved<=physical),reorder_level INTEGER NOT NULL DEFAULT 5 CHECK(reorder_level>=0),location VARCHAR(120) NOT NULL DEFAULT '',created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS inv_sessions(token_hash TEXT PRIMARY KEY,admin_id INTEGER NOT NULL REFERENCES admin_accounts(id) ON DELETE CASCADE,expires_at TIMESTAMPTZ NOT NULL);
+CREATE TABLE IF NOT EXISTS inv_mappings(id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,item_id INTEGER NOT NULL REFERENCES inv_items(id),channel TEXT NOT NULL CHECK(channel IN ('website','etsy')),external_sku VARCHAR(100) NOT NULL,listing_id VARCHAR(100),UNIQUE(channel,external_sku));
+CREATE TABLE IF NOT EXISTS inv_orders(id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,channel TEXT NOT NULL CHECK(channel IN ('website','etsy')),external_id TEXT NOT NULL,status TEXT NOT NULL CHECK(status IN ('open','shipped','cancelled')),created_at TIMESTAMPTZ NOT NULL DEFAULT now(),UNIQUE(channel,external_id));
+CREATE TABLE IF NOT EXISTS inv_order_lines(id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,order_id INTEGER NOT NULL REFERENCES inv_orders(id),item_id INTEGER NOT NULL REFERENCES inv_items(id),quantity INTEGER NOT NULL CHECK(quantity>0),UNIQUE(order_id,item_id));
+CREATE TABLE IF NOT EXISTS inv_movements(id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,item_id INTEGER NOT NULL REFERENCES inv_items(id),physical_delta INTEGER NOT NULL,reserved_delta INTEGER NOT NULL,reason TEXT NOT NULL,actor TEXT NOT NULL,reference TEXT UNIQUE,created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS inv_movements_item_idx ON inv_movements(item_id,created_at DESC);
+CREATE TABLE IF NOT EXISTS inv_integrations(shop_id TEXT PRIMARY KEY,tokens TEXT NOT NULL,expires_at TIMESTAMPTZ NOT NULL);
+CREATE TABLE IF NOT EXISTS inv_oauth_states(state TEXT PRIMARY KEY,verifier TEXT NOT NULL,session_hash TEXT NOT NULL,expires_at TIMESTAMPTZ NOT NULL);
+CREATE TABLE IF NOT EXISTS inv_sync_history(id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,channel TEXT NOT NULL,status TEXT NOT NULL,message TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+`;
+let ready: Promise<void> | undefined;
+export function ensureInventorySchema(): Promise<void> {
+  return (ready ??= install().catch((error) => {
+    ready = undefined;
+    throw error;
+  }));
+}
+async function install(): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    // Serialize cold starts across serverless instances.
+    await client.query("SELECT pg_advisory_xact_lock(183621591, 1)");
+    await client.query(INVENTORY_SCHEMA_SQL);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
