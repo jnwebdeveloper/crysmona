@@ -42,16 +42,29 @@ export async function syncWebsiteOrder(
         [existing.id],
       )
     ).rows;
-    for (const line of lines)
+    for (const line of lines) {
+      const remaining = line.quantity - line.shipped_quantity;
+      if (!remaining) continue;
       await move(
         c,
         line.item_id,
         status === "shipped" ? "ship" : "release",
-        line.quantity,
+        remaining,
         `Website order ${order.order_number}: ${status}`,
         actor,
         `website:${order.order_number}:${status}:${line.item_id}`,
       );
+    }
+    if (status === "shipped") {
+      await c.query(
+        "UPDATE inv_order_lines SET shipped_quantity=quantity WHERE order_id=$1",
+        [existing.id],
+      );
+      await c.query(
+        "UPDATE inv_website_lines SET shipped_quantity=quantity WHERE order_id=$1",
+        [existing.id],
+      );
+    }
     await c.query("UPDATE inv_orders SET status=$2 WHERE id=$1", [
       existing.id,
       status,
@@ -62,11 +75,12 @@ export async function syncWebsiteOrder(
   if (status === "cancelled") return;
   const lines = (
     await c.query(
-      "SELECT sku,quantity FROM order_items WHERE order_id=$1 ORDER BY id",
+      "SELECT id,sku,quantity FROM order_items WHERE order_id=$1 ORDER BY id",
       [orderId],
     )
   ).rows;
   const grouped = new Map<number, number>();
+  const snapshot: { id: number; item_id: number; quantity: number }[] = [];
   for (const line of lines) {
     const mapping = (
       await c.query(
@@ -78,6 +92,11 @@ export async function syncWebsiteOrder(
       throw bad(
         `Map website SKU ${line.sku || "(missing)"} before syncing order ${order.order_number}.`,
       );
+    snapshot.push({
+      id: line.id,
+      item_id: mapping.item_id,
+      quantity: line.quantity,
+    });
     grouped.set(
       mapping.item_id,
       (grouped.get(mapping.item_id) || 0) + line.quantity,
@@ -101,10 +120,21 @@ export async function syncWebsiteOrder(
       `website:${order.order_number}:import:${id}`,
     );
     await c.query(
-      "INSERT INTO inv_order_lines(order_id,item_id,quantity) VALUES($1,$2,$3)",
-      [created.id, id, quantity],
+      "INSERT INTO inv_order_lines(order_id,item_id,quantity,shipped_quantity) VALUES($1,$2,$3,$4)",
+      [created.id, id, quantity, status === "shipped" ? quantity : 0],
     );
   }
+  for (const line of snapshot)
+    await c.query(
+      "INSERT INTO inv_website_lines(order_item_id,order_id,item_id,quantity,shipped_quantity) VALUES($1,$2,$3,$4,$5)",
+      [
+        line.id,
+        created.id,
+        line.item_id,
+        line.quantity,
+        status === "shipped" ? line.quantity : 0,
+      ],
+    );
 }
 
 export async function releaseWebsiteOrder(
@@ -124,6 +154,18 @@ export async function releaseWebsiteOrder(
     )
   ).rows[0];
   if (!inv || inv.status === "cancelled") return;
+  if (
+    (
+      await c.query(
+        "SELECT 1 FROM inv_order_lines WHERE order_id=$1 AND shipped_quantity>0",
+        [inv.id],
+      )
+    ).rowCount
+  )
+    throw bad(
+      "Partially shipped orders require a returns or remaining-items workflow; full cancellation is unavailable.",
+      409,
+    );
   if (inv.status !== "open")
     throw bad("Shipped inventory cannot be released by cancellation.", 409);
   for (const line of (

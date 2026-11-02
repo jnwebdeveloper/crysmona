@@ -420,9 +420,13 @@ for (const [table, definition] of Object.entries(resources)) {
             "Placed order amounts and payment records cannot be overwritten.",
           );
       if (
-        !["placed", "processing", "shipped", "delivered"].includes(
-          values.status,
-        )
+        ![
+          "placed",
+          "processing",
+          "partially_shipped",
+          "shipped",
+          "delivered",
+        ].includes(values.status)
       )
         throw bad("Only fulfillment status can be updated for a placed order.");
       for (const key of Object.keys(values))

@@ -1,0 +1,7 @@
+BEGIN;
+ALTER TABLE inv_order_lines ADD COLUMN IF NOT EXISTS shipped_quantity INTEGER NOT NULL DEFAULT 0 CHECK(shipped_quantity>=0 AND shipped_quantity<=quantity);
+UPDATE inv_order_lines l SET shipped_quantity=l.quantity FROM inv_orders o WHERE o.id=l.order_id AND o.status='shipped' AND l.shipped_quantity<>l.quantity;
+CREATE TABLE IF NOT EXISTS inv_website_lines(order_item_id INTEGER PRIMARY KEY REFERENCES order_items(id) ON DELETE CASCADE,order_id INTEGER NOT NULL REFERENCES inv_orders(id) ON DELETE CASCADE,item_id INTEGER NOT NULL REFERENCES inv_items(id),quantity INTEGER NOT NULL CHECK(quantity>0),shipped_quantity INTEGER NOT NULL DEFAULT 0 CHECK(shipped_quantity>=0 AND shipped_quantity<=quantity));
+CREATE TABLE IF NOT EXISTS inv_shipments(id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,order_id INTEGER NOT NULL REFERENCES inv_orders(id) ON DELETE CASCADE,request_key TEXT NOT NULL,payload_hash TEXT NOT NULL,carrier VARCHAR(120) NOT NULL DEFAULT '',tracking_number VARCHAR(180) NOT NULL DEFAULT '',actor TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT now(),UNIQUE(order_id,request_key));
+CREATE TABLE IF NOT EXISTS inv_shipment_lines(shipment_id INTEGER NOT NULL REFERENCES inv_shipments(id) ON DELETE CASCADE,order_item_id INTEGER NOT NULL REFERENCES inv_website_lines(order_item_id) ON DELETE CASCADE,quantity INTEGER NOT NULL CHECK(quantity>0),PRIMARY KEY(shipment_id,order_item_id));
+COMMIT;

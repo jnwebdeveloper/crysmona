@@ -4,7 +4,7 @@ export type CartItem = { product: Product; qty: number };
 export type Order = {
   id: string;
   createdAt: string;
-  items: CartItem[];
+  items: (CartItem & { shippedQty?: number })[];
   total: number;
   status: string;
   subtotal?: number;
@@ -12,8 +12,13 @@ export type Order = {
   discount?: number;
   paymentStatus?: string;
   paymentMethod?: string;
-  shippingAddress?: Record<string,string>;
+  shippingAddress?: Record<string, string>;
   paypalOrderId?: string;
   paypalCaptureId?: string;
-  history?: {status:string;note?:string;actor?:string;created_at:string}[];
+  history?: {
+    status: string;
+    note?: string;
+    actor?: string;
+    created_at: string;
+  }[];
 };

@@ -1,3 +1,4 @@
+import { shipWebsiteItems } from "../inventory/shipments.js";
 import { updateFulfillment } from "../services/orders.js";
 import { syncWebsiteOrder } from "../inventory/website.js";
 import { ensureInventorySchema } from "../inventory/schema.js";
@@ -80,14 +81,16 @@ router.get("/data", async (_req, res) => {
   const [items, mappings, orders, movements, history, products, integrations] =
     await Promise.all([
       q(
-        "SELECT i.*,i.physical-i.reserved available,p.description,p.image_url FROM inv_items i LEFT JOIN products p ON p.id=i.product_id ORDER BY i.id DESC",
+        `SELECT i.*,i.physical-i.reserved available,p.description,p.image_url,COALESCE((SELECT json_agg(json_build_object('channel',m.channel,'sku',m.external_sku) ORDER BY m.channel,m.external_sku) FROM inv_mappings m WHERE m.item_id=i.id),'[]'::json) channel_skus FROM inv_items i LEFT JOIN products p ON p.id=i.product_id ORDER BY i.id DESC`,
       ),
       q(
         "SELECT m.*,i.sku FROM inv_mappings m JOIN inv_items i ON i.id=m.item_id ORDER BY m.id DESC",
       ),
       q(`SELECT o.*,w.id website_order_id,w.status website_status,w.payment_status,w.payment_method,
-          COALESCE((SELECT json_agg(json_build_object('sku',i.sku,'name',i.name,'quantity',l.quantity) ORDER BY l.item_id) FROM inv_order_lines l JOIN inv_items i ON i.id=l.item_id WHERE l.order_id=o.id),'[]'::json) items
-          FROM inv_orders o LEFT JOIN orders w ON o.channel='website' AND w.order_number=o.external_id ORDER BY o.id DESC LIMIT 200`),
+        CASE WHEN o.channel='website' THEN COALESCE((SELECT json_agg(json_build_object('order_item_id',oi.id,'item_id',wl.item_id,'sku',oi.sku,'name',oi.product_name,'quantity',oi.quantity,'shipped_quantity',COALESCE(wl.shipped_quantity,CASE WHEN o.status='shipped' THEN oi.quantity ELSE 0 END),'remaining',oi.quantity-COALESCE(wl.shipped_quantity,CASE WHEN o.status='shipped' THEN oi.quantity ELSE 0 END)) ORDER BY oi.id) FROM order_items oi LEFT JOIN inv_website_lines wl ON wl.order_item_id=oi.id WHERE oi.order_id=w.id),'[]'::json)
+        ELSE COALESCE((SELECT json_agg(json_build_object('sku',i.sku,'name',i.name,'quantity',l.quantity,'shipped_quantity',l.shipped_quantity,'remaining',l.quantity-l.shipped_quantity) ORDER BY l.item_id) FROM inv_order_lines l JOIN inv_items i ON i.id=l.item_id WHERE l.order_id=o.id),'[]'::json) END items,
+        COALESCE((SELECT json_agg(json_build_object('id',s.id,'carrier',s.carrier,'tracking_number',s.tracking_number,'created_at',s.created_at,'lines',(SELECT json_agg(json_build_object('sku',oi.sku,'quantity',sl.quantity)) FROM inv_shipment_lines sl JOIN order_items oi ON oi.id=sl.order_item_id WHERE sl.shipment_id=s.id)) ORDER BY s.id DESC) FROM inv_shipments s WHERE s.order_id=o.id),'[]'::json) shipments
+        FROM inv_orders o LEFT JOIN orders w ON o.channel='website' AND w.order_number=o.external_id ORDER BY o.id DESC LIMIT 200`),
       q(
         "SELECT m.*,i.sku FROM inv_movements m JOIN inv_items i ON i.id=m.item_id ORDER BY m.id DESC LIMIT 200",
       ),
@@ -105,6 +108,39 @@ router.get("/data", async (_req, res) => {
     integrations: integrations.rows,
   });
 });
+router.get("/dashboard", async (_req, res) => {
+  const [stock, orders, shipments, activity] = await Promise.all([
+    q(
+      `SELECT count(*)::int skus,COALESCE(sum(physical),0)::int physical,COALESCE(sum(reserved),0)::int reserved,COALESCE(sum(physical-reserved),0)::int available,count(*) FILTER(WHERE physical-reserved=0)::int out_of_stock,count(*) FILTER(WHERE physical-reserved>0 AND physical-reserved<=reorder_level)::int low_stock FROM inv_items WHERE archived=false`,
+    ),
+    q(
+      `SELECT count(*) FILTER(WHERE status IN ('placed','processing'))::int awaiting_shipment,count(*) FILTER(WHERE status='partially_shipped')::int partial,count(*) FILTER(WHERE status='awaiting_payment')::int awaiting_payment,count(*) FILTER(WHERE status='shipped')::int in_transit,count(*) FILTER(WHERE status='delivered')::int delivered FROM orders WHERE status<>'draft'`,
+    ),
+    q(
+      `SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'Asia/Kolkata') AT TIME ZONE 'Asia/Kolkata')::int today FROM inv_shipments`,
+    ),
+    q(
+      `SELECT date_trunc('day',created_at AT TIME ZONE 'Asia/Kolkata')::date::text AS "day",COALESCE(sum(GREATEST(physical_delta,0)),0)::int received,COALESCE(sum(GREATEST(-physical_delta,0)),0)::int dispatched FROM inv_movements WHERE created_at>=now()-interval '7 days' GROUP BY 1 ORDER BY 1`,
+    ),
+  ]);
+  res.json({
+    stock: stock.rows[0],
+    orders: orders.rows[0],
+    shipments: shipments.rows[0],
+    activity: activity.rows,
+  });
+});
+router.post("/orders/:id/shipments", async (req, res) =>
+  res
+    .status(201)
+    .json(
+      await shipWebsiteItems(
+        integer(req.params.id),
+        req.body,
+        req.adminAccount!.email,
+      ),
+    ),
+);
 router.post("/orders/:id/fulfillment", async (req, res) => {
   const order = (
     await q(
@@ -354,6 +390,11 @@ async function importOrder(
           existing.id,
           status,
         ]);
+        if (status === "shipped")
+          await c.query(
+            "UPDATE inv_order_lines SET shipped_quantity=quantity WHERE order_id=$1",
+            [existing.id],
+          );
       }
       await c.query("COMMIT");
       return;
@@ -395,8 +436,8 @@ async function importOrder(
         `${channel}:${external}:import:${id}`,
       );
       await c.query(
-        "INSERT INTO inv_order_lines(order_id,item_id,quantity) VALUES($1,$2,$3)",
-        [order.id, id, quantity],
+        "INSERT INTO inv_order_lines(order_id,item_id,quantity,shipped_quantity) VALUES($1,$2,$3,$4)",
+        [order.id, id, quantity, status === "shipped" ? quantity : 0],
       );
     }
     await c.query("COMMIT");

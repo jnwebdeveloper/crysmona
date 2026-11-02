@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, type FormEvent } from "react";
 import { NavLink, useParams } from "react-router";
 import {
   Boxes,
+  LayoutDashboard,
   Package,
   ArrowLeftRight,
   Truck,
@@ -37,6 +38,7 @@ async function api(path: string, body?: unknown, method?: string) {
   return data;
 }
 const sections = [
+  ["dashboard", "Dashboard", LayoutDashboard],
   ["stock", "Stock overview", Boxes],
   ["movements", "Stock movements", ArrowLeftRight],
   ["mappings", "SKU mappings", Link2],
@@ -44,7 +46,7 @@ const sections = [
   ["integrations", "Integrations", RefreshCw],
 ] as const;
 export default function Inventory() {
-  const { section = "stock" } = useParams();
+  const { section = "dashboard" } = useParams();
   const [user, setUser] = useState<string | null>(null),
     [checking, setChecking] = useState(true),
     [data, setData] = useState<Row | null>(null),
@@ -57,7 +59,8 @@ export default function Inventory() {
       type: "item" | "mapping" | "stock";
       row: Row;
     } | null>(null),
-    [adding, setAdding] = useState(false);
+    [adding, setAdding] = useState(false),
+    [shipping, setShipping] = useState<Row | null>(null);
   useEffect(() => {
     const previous = document.title;
     document.title = "Crysmona Inventory";
@@ -78,7 +81,11 @@ export default function Inventory() {
   }, []);
   async function load() {
     try {
-      setData(await api("/data"));
+      const [records, dashboard] = await Promise.all([
+        api("/data"),
+        api("/dashboard"),
+      ]);
+      setData({ ...records, dashboard });
     } catch (e: any) {
       setError(e.message);
       if (e.status === 401) setUser(null);
@@ -235,22 +242,25 @@ export default function Inventory() {
           <p>Loading inventory data…</p>
         ) : (
           <>
-            <div className="inv-stats">
-              {[
-                ["Inventory SKUs", items.length],
-                ["Physical units", items.reduce((n, i) => n + i.physical, 0)],
-                ["Reserved units", items.reduce((n, i) => n + i.reserved, 0)],
-                [
-                  "Low stock",
-                  items.filter((i) => i.available <= i.reorder_level).length,
-                ],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <span>{label}</span>
-                  <strong>{value}</strong>
-                </div>
-              ))}
-            </div>
+            {section !== "dashboard" && (
+              <div className="inv-stats">
+                {[
+                  ["Inventory SKUs", items.length],
+                  ["Physical units", items.reduce((n, i) => n + i.physical, 0)],
+                  ["Reserved units", items.reduce((n, i) => n + i.reserved, 0)],
+                  [
+                    "Low stock",
+                    items.filter((i) => i.available <= i.reorder_level).length,
+                  ],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <span>{label}</span>
+                    <strong>{value}</strong>
+                  </div>
+                ))}
+              </div>
+            )}
+            {section === "dashboard" && <Dashboard data={data} />}
             {section === "stock" && (
               <>
                 <div className="inv-section-heading">
@@ -369,7 +379,15 @@ export default function Inventory() {
                                   : true)),
                       )
                       .filter((i) =>
-                        (i.name + " " + i.sku)
+                        (
+                          i.name +
+                          " " +
+                          i.sku +
+                          " " +
+                          (i.channel_skus || [])
+                            .map((m: Row) => m.sku)
+                            .join(" ")
+                        )
                           .toLowerCase()
                           .includes(search.toLowerCase()),
                       )
@@ -378,7 +396,16 @@ export default function Inventory() {
                           {i.image_url && <img src={i.image_url} alt="" />}
                           <div>
                             <b>{i.name}</b>
-                            <small>{i.sku}</small>
+                            <div className="inv-sku-list">
+                              <small>
+                                <b>Internal</b> {i.sku}
+                              </small>
+                              {(i.channel_skus || []).map((m: Row) => (
+                                <small key={m.channel + ":" + m.sku}>
+                                  <b>{m.channel}</b> {m.sku}
+                                </small>
+                              ))}
+                            </div>
                           </div>
                         </div>,
                         i.physical,
@@ -690,15 +717,18 @@ export default function Inventory() {
                     o.channel,
                     o.external_id,
                     (o.items || [])
-                      .map((i: Row) => `${i.sku} × ${i.quantity}`)
+                      .map(
+                        (i: Row) =>
+                          `${i.sku} · ${i.shipped_quantity || 0}/${i.quantity} shipped · ${i.remaining ?? i.quantity} remaining`,
+                      )
                       .join(", "),
-                    o.website_status || o.status,
+                    (o.website_status || o.status).replace(/_/g, " "),
                     o.payment_status || "—",
                     o.status,
                     date(o.created_at),
                     o.channel === "website" ? (
                       <div className="inv-actions">
-                        {["placed", "processing"].includes(
+                        {["placed", "processing", "partially_shipped"].includes(
                           o.website_status,
                         ) && (
                           <>
@@ -722,23 +752,24 @@ export default function Inventory() {
                             <button
                               disabled={busy}
                               onClick={() => {
-                                if (
-                                  window.confirm(
-                                    `Mark order ${o.external_id} shipped? This deducts its reserved physical stock and updates admin.`,
-                                  )
-                                )
-                                  void run(
-                                    () =>
-                                      api(`/orders/${o.id}/fulfillment`, {
-                                        status: "shipped",
-                                      }),
-                                    "Order shipped. Physical stock and reservations updated.",
-                                  );
+                                setError("");
+                                setShipping(o);
                               }}
                             >
-                              <Truck size={14} /> Mark shipped
+                              <Truck size={14} /> Ship products
                             </button>
                           </>
+                        )}
+                        {(o.shipments || []).length > 0 && (
+                          <button
+                            className="inv-secondary"
+                            onClick={() => {
+                              setError("");
+                              setShipping(o);
+                            }}
+                          >
+                            Shipments ({o.shipments.length})
+                          </button>
                         )}
                         {o.website_status === "shipped" && (
                           <button
@@ -869,6 +900,21 @@ export default function Inventory() {
           </>
         )}
       </main>
+      {shipping && (
+        <ShipmentEditor
+          key={shipping.id}
+          order={shipping}
+          busy={busy}
+          error={error}
+          close={() => setShipping(null)}
+          save={(values) =>
+            void run(async () => {
+              await api(`/orders/${shipping.id}/shipments`, values);
+              setShipping(null);
+            }, "Shipment recorded. Only shipped quantities were deducted; remaining units stay reserved.")
+          }
+        />
+      )}
       {editing && (
         <Editor
           key={`${editing.type}-${editing.row.id}`}
@@ -943,9 +989,10 @@ function Table({
           }) * sort.dir,
       )
     : filtered;
-  const total = Math.max(1, Math.ceil(sorted.length / size)),
+  const pageSize = size === -1 ? Math.max(sorted.length, 1) : size;
+  const total = Math.max(1, Math.ceil(sorted.length / pageSize)),
     current = Math.min(page, total),
-    shown = sorted.slice((current - 1) * size, current * size);
+    shown = sorted.slice((current - 1) * pageSize, current * pageSize);
   function download() {
     const csv = [
       headers.filter((h) => h !== "Actions"),
@@ -1058,7 +1105,7 @@ function Table({
       <div className="inv-pagination">
         <span>
           {filtered.length
-            ? `${(current - 1) * size + 1}–${Math.min(current * size, filtered.length)}`
+            ? `${(current - 1) * pageSize + 1}–${Math.min(current * pageSize, filtered.length)}`
             : "0"}{" "}
           of {filtered.length} records
         </span>
@@ -1075,6 +1122,7 @@ function Table({
             {[10, 20, 50, 100].map((n) => (
               <option key={n}>{n}</option>
             ))}
+            <option value="-1">All</option>
           </select>
         </label>
         <button
@@ -1316,5 +1364,370 @@ function Editor({
         </footer>
       </form>
     </dialog>
+  );
+}
+
+function ShipmentEditor({
+  order,
+  busy,
+  error,
+  close,
+  save,
+}: {
+  order: Row;
+  busy: boolean;
+  error: string;
+  close: () => void;
+  save: (v: Row) => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [requestKey] = useState(() => crypto.randomUUID());
+  const [formError, setFormError] = useState("");
+  useEffect(() => {
+    dialog.current?.showModal();
+  }, []);
+  const canShip = ["placed", "processing", "partially_shipped"].includes(
+    order.website_status,
+  );
+  return (
+    <dialog
+      ref={dialog}
+      className="inv-editor inv-shipment-editor"
+      aria-labelledby="inv-ship-title"
+      onCancel={(e) => {
+        e.preventDefault();
+        if (!busy) close();
+      }}
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const values = new FormData(e.currentTarget);
+          const lines = (order.items || [])
+            .map((i: Row) => ({
+              order_item_id: i.order_item_id,
+              quantity: Number(values.get("quantity-" + i.order_item_id) || 0),
+            }))
+            .filter((i: Row) => i.quantity > 0);
+          if (!lines.length) {
+            setFormError("Enter a positive quantity for at least one product.");
+            return;
+          }
+          setFormError("");
+          save({
+            request_key: requestKey,
+            lines,
+            carrier: values.get("carrier"),
+            tracking_number: values.get("tracking_number"),
+          });
+        }}
+      >
+        <header>
+          <div>
+            <p className="inv-eyebrow">{order.external_id}</p>
+            <h2 id="inv-ship-title">
+              {canShip ? "Ship products" : "Shipment history"}
+            </h2>
+          </div>
+          <button
+            type="button"
+            className="inv-icon"
+            onClick={close}
+            disabled={busy}
+            aria-label="Close shipment"
+          >
+            <X size={18} />
+          </button>
+        </header>
+        {(error || formError) && (
+          <p role="alert" className="inv-error">
+            {formError || error}
+          </p>
+        )}
+        {canShip && (
+          <>
+            <p className="inv-form-note">
+              Choose how many units to ship now. Set 0 to leave a product for a
+              later shipment. Unshipped units remain reserved.
+            </p>
+            <div className="inv-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product / SKU</th>
+                    <th>Ordered</th>
+                    <th>Shipped</th>
+                    <th>Remaining</th>
+                    <th>Ship now</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {order.items.map((i: Row) => (
+                    <tr key={i.order_item_id}>
+                      <td>
+                        <b>{i.name}</b>
+                        <small className="inv-block">{i.sku}</small>
+                      </td>
+                      <td>{i.quantity}</td>
+                      <td>{i.shipped_quantity || 0}</td>
+                      <td>{i.remaining}</td>
+                      <td>
+                        <input
+                          aria-label={`Ship quantity for ${i.sku}`}
+                          name={"quantity-" + i.order_item_id}
+                          type="number"
+                          min="0"
+                          max={i.remaining}
+                          step="1"
+                          defaultValue={i.remaining}
+                          disabled={!i.remaining}
+                          required
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="inv-edit-grid inv-shipping-fields">
+              <label>
+                Carrier (optional)
+                <input
+                  name="carrier"
+                  maxLength={120}
+                  placeholder="DHL, FedEx, local courier…"
+                />
+              </label>
+              <label>
+                Tracking number (optional)
+                <input name="tracking_number" maxLength={180} />
+              </label>
+            </div>
+          </>
+        )}
+        {order.shipments?.length > 0 && (
+          <section className="inv-shipment-history">
+            <h3>Recorded shipments</h3>
+            {order.shipments.map((s: Row) => (
+              <article key={s.id}>
+                <b>Shipment #{s.id}</b>
+                <span>{date(s.created_at)}</span>
+                <p>
+                  {(s.lines || [])
+                    .map((l: Row) => `${l.sku} × ${l.quantity}`)
+                    .join(" · ")}
+                </p>
+                <small>
+                  {s.carrier || "Carrier not specified"}
+                  {s.tracking_number ? " · " + s.tracking_number : ""}
+                </small>
+              </article>
+            ))}
+          </section>
+        )}
+        <footer>
+          <button
+            type="button"
+            className="inv-secondary"
+            disabled={busy}
+            onClick={close}
+          >
+            {canShip ? "Cancel" : "Close"}
+          </button>
+          {canShip && (
+            <button disabled={busy}>
+              <Truck size={15} />
+              {busy ? "Recording…" : "Confirm shipment"}
+            </button>
+          )}
+        </footer>
+      </form>
+    </dialog>
+  );
+}
+function Dashboard({ data }: { data: Row }) {
+  const d = data.dashboard,
+    s = d.stock,
+    o = d.orders;
+  const items: Row[] = data.items.filter((i: Row) => !i.archived);
+  const attention = items
+    .filter((i) => i.available <= i.reorder_level)
+    .sort((a, b) => a.available - b.available);
+  const peak = Math.max(
+    1,
+    ...d.activity.flatMap((a: Row) => [a.received, a.dispatched]),
+  );
+  return (
+    <div className="inv-dashboard">
+      <div className="inv-dashboard-intro">
+        <div>
+          <p className="inv-eyebrow">OPERATIONS AT A GLANCE</p>
+          <h2>Your inventory, in focus.</h2>
+          <p>Stock health, outstanding orders and recent warehouse activity.</p>
+        </div>
+        <NavLink className="inv-button" to="/inventory/orders">
+          <Truck size={16} /> Manage shipments
+        </NavLink>
+      </div>
+      <div className="inv-dashboard-metrics">
+        {[
+          ["Available units", s.available, "Ready to sell"],
+          ["Reserved units", s.reserved, "Held for open orders"],
+          ["Awaiting shipment", o.awaiting_shipment, "Placed or processing"],
+          ["Partially shipped", o.partial, "Products still to dispatch"],
+          ["Out of stock", s.out_of_stock, "Active items with zero stock"],
+          ["Low stock", s.low_stock, "Positive stock at the threshold"],
+        ].map(([label, value, note]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+            <small>{note}</small>
+          </div>
+        ))}
+      </div>
+      <div className="inv-dashboard-grid">
+        <section className="inv-card">
+          <div className="inv-card-heading">
+            <h2>Stock health</h2>
+            <NavLink to="/inventory/stock">View inventory →</NavLink>
+          </div>
+          <div className="inv-health-bar" aria-label="Inventory stock health">
+            {s.skus > 0 && (
+              <>
+                <span
+                  style={{
+                    width:
+                      (100 * (s.skus - s.out_of_stock - s.low_stock)) / s.skus +
+                      "%",
+                  }}
+                />
+                <span style={{ width: (100 * s.low_stock) / s.skus + "%" }} />
+                <span
+                  style={{ width: (100 * s.out_of_stock) / s.skus + "%" }}
+                />
+              </>
+            )}
+          </div>
+          <div className="inv-health-legend">
+            <span>
+              Healthy <b>{s.skus - s.out_of_stock - s.low_stock}</b>
+            </span>
+            <span>
+              Low <b>{s.low_stock}</b>
+            </span>
+            <span>
+              Out <b>{s.out_of_stock}</b>
+            </span>
+          </div>
+          <div className="inv-dashboard-totals">
+            <div>
+              <small>Physical units</small>
+              <b>{s.physical}</b>
+            </div>
+            <div>
+              <small>Active SKUs</small>
+              <b>{s.skus}</b>
+            </div>
+            <div>
+              <small>Shipments today (IST)</small>
+              <b>{d.shipments.today}</b>
+            </div>
+          </div>
+        </section>
+        <section className="inv-card">
+          <h2>Order pipeline</h2>
+          <div className="inv-pipeline">
+            {[
+              ["Awaiting payment", o.awaiting_payment],
+              ["Awaiting shipment", o.awaiting_shipment],
+              ["Partially shipped", o.partial],
+              ["In transit", o.in_transit],
+              ["Delivered", o.delivered],
+            ].map(([label, n]) => (
+              <div key={label}>
+                <span>{label}</span>
+                <b>{n}</b>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="inv-card">
+          <div className="inv-card-heading">
+            <h2>Stock needing attention</h2>
+            <span className="inv-badge inv-low">{attention.length} items</span>
+          </div>
+          <Table
+            headers={["Item / SKU", "Available", "Low stock"]}
+            rows={attention.slice(0, 8).map((i) => [
+              <div>
+                <b>{i.name}</b>
+                <small className="inv-block">{i.sku}</small>
+              </div>,
+              i.available,
+              i.reorder_level,
+            ])}
+          />
+        </section>
+        <section className="inv-card">
+          <h2>Stock movements · last 7 days</h2>
+          <p className="inv-chart-legend">
+            Gold: received · Brown: stock deducted
+          </p>
+          {d.activity.length ? (
+            <div className="inv-activity-chart">
+              {d.activity.map((a: Row) => (
+                <div key={a.day}>
+                  <span>
+                    {new Date(a.day + "T12:00:00").toLocaleDateString(
+                      undefined,
+                      { month: "short", day: "numeric" },
+                    )}
+                  </span>
+                  <div className="inv-chart-bars">
+                    <i
+                      title={`${a.received} received`}
+                      style={{ width: (100 * a.received) / peak + "%" }}
+                    />
+                    <i
+                      title={`${a.dispatched} deducted`}
+                      style={{ width: (100 * a.dispatched) / peak + "%" }}
+                    />
+                  </div>
+                  <small>
+                    {a.received} / {a.dispatched}
+                  </small>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>No stock movements in the last seven days.</p>
+          )}
+        </section>
+      </div>
+      <section className="inv-card">
+        <div className="inv-card-heading">
+          <h2>Recent activity</h2>
+          <NavLink to="/inventory/movements">View movement history →</NavLink>
+        </div>
+        <Table
+          headers={[
+            "Time",
+            "SKU",
+            "Physical change",
+            "Reserved change",
+            "Reason",
+          ]}
+          rows={data.movements
+            .slice(0, 10)
+            .map((m: Row) => [
+              date(m.created_at),
+              m.sku,
+              m.physical_delta,
+              m.reserved_delta,
+              m.reason,
+            ])}
+        />
+      </section>
+    </div>
   );
 }

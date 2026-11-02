@@ -753,7 +753,7 @@ export async function cancelOrder(input: {
 // ---- storefront order shapes ------------------------------------------------
 
 const ITEM_SELECT =
-  "SELECT i.*,p.slug,p.stone,p.kind FROM order_items i LEFT JOIN products p ON p.id=i.product_id";
+  "SELECT i.*,p.slug,p.stone,p.kind,wl.shipped_quantity FROM order_items i LEFT JOIN products p ON p.id=i.product_id LEFT JOIN inv_website_lines wl ON wl.order_item_id=i.id";
 
 function toOrder(o: any, items: any[]) {
   return {
@@ -774,6 +774,9 @@ function toOrder(o: any, items: any[]) {
     paypalCaptureId: o.paypal_capture_id,
     items: items.map((i) => ({
       qty: i.quantity,
+      shippedQty:
+        i.shipped_quantity ??
+        (["shipped", "delivered"].includes(o.status) ? i.quantity : 0),
       product: {
         slug: i.slug || "",
         name: i.product_name,
@@ -789,6 +792,7 @@ function toOrder(o: any, items: any[]) {
 }
 
 export async function listOrders(userId: number) {
+  await ensureInventorySchema();
   const orders = (
     await q("SELECT * FROM orders WHERE user_id=$1 ORDER BY created_at DESC", [
       userId,
@@ -810,6 +814,7 @@ export async function listOrders(userId: number) {
 }
 
 export async function getOrder(orderNumber: string, userId: number) {
+  await ensureInventorySchema();
   const o = (
     await q("SELECT * FROM orders WHERE order_number=$1 AND user_id=$2", [
       orderNumber,
@@ -818,7 +823,7 @@ export async function getOrder(orderNumber: string, userId: number) {
   ).rows[0];
   if (!o) throw bad("Order not found.", 404);
   const [items, history] = await Promise.all([
-    q(ITEM_SELECT + " WHERE order_id=$1 ORDER BY i.id", [o.id]),
+    q(ITEM_SELECT + " WHERE i.order_id=$1 ORDER BY i.id", [o.id]),
     q(
       "SELECT status,note,actor,created_at FROM order_status_history WHERE order_id=$1 ORDER BY created_at",
       [o.id],
@@ -839,7 +844,13 @@ export async function updateFulfillment(
       await c.query("SELECT * FROM orders WHERE id=$1 FOR UPDATE", [orderId])
     ).rows[0];
     if (!current) throw bad("Order not found.", 404);
-    const states = ["placed", "processing", "shipped", "delivered"];
+    const states = [
+      "placed",
+      "processing",
+      "partially_shipped",
+      "shipped",
+      "delivered",
+    ];
     if (
       !states.includes(current.status) ||
       !states.includes(status) ||
@@ -849,6 +860,16 @@ export async function updateFulfillment(
         "Fulfillment cannot move backwards or change payment/cancellation states.",
         409,
       );
+    if (status === "partially_shipped" && current.status !== status)
+      throw bad(
+        "Choose products and quantities through the inventory shipment form.",
+        409,
+      );
+    if (
+      status === "delivered" &&
+      !["shipped", "delivered"].includes(current.status)
+    )
+      throw bad("Ship all order items before marking delivered.", 409);
     if (current.refund_status === "pending")
       throw bad("A cancellation refund is in progress.", 409);
     const updated = (

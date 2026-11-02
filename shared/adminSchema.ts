@@ -114,6 +114,7 @@ export const resources: Record<string, { label: string; fields: Field[] }> = {
         "draft",
         "placed",
         "processing",
+        "partially_shipped",
         "shipped",
         "delivered",
         "cancelled",
