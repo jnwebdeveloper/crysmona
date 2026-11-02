@@ -1,4 +1,4 @@
-import { lazy, useEffect, useLayoutEffect } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
 import { Route, Routes, useLocation, useNavigate } from "react-router";
 import AdminLayout from "./components/AdminLayout";
 import RequireLogin from "./components/RequireLogin";
@@ -21,6 +21,7 @@ import { WishlistPage } from "./pages/WishlistPage";
 
 // Admin is only for staff, so it is split into its own bundle and loaded on demand.
 const AdminPage = lazy(() => import("./pages/Admin"));
+const InventoryPage = lazy(() => import("./pages/Inventory"));
 const SUPPORT_PAGES = ["faq", "returns", "care", "privacy", "terms"];
 
 // Shared by both webapps: lets go() navigate through React Router, and scrolls to
@@ -50,6 +51,14 @@ export default function App() {
     <>
       <NavigationEffects />
       <Routes>
+        <Route
+          path="inventory/:section?"
+          element={
+            <Suspense fallback={<main>Loading inventory…</main>}>
+              <InventoryPage />
+            </Suspense>
+          }
+        />
         {/* Admin webapp */}
         <Route element={<AdminLayout />}>
           <Route path="admin/:section?" element={<AdminPage />} />

@@ -1,3 +1,4 @@
+import inventory from './routes/inventory.js';
 import cors from "cors";
 import "dotenv/config";
 import express from "express";
@@ -100,6 +101,7 @@ app.get("/api/health", async (_req, res) => {
   await q("select 1");
   res.json({ ok: true, database: "connected" });
 });
+app.use("/api/inventory", adminRequestSecurity(webOrigin), inventory);
 app.use(catalog);
 app.use(customerAuth);
 app.use(wishlist);
