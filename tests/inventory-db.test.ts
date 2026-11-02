@@ -76,7 +76,34 @@ test(
         await q("SELECT physical,reserved FROM inv_items WHERE id=$1", [item])
       ).rows[0];
       assert.deepEqual(current, { physical: 10, reserved: 3 });
-      await q("UPDATE orders SET status='shipped' WHERE id=$1", [order]);
+      const invOrder = (
+        await q(
+          "SELECT id FROM inv_orders WHERE channel='website' AND external_id=$1",
+          [number],
+        )
+      ).rows[0];
+      await request(`/orders/${invOrder.id}/fulfillment`, {
+        status: "processing",
+      });
+      await request(`/orders/${invOrder.id}/fulfillment`, {
+        status: "shipped",
+      });
+      await request(`/orders/${invOrder.id}/fulfillment`, {
+        status: "shipped",
+      });
+      assert.equal(
+        (await q("SELECT status FROM orders WHERE id=$1", [order])).rows[0]
+          .status,
+        "shipped",
+      );
+      await request(`/orders/${invOrder.id}/fulfillment`, {
+        status: "delivered",
+      });
+      await request(
+        `/orders/${invOrder.id}/fulfillment`,
+        { status: "processing" },
+        409,
+      );
       await request("/sync/website", {});
       await request("/sync/website", {});
       current = (

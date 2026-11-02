@@ -4,6 +4,8 @@ import {
   Boxes,
   Package,
   ArrowLeftRight,
+  Truck,
+  Check,
   Link2,
   ClipboardList,
   RefreshCw,
@@ -666,11 +668,12 @@ export default function Inventory() {
             )}
             {section === "orders" && (
               <section className="inv-card">
-                <h2>Imported channel orders</h2>
+                <h2>Orders &amp; fulfillment</h2>
                 <p>
                   New website orders reserve stock immediately. Shipment
-                  consumes stock; cancellation releases reservations. Use
-                  Integrations to pull current orders.
+                  consumes stock; cancellation releases reservations. Process
+                  and ship website orders here; admin updates automatically.
+                  Update Etsy shipments on Etsy, then sync.
                 </p>
                 <Table
                   headers={[
@@ -681,6 +684,7 @@ export default function Inventory() {
                     "Payment",
                     "Stock status",
                     "Created",
+                    "Fulfillment",
                   ]}
                   rows={data.orders.map((o: Row) => [
                     o.channel,
@@ -692,6 +696,82 @@ export default function Inventory() {
                     o.payment_status || "—",
                     o.status,
                     date(o.created_at),
+                    o.channel === "website" ? (
+                      <div className="inv-actions">
+                        {["placed", "processing"].includes(
+                          o.website_status,
+                        ) && (
+                          <>
+                            {o.website_status === "placed" && (
+                              <button
+                                disabled={busy}
+                                className="inv-secondary"
+                                onClick={() =>
+                                  void run(
+                                    () =>
+                                      api(`/orders/${o.id}/fulfillment`, {
+                                        status: "processing",
+                                      }),
+                                    "Order marked processing in admin and inventory.",
+                                  )
+                                }
+                              >
+                                Process
+                              </button>
+                            )}
+                            <button
+                              disabled={busy}
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    `Mark order ${o.external_id} shipped? This deducts its reserved physical stock and updates admin.`,
+                                  )
+                                )
+                                  void run(
+                                    () =>
+                                      api(`/orders/${o.id}/fulfillment`, {
+                                        status: "shipped",
+                                      }),
+                                    "Order shipped. Physical stock and reservations updated.",
+                                  );
+                              }}
+                            >
+                              <Truck size={14} /> Mark shipped
+                            </button>
+                          </>
+                        )}
+                        {o.website_status === "shipped" && (
+                          <button
+                            disabled={busy}
+                            onClick={() =>
+                              void run(
+                                () =>
+                                  api(`/orders/${o.id}/fulfillment`, {
+                                    status: "delivered",
+                                  }),
+                                "Order marked delivered.",
+                              )
+                            }
+                          >
+                            <Check size={14} /> Mark delivered
+                          </button>
+                        )}
+                        {o.website_status === "awaiting_payment" && (
+                          <span className="inv-badge inv-low">
+                            Awaiting payment
+                          </span>
+                        )}
+                        {["delivered", "cancelled"].includes(
+                          o.website_status,
+                        ) && (
+                          <span className="inv-badge">{o.website_status}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="inv-form-note">
+                        Ship on Etsy, then sync
+                      </span>
+                    ),
                   ])}
                 />
               </section>

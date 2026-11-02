@@ -1,3 +1,4 @@
+import { updateFulfillment } from "../services/orders.js";
 import { syncWebsiteOrder } from "../inventory/website.js";
 import { ensureInventorySchema } from "../inventory/schema.js";
 import express from "express";
@@ -84,7 +85,7 @@ router.get("/data", async (_req, res) => {
       q(
         "SELECT m.*,i.sku FROM inv_mappings m JOIN inv_items i ON i.id=m.item_id ORDER BY m.id DESC",
       ),
-      q(`SELECT o.*,w.status website_status,w.payment_status,
+      q(`SELECT o.*,w.id website_order_id,w.status website_status,w.payment_status,w.payment_method,
           COALESCE((SELECT json_agg(json_build_object('sku',i.sku,'name',i.name,'quantity',l.quantity) ORDER BY l.item_id) FROM inv_order_lines l JOIN inv_items i ON i.id=l.item_id WHERE l.order_id=o.id),'[]'::json) items
           FROM inv_orders o LEFT JOIN orders w ON o.channel='website' AND w.order_number=o.external_id ORDER BY o.id DESC LIMIT 200`),
       q(
@@ -103,6 +104,28 @@ router.get("/data", async (_req, res) => {
     products: products.rows,
     integrations: integrations.rows,
   });
+});
+router.post("/orders/:id/fulfillment", async (req, res) => {
+  const order = (
+    await q(
+      "SELECT w.id FROM inv_orders i JOIN orders w ON i.channel='website' AND i.external_id=w.order_number WHERE i.id=$1",
+      [integer(req.params.id)],
+    )
+  ).rows[0];
+  if (!order)
+    throw bad(
+      "Only website orders can be fulfilled here. Update Etsy shipments on Etsy, then sync.",
+      404,
+    );
+  if (!["processing", "shipped", "delivered"].includes(req.body.status))
+    throw bad("Choose processing, shipped or delivered.");
+  res.json(
+    await updateFulfillment(
+      String(order.id),
+      req.body.status,
+      String(req.adminAccount!.id),
+    ),
+  );
 });
 router.post("/items", async (req, res) => {
   const b = req.body;
