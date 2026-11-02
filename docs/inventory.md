@@ -1,36 +1,50 @@
-# Inventory workspace
+# Inventory workspace and website stock
 
-Visit `/inventory` and sign in with an active staff account. Inventory has its own cookie and session table, so signing out does not end an admin session. No admin components or existing commerce write paths are changed.
+`/inventory` uses active admin staff credentials with a separate session. Inventory tables use `inv_` prefixes in the existing database and initialize automatically on first use. No admin layout changes are required.
 
-## Installation
+## Stock setup
 
-Use the existing `DATABASE_URL` pointing to `crysmona`. Inventory automatically creates its missing `inv_` tables on the first inventory API request, including on Vercel. You may also run `npm run db:migrate:inventory` explicitly before deployment. This additive migration creates only `inv_` tables; it does not modify existing tables or seed inventory stock. Deploy the application normally to expose `/inventory` on the existing domain.
+1. Create an inventory item and record physical stock using **Stock movements → Receive stock**.
+2. In **SKU mappings**, map the exact website product SKU to the inventory item with channel **Website**. A product reference alone is not a stock mapping.
+3. Website availability is **physical − reserved**. An unmapped product has zero available stock and cannot be purchased. Multiple channel SKUs may share one inventory item.
+4. Manage quantities through inventory. The old product stock column is no longer authoritative; admin product listings/export and website reads show inventory availability. Legacy stock edits do not change available units.
 
-1. Add inventory items. Optionally link existing website products to display their description/image without copying prices or customer details.
-2. Receive opening physical quantities from Stock movements. Set a shelf/bin and reorder threshold on creation.
-3. Map every website and Etsy SKU before syncing. Multiple channel SKUs can map to one physical inventory item; Etsy listing IDs are optional references.
-4. Sync website or Etsy orders from Integrations. Sync is explicitly manual. No stock quantities are pushed back to the website or Etsy.
+## Website order flow
 
-**Opening stock:** Order imports include historical paid orders. Opening physical quantities must account for those sales before the first sync. A previously unseen shipped order deducts physical stock once; an open paid order reserves stock. When an imported open order ships, its reservation and physical stock decrease together; cancellation releases its reservation. Unpaid orders are ignored. Completed historical records are retained and not re-applied. Terminal orders are not reopened, and refunds/line edits after import require a documented manual adjustment. Do not manually release a channel reservation; allow the channel order status to drive it.
+Creating a website order (COD or pending PayPal) writes the normal admin order, its inventory order, its item quantities and the stock reservation in the same transaction. If stock is insufficient, the whole order is rolled back. Competing checkouts cannot reserve the same available units twice.
 
-Imports lock each order and update its stock/ledger atomically. Unmapped SKUs or insufficient stock roll back that order and stop the sync with a visible error; prior successful orders remain committed and retries are safe. No customer details, shipping addresses, website prices or discounts are copied. History shows the latest 100 syncs and 200 movements/orders; older rows remain in the database.
+Example: physical 50, reserved 0 → order for 2 → physical 50, reserved 2, available 48. Shipping that order → physical 48, reserved 0, available 48. Cancelling an unshipped order instead releases its reservation and restores available stock.
 
-## Etsy configuration
+- New orders appear in admin and inventory automatically; no manual website sync is needed for new checkouts.
+- Inventory orders show the website order status, payment status, SKUs and quantities. The inventory screen refreshes every 30 seconds while visible, or immediately with Refresh.
+- Admin fulfillment updates and inventory stock changes commit together. Shipment consumes reserved physical stock once; delivery does not deduct again. Fulfillment cannot move backwards.
+- Customer cancellation and abandoned/failed PayPal checkout release reservations once. Pending PayPal review retains the hold. Live PayPal provider behavior still requires configured credentials.
+- Prices, discounts, descriptions, images, customers and payments remain in the normal website tables. Inventory stores operational order references and quantities, without copying customer addresses.
 
-Register an Etsy app and set these server-only environment variables:
+## Existing orders and reconciliation
+
+**Sync website orders** reconciles existing non-draft orders through the same idempotent stock lifecycle. Older orders must have SKU mappings and sufficient stock before reconciliation. It stops on an unmapped SKU or insufficient stock; previously successful orders stay committed and retries are safe.
+
+Before cutover, reconcile outstanding orders and past shipments with your opening stock. A previously unseen shipped order deducts physical units once. An open order reserves units, including pending COD/PayPal orders. An older cancelled order without an inventory record has no stock effect. Previously imported orders are not deducted again.
+
+Do not manually release reservations owned by an imported order. Refunds/returns after shipment and edits to imported line quantities need a documented stock adjustment; terminal inventory orders cannot be reopened. History displays the latest 100 syncs and 200 movements/orders; older records remain stored.
+
+## Etsy
+
+Etsy receipt imports remain manual and never publish quantities back to Etsy. Map Etsy SKUs before importing. Optional listing IDs are local references.
+
+Set these server-only environment variables:
 
 - `ETSY_CLIENT_ID`: app keystring.
-- `ETSY_SHARED_SECRET`: app shared secret (sent with keystring in the x-api-key header).
+- `ETSY_SHARED_SECRET`: app shared secret.
 - `ETSY_SHOP_ID`: numeric shop ID.
-- `ETSY_REDIRECT_URI`: `https://crysmona.vercel.app/api/inventory/etsy/callback`, also registered in the Etsy app.
-- `INV_ENCRYPTION_KEY`: a base64-encoded 32-byte cryptographically random key. Generate with `openssl rand -base64 32`. Keep it stable and secret; changing it requires reconnecting Etsy.
+- `ETSY_REDIRECT_URI`: `https://crysmona.vercel.app/api/inventory/etsy/callback`, registered in your Etsy app.
+- `INV_ENCRYPTION_KEY`: base64 encoded 32-byte random key. Generate with `openssl rand -base64 32` and keep stable.
 
-Connect Etsy from Integrations, approve read access to orders, then sync. The OAuth flow uses PKCE, a one-use state tied to the inventory session, ten-minute expiry, encrypted AES-256-GCM token storage, and token refresh. The inventory session must still be active when returning from Etsy. A missing SKU in an Etsy transaction is surfaced as an import error and must be corrected in Etsy. Listing mapping is maintained locally; listing publication and stock push are outside this implementation.
+Connect Etsy from Integrations and approve order read access. OAuth uses PKCE, session-bound expiring state, AES-256-GCM encrypted tokens and token refresh. Official reference: https://developer.etsy.com/documentation/essentials/authentication/
 
-Official reference: https://developer.etsy.com/documentation/essentials/authentication/
+## Deployment and checks
 
-## Checks
+Deploy the updated code normally. Existing inventory tables are reused; no extra migration is needed for website-driven availability. The additive explicit installer remains available as `npm run db:migrate:inventory`.
 
-`npm run build`, `npm run check:server`, `npm run test:inventory`. To run tests where the tsx CLI cannot open its local IPC pipe: `node --import tsx --test tests/inventory.test.ts`.
-
-Back up before deployment and run the migration against your normal database. Inventory schema installation runs only on inventory API requests and remains separate from existing `db:setup`; existing setup behavior stays unchanged.
+Checks: `npm run build`, `npm run check:server`, `node --import tsx --test tests/inventory.test.ts`. Against an isolated test database with the existing schema/seed and an active development admin, run `INV_TEST_DATABASE=1 DATABASE_URL=... node --import tsx --test tests/inventory-checkout-db.test.ts tests/inventory-db.test.ts`. Never point fixture tests at production.

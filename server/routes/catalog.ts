@@ -1,3 +1,5 @@
+import { ensureInventorySchema } from "../inventory/schema.js";
+import { WEBSITE_STOCK_SQL } from "../inventory/website.js";
 import express from "express";
 import { bad } from "../lib/errors.js";
 import { dto } from "../services/catalog.js";
@@ -7,18 +9,20 @@ const app = express.Router();
 // Product reads release stock held by abandoned PayPal checkouts first, so shoppers
 // do not see items as sold out that nobody paid for (at most one check a minute).
 app.get("/api/products", async (_req, res) => {
+  await ensureInventorySchema();
   await expireUnpaidOrders();
   const { rows } = await q(
-    `SELECT p.*, COALESCE((SELECT json_agg(i ORDER BY i.sort_order,i.id) FROM product_media i WHERE i.product_id=p.id), '[]'::json) images
+    `SELECT p.*, ${WEBSITE_STOCK_SQL} AS stock_qty, COALESCE((SELECT json_agg(i ORDER BY i.sort_order,i.id) FROM product_media i WHERE i.product_id=p.id), '[]'::json) images
      FROM products p LEFT JOIN admin_record_order o ON o.resource='products' AND o.record_id=p.id
      WHERE p.active=true ORDER BY o.position NULLS LAST,p.created_at,p.name`,
   );
   res.json(rows.map(dto));
 });
 app.get("/api/products/:slug", async (req, res) => {
+  await ensureInventorySchema();
   await expireUnpaidOrders();
   const { rows } = await q(
-    "SELECT * FROM products WHERE slug=$1 AND active=true",
+    `SELECT p.*, ${WEBSITE_STOCK_SQL} AS stock_qty FROM products p WHERE p.slug=$1 AND p.active=true`,
     [req.params.slug],
   );
   if (!rows[0]) throw bad("Product not found.", 404);

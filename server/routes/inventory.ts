@@ -1,3 +1,4 @@
+import { syncWebsiteOrder } from "../inventory/website.js";
 import { ensureInventorySchema } from "../inventory/schema.js";
 import express from "express";
 import { randomBytes, createHash } from "node:crypto";
@@ -83,7 +84,9 @@ router.get("/data", async (_req, res) => {
       q(
         "SELECT m.*,i.sku FROM inv_mappings m JOIN inv_items i ON i.id=m.item_id ORDER BY m.id DESC",
       ),
-      q("SELECT * FROM inv_orders ORDER BY id DESC LIMIT 200"),
+      q(`SELECT o.*,w.status website_status,w.payment_status,
+          COALESCE((SELECT json_agg(json_build_object('sku',i.sku,'name',i.name,'quantity',l.quantity) ORDER BY l.item_id) FROM inv_order_lines l JOIN inv_items i ON i.id=l.item_id WHERE l.order_id=o.id),'[]'::json) items
+          FROM inv_orders o LEFT JOIN orders w ON o.channel='website' AND w.order_number=o.external_id ORDER BY o.id DESC LIMIT 200`),
       q(
         "SELECT m.*,i.sku FROM inv_movements m JOIN inv_items i ON i.id=m.item_id ORDER BY m.id DESC LIMIT 200",
       ),
@@ -255,27 +258,21 @@ router.post("/sync/:channel", async (req, res) => {
     if (channel === "website") {
       const orders = (
         await q(
-          "SELECT id,order_number,status FROM orders WHERE payment_status='paid' OR status='cancelled' ORDER BY id",
+          "SELECT id,order_number,status FROM orders WHERE status<>'draft' ORDER BY id",
         )
       ).rows;
       for (const order of orders) {
-        const lines = (
-          await q(
-            "SELECT sku,quantity FROM order_items WHERE order_id=$1 ORDER BY id",
-            [order.id],
-          )
-        ).rows;
-        await importOrder(
-          channel,
-          order.order_number,
-          order.status === "cancelled"
-            ? "cancelled"
-            : ["shipped", "delivered", "completed"].includes(order.status)
-              ? "shipped"
-              : "open",
-          lines,
-          req.adminAccount!.email,
-        );
+        const c = await pool.connect();
+        try {
+          await c.query("BEGIN");
+          await syncWebsiteOrder(c, order.id, req.adminAccount!.email);
+          await c.query("COMMIT");
+        } catch (error) {
+          await c.query("ROLLBACK");
+          throw error;
+        } finally {
+          c.release();
+        }
         count++;
       }
     } else {

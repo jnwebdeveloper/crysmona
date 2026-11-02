@@ -68,7 +68,12 @@ export default function Inventory() {
     }
   }
   useEffect(() => {
-    if (user) void load();
+    if (!user) return;
+    void load();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, 30000);
+    return () => window.clearInterval(timer);
   }, [user]);
   async function run(work: () => Promise<unknown>, message: string) {
     setBusy(true);
@@ -477,20 +482,28 @@ export default function Inventory() {
               <section className="inv-card">
                 <h2>Imported channel orders</h2>
                 <p>
-                  Open paid orders reserve stock. Shipment consumes stock;
-                  cancellation releases reservations. Use Integrations to pull
-                  current orders.
+                  New website orders reserve stock immediately. Shipment
+                  consumes stock; cancellation releases reservations. Use
+                  Integrations to pull current orders.
                 </p>
                 <Table
                   headers={[
                     "Channel",
                     "Order reference",
+                    "Items / quantity",
+                    "Order status",
+                    "Payment",
                     "Stock status",
-                    "Imported",
+                    "Created",
                   ]}
                   rows={data.orders.map((o: Row) => [
                     o.channel,
                     o.external_id,
+                    (o.items || [])
+                      .map((i: Row) => `${i.sku} × ${i.quantity}`)
+                      .join(", "),
+                    o.website_status || o.status,
+                    o.payment_status || "—",
                     o.status,
                     date(o.created_at),
                   ])}
@@ -502,11 +515,11 @@ export default function Inventory() {
                 <div className="inv-integrations">
                   <section className="inv-card">
                     <h2>Website</h2>
-                    <span className="inv-badge">Read-only source</span>
+                    <span className="inv-badge">Inventory-driven</span>
                     <p>
-                      Import paid orders and cancellations using mapped SKUs.
-                      Existing customer data, pricing and store stock are not
-                      modified.
+                      Website availability comes from inventory. New orders
+                      reserve stock automatically and appear here and in admin.
+                      Use sync to reconcile older orders.
                     </p>
                     <button
                       disabled={busy}
@@ -565,11 +578,12 @@ export default function Inventory() {
                 <section className="inv-card">
                   <h2>Before your first sync</h2>
                   <p>
-                    Record current physical stock and map all channel SKUs
-                    first. Imports include historical paid orders, so use
-                    opening quantities that account for those sales. Syncs are
-                    manual and never publish quantities back to either
-                    storefront.
+                    Map website SKUs and record stock before selling. Available
+                    stock is physical minus reserved; unmapped products are
+                    unavailable. Website orders update inventory automatically.
+                    Manual reconciliation includes historical orders, so account
+                    for past shipments in opening stock. Etsy imports remain
+                    manual.
                   </p>
                 </section>
                 <section className="inv-card">

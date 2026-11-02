@@ -47,7 +47,7 @@ test("guest bag is saved and reloaded under the cookie owner, with stock validat
     async () =>
       ({
         query: async (sql: string, args: any[]) => {
-          if (sql.startsWith("SELECT id,stock_qty"))
+          if (sql.startsWith("SELECT p.id,") && sql.includes("FROM inv_mappings"))
             return { rows: [{ id: 1, stock_qty: 3 }] };
           if (sql.startsWith("INSERT INTO carts")) {
             writes.push(args);

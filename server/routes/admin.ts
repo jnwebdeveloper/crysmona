@@ -1,3 +1,5 @@
+import { ensureInventorySchema } from "../inventory/schema.js";
+import { WEBSITE_STOCK_SQL } from "../inventory/website.js";
 import { validOrder } from "../../shared/adminLists.js";
 import { randomUUID } from "node:crypto";
 import { admin } from "../auth/admin/index.js";
@@ -6,10 +8,14 @@ import { resources } from "../../shared/adminSchema.js";
 import { adminValidation } from "../../shared/adminValidation.js";
 import { bad } from "../lib/errors.js";
 import { pool, q } from "../lib/db.js";
-import { expireUnpaidOrders } from "../services/orders.js";
+import { expireUnpaidOrders, updateFulfillment } from "../services/orders.js";
 import { paypalReady } from "../services/paypal.js";
 import { claimMedia, MediaFolder } from "../services/storage.js";
 const app = express.Router();
+app.use("/api/admin", admin, async (_req, _res, next) => {
+  await ensureInventorySchema();
+  next();
+});
 app.get("/api/admin/dashboard", admin, async (_req, res) => {
   await expireUnpaidOrders();
   const [p, o, u, e] = await Promise.all([
@@ -26,7 +32,7 @@ app.get("/api/admin/dashboard", admin, async (_req, res) => {
       "SELECT COALESCE(round(avg(total_cents)),0)::bigint total FROM orders WHERE status NOT IN ('cancelled','draft')",
     ),
     q(
-      "SELECT count(*)::int count FROM products WHERE active=true AND stock_qty<=5",
+      `SELECT count(*)::int count FROM products p WHERE active=true AND ${WEBSITE_STOCK_SQL}<=5`,
     ),
     q(
       "SELECT i.product_name,sum(i.quantity)::int units FROM order_items i JOIN orders o ON o.id=i.order_id WHERE o.status<>'cancelled' GROUP BY i.product_name ORDER BY units DESC LIMIT 5",
@@ -79,7 +85,8 @@ function validUrl(value: any) {
 }
 // Export every product, including unpublished items and the complete gallery.
 app.get("/api/admin/products/export", admin, async (_req, res) => {
-  const { rows } = await q(`SELECT p.*, c.name AS category_name, c.slug AS category_slug,
+  const { rows } =
+    await q(`SELECT p.*, ${WEBSITE_STOCK_SQL} AS stock_qty, c.name AS category_name, c.slug AS category_slug,
     COALESCE((SELECT json_agg(i ORDER BY i.sort_order,i.id) FROM product_media i WHERE i.product_id=p.id), '[]'::json) AS gallery
     FROM products p LEFT JOIN categories c ON c.id=p.category_id ORDER BY p.id`);
   res.set("Cache-Control", "no-store");
@@ -163,7 +170,9 @@ export async function saveProduct(
       "products",
       [
         product.image_url,
-        ...(Array.isArray(images) ? images.map((image: any) => image.media_url) : []),
+        ...(Array.isArray(images)
+          ? images.map((image: any) => image.media_url)
+          : []),
       ],
       product.id,
     );
@@ -359,7 +368,7 @@ for (const [table, definition] of Object.entries(resources)) {
     res.json(
       (
         await q(
-          `SELECT t.*, COALESCE(o.position, ${definition.fields.some((f) => f.key === "sort_order") ? "t.sort_order" : "t.id"}) AS list_priority FROM ${table} t LEFT JOIN admin_record_order o ON o.resource=$1 AND o.record_id=t.id ORDER BY list_priority,t.id`,
+          `SELECT t.*, ${table === "products" ? WEBSITE_STOCK_SQL.replaceAll("p.sku", "t.sku") + " AS stock_qty," : ""} COALESCE(o.position, ${definition.fields.some((f) => f.key === "sort_order") ? "t.sort_order" : "t.id"}) AS list_priority FROM ${table} t LEFT JOIN admin_record_order o ON o.resource=$1 AND o.record_id=t.id ORDER BY list_priority,t.id`,
           [table],
         )
       ).rows,
@@ -444,6 +453,16 @@ for (const [table, definition] of Object.entries(resources)) {
       ).rows[0];
       if (order?.status !== "draft")
         throw bad("Only draft order line items can be edited.");
+    }
+    if (table === "orders" && existing.status !== "draft") {
+      res.json(
+        await updateFulfillment(
+          String(req.params.id),
+          values.status,
+          String(req.adminAccount?.id || ""),
+        ),
+      );
+      return;
     }
     const keys = Object.keys(values);
     const { rows } = await q(

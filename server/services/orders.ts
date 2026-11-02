@@ -1,3 +1,9 @@
+import { ensureInventorySchema } from "../inventory/schema.js";
+import {
+  WEBSITE_STOCK_SQL,
+  syncWebsiteOrder,
+  releaseWebsiteOrder,
+} from "../inventory/website.js";
 import crypto from "node:crypto";
 import type { PoolClient } from "pg";
 import { pool, q } from "../lib/db.js";
@@ -40,20 +46,17 @@ async function transaction<T>(work: (c: PoolClient) => Promise<T>): Promise<T> {
   }
 }
 
-async function restoreStock(c: Queryable, orderId: string) {
-  const lines = await c.query(
-    "SELECT product_id,quantity FROM order_items WHERE order_id=$1",
-    [orderId],
-  );
-  for (const l of lines.rows)
-    if (l.product_id)
-      await c.query("UPDATE products SET stock_qty=stock_qty+$1 WHERE id=$2", [
-        l.quantity,
-        l.product_id,
-      ]);
+async function restoreStock(c: PoolClient, orderId: string) {
+  await releaseWebsiteOrder(c, orderId);
 }
 
-const addHistory = (c: Queryable, orderId: string, status: string, note: string, actor: string) =>
+const addHistory = (
+  c: Queryable,
+  orderId: string,
+  status: string,
+  note: string,
+  actor: string,
+) =>
   c.query(
     "INSERT INTO order_status_history(order_id,status,note,actor) VALUES($1,$2,$3,$4)",
     [orderId, status, note, actor],
@@ -61,7 +64,12 @@ const addHistory = (c: Queryable, orderId: string, status: string, note: string,
 
 // ---- pricing ----------------------------------------------------------------
 
-export async function quote(items: any[], coupon: string, client: Queryable = pool) {
+export async function quote(
+  items: any[],
+  coupon: string,
+  client: Queryable = pool,
+) {
+  await ensureInventorySchema();
   if (!Array.isArray(items) || !items.length || items.length > 100)
     throw bad("Your bag is empty or invalid.");
   const grouped = new Map<string, number>();
@@ -72,10 +80,12 @@ export async function quote(items: any[], coupon: string, client: Queryable = po
   }
   let subtotal = 0;
   const lines = [];
-  for (const [slug, qty] of [...grouped].sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [slug, qty] of [...grouped].sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
     if (qty > 99) throw bad("Quantity must be between 1 and 99 per product.");
     const { rows } = await client.query(
-      "SELECT * FROM products WHERE slug=$1 AND active=true",
+      `SELECT p.*, ${WEBSITE_STOCK_SQL} AS stock_qty FROM products p WHERE p.slug=$1 AND p.active=true`,
       [slug],
     );
     const p = rows[0];
@@ -85,7 +95,9 @@ export async function quote(items: any[], coupon: string, client: Queryable = po
     lines.push({ product: p, qty });
   }
   const settings = await client.query("SELECT key,value FROM settings");
-  const config = Object.fromEntries(settings.rows.map((r: any) => [r.key, r.value]));
+  const config = Object.fromEntries(
+    settings.rows.map((r: any) => [r.key, r.value]),
+  );
   const shipping =
     subtotal >= Number(config.free_shipping_threshold_cents ?? 500000)
       ? 0
@@ -98,7 +110,9 @@ export async function quote(items: any[], coupon: string, client: Queryable = po
     );
     const c = rows[0];
     if (!c || subtotal < c.min_order_cents)
-      throw bad("This discount code is unavailable or the minimum order is not met.");
+      throw bad(
+        "This discount code is unavailable or the minimum order is not met.",
+      );
     discount = Math.min(
       subtotal,
       c.discount_type === "percent"
@@ -106,12 +120,25 @@ export async function quote(items: any[], coupon: string, client: Queryable = po
         : c.discount_value,
     );
   }
-  return { subtotal, shipping, discount, total: subtotal + shipping - discount, lines };
+  return {
+    subtotal,
+    shipping,
+    discount,
+    total: subtotal + shipping - discount,
+    lines,
+  };
 }
 
 // ---- placing an order -------------------------------------------------------
 
-const REQUIRED_ADDRESS = ["name", "email", "line1", "city", "postal_code", "country"];
+const REQUIRED_ADDRESS = [
+  "name",
+  "email",
+  "line1",
+  "city",
+  "postal_code",
+  "country",
+];
 
 export async function placeOrder(input: {
   userId: number;
@@ -131,18 +158,12 @@ export async function placeOrder(input: {
     if (!String(address?.[field] || "").trim())
       throw bad("Complete your contact and delivery address.");
   // Free stock held by abandoned PayPal checkouts before reserving it again.
+  await ensureInventorySchema();
   await expireUnpaidOrders();
 
   // Price, reserve stock and record the order atomically.
   const order = await transaction(async (c) => {
     const result = await quote(items, coupon, c);
-    for (const l of result.lines) {
-      const r = await c.query(
-        "UPDATE products SET stock_qty=stock_qty-$1 WHERE id=$2 AND stock_qty>=$1",
-        [l.qty, l.product.id],
-      );
-      if (!r.rowCount) throw bad("Stock changed. Please update your bag.");
-    }
     const number = "CRY-" + crypto.randomBytes(6).toString("hex").toUpperCase();
     const status = paymentMethod === "paypal" ? "awaiting_payment" : "placed";
     const { rows } = await c.query(
@@ -166,8 +187,17 @@ export async function placeOrder(input: {
     for (const l of result.lines)
       await c.query(
         "INSERT INTO order_items(order_id,product_id,product_name,sku,unit_price_cents,quantity,image_url) VALUES($1,$2,$3,$4,$5,$6,$7)",
-        [created.id, l.product.id, l.product.name, l.product.sku, l.product.price_cents, l.qty, l.product.image_url],
+        [
+          created.id,
+          l.product.id,
+          l.product.name,
+          l.product.sku,
+          l.product.price_cents,
+          l.qty,
+          l.product.image_url,
+        ],
       );
+    await syncWebsiteOrder(c, created.id);
     await addHistory(c, created.id, status, "Order created", "customer");
     return created;
   });
@@ -200,11 +230,24 @@ export async function placeOrder(input: {
       order.paypal_amount,
       origin,
     );
-    await q("UPDATE orders SET paypal_order_id=$1 WHERE id=$2", [paypalOrderId, order.id]);
-    return { kind: "redirect" as const, body: { redirect: approveUrl, reference: order.id } };
+    await q("UPDATE orders SET paypal_order_id=$1 WHERE id=$2", [
+      paypalOrderId,
+      order.id,
+    ]);
+    return {
+      kind: "redirect" as const,
+      body: { redirect: approveUrl, reference: order.id },
+    };
   } catch (error) {
-    log.warn("paypal order creation failed; releasing stock", { requestId, orderId: order.id });
-    await releaseUnpaidOrder(String(order.id), userId, "PayPal checkout could not be started");
+    log.warn("paypal order creation failed; releasing stock", {
+      requestId,
+      orderId: order.id,
+    });
+    await releaseUnpaidOrder(
+      String(order.id),
+      userId,
+      "PayPal checkout could not be started",
+    );
     throw error;
   }
 }
@@ -214,7 +257,12 @@ export async function placeOrder(input: {
 // whose capture PayPal is still reviewing (payment_status 'under_review'): money may
 // still arrive. Internal callers (capture, webhook) pass no userId to release an
 // order PayPal declined.
-export async function releaseUnpaidOrder(orderId: string, userId: number | null, note: string) {
+export async function releaseUnpaidOrder(
+  orderId: string,
+  userId: number | null,
+  note: string,
+) {
+  await ensureInventorySchema();
   const released = await transaction(async (c) => {
     const { rows } = await c.query(
       userId === null
@@ -226,7 +274,10 @@ export async function releaseUnpaidOrder(orderId: string, userId: number | null,
     if (!order) throw bad("Order not found.", 404);
     if (order.status !== "awaiting_payment") return false;
     if (userId !== null && order.payment_status === "under_review")
-      throw bad("PayPal is still reviewing this payment, so it can no longer be cancelled here.", 409);
+      throw bad(
+        "PayPal is still reviewing this payment, so it can no longer be cancelled here.",
+        409,
+      );
     await restoreStock(c, order.id);
     await c.query(
       "UPDATE orders SET status='cancelled',payment_status='failed',cancelled_at=now(),updated_at=now() WHERE id=$1",
@@ -254,7 +305,8 @@ async function markOrderPaid(
     const current = (
       await c.query("SELECT * FROM orders WHERE id=$1 FOR UPDATE", [orderId])
     ).rows[0];
-    if (current.payment_status === "paid") return { orderNumber: current.order_number as string };
+    if (current.payment_status === "paid")
+      return { orderNumber: current.order_number as string };
     if (current.status !== "awaiting_payment") {
       log.error("paypal captured for an order no longer awaiting payment", {
         requestId,
@@ -269,16 +321,28 @@ async function markOrderPaid(
       [capture.captureId, orderId],
     );
     await addHistory(c, orderId, "placed", "PayPal payment captured", "system");
-    const user = (await c.query("SELECT email,phone FROM users WHERE id=$1", [current.user_id])).rows[0];
+    const user = (
+      await c.query("SELECT email,phone FROM users WHERE id=$1", [
+        current.user_id,
+      ])
+    ).rows[0];
     const recipient = user?.email || user?.phone;
     if (recipient)
       await c.query(
         "INSERT INTO notification_outbox(user_id,order_id,channel,template,recipient,payload) VALUES($1,$2,$3,'order_confirmed',$4,$5)",
-        [current.user_id, orderId, user.email ? "email" : "sms", recipient, JSON.stringify({ orderNumber: current.order_number })],
+        [
+          current.user_id,
+          orderId,
+          user.email ? "email" : "sms",
+          recipient,
+          JSON.stringify({ orderNumber: current.order_number }),
+        ],
       );
     if (current.coupon_code) {
       const cp = (
-        await c.query("SELECT id FROM coupons WHERE upper(code)=upper($1)", [current.coupon_code])
+        await c.query("SELECT id FROM coupons WHERE upper(code)=upper($1)", [
+          current.coupon_code,
+        ])
       ).rows[0];
       if (cp) {
         await c.query(
@@ -305,7 +369,11 @@ async function markOrderPaid(
 // Records that PayPal is holding the payment. Stock stays reserved and the order
 // stays awaiting payment until a webhook, or the customer reopening the PayPal return
 // page, finds the capture completed or denied.
-async function markCaptureUnderReview(orderId: string, captureId: string, reason?: string) {
+async function markCaptureUnderReview(
+  orderId: string,
+  captureId: string,
+  reason?: string,
+) {
   const r = await q(
     "UPDATE orders SET payment_status='under_review',paypal_capture_id=$1,updated_at=now() WHERE id=$2 AND status='awaiting_payment' AND payment_status='pending'",
     [captureId, orderId],
@@ -313,7 +381,10 @@ async function markCaptureUnderReview(orderId: string, captureId: string, reason
   if (r.rowCount)
     await q(
       "INSERT INTO order_status_history(order_id,status,note,actor) VALUES($1,'awaiting_payment',$2,'system')",
-      [orderId, "PayPal is reviewing the payment" + (reason ? " (" + reason + ")" : "")],
+      [
+        orderId,
+        "PayPal is reviewing the payment" + (reason ? " (" + reason + ")" : ""),
+      ],
     );
   log.warn("paypal capture pending", { orderId, captureId, reason });
 }
@@ -331,11 +402,14 @@ export async function capturePayment(input: {
   requestId?: string;
 }): Promise<CaptureResponse> {
   const { orderId, userId, paypalToken, requestId } = input;
-  const o = (await q(CAPTURE_SELECT + " WHERE id=$1 AND user_id=$2", [orderId, userId])).rows[0];
+  const o = (
+    await q(CAPTURE_SELECT + " WHERE id=$1 AND user_id=$2", [orderId, userId])
+  ).rows[0];
   if (!o || o.paypal_order_id !== paypalToken)
     throw bad("This payment does not belong to your order.", 403);
   if (o.payment_status === "paid") return { orderNumber: o.order_number };
-  if (o.status !== "awaiting_payment") throw bad("This order is no longer awaiting payment.");
+  if (o.status !== "awaiting_payment")
+    throw bad("This order is no longer awaiting payment.");
   return settlePayment(o, requestId);
 }
 
@@ -357,7 +431,11 @@ async function settlePayment(
     known ??
     (o.payment_status === "under_review" && o.paypal_capture_id
       ? await getPayPalCapture(o.paypal_capture_id, o.paypal_amount)
-      : await capturePayPalOrder(o.paypal_order_id, o.paypal_amount, o.order_number + "-capture"));
+      : await capturePayPalOrder(
+          o.paypal_order_id,
+          o.paypal_amount,
+          o.order_number + "-capture",
+        ));
 
   if (outcome.state === "pending") {
     await markCaptureUnderReview(o.id, outcome.captureId, outcome.reason);
@@ -365,13 +443,19 @@ async function settlePayment(
   }
   if (outcome.state === "declined") {
     await releaseUnpaidOrder(o.id, null, "PayPal declined the payment");
-    throw bad("PayPal declined this payment. Your bag is saved; please try another payment method.", 402);
+    throw bad(
+      "PayPal declined this payment. Your bag is saved; please try another payment method.",
+      402,
+    );
   }
   if (outcome.state !== "completed")
     throw bad("Payment is not yet confirmed. Please try again.", 409);
   const paid = await markOrderPaid(o.id, outcome, requestId);
   if (!paid)
-    throw bad("This order was cancelled before payment completed. Please contact us for a refund.", 409);
+    throw bad(
+      "This order was cancelled before payment completed. Please contact us for a refund.",
+      409,
+    );
   return paid;
 }
 
@@ -407,7 +491,9 @@ export async function expireUnpaidOrders() {
 
 async function expireUnpaidOrder(o: any) {
   try {
-    const paypal = o.paypal_order_id ? await getPayPalOrder(o.paypal_order_id) : null;
+    const paypal = o.paypal_order_id
+      ? await getPayPalOrder(o.paypal_order_id)
+      : null;
     // The customer approved (or PayPal already captured) but neither the return page
     // nor the webhook finished: complete the order instead of losing the sale.
     if (paypal?.status === "APPROVED") {
@@ -422,14 +508,21 @@ async function expireUnpaidOrder(o: any) {
       }
       // Captured, but not for this order's amount: release the stock and leave the
       // money for a person to reconcile in PayPal.
-      log.error("paypal capture does not match expired order; reconcile manually", {
-        orderId: o.id,
-        orderNumber: o.order_number,
-        captureId: paypal.capture.id,
-        capturedAmount: paypal.capture.amount?.value,
-        expectedAmount: o.paypal_amount,
-      });
-      await releaseUnpaidOrder(o.id, null, "PayPal payment did not match the order");
+      log.error(
+        "paypal capture does not match expired order; reconcile manually",
+        {
+          orderId: o.id,
+          orderNumber: o.order_number,
+          captureId: paypal.capture.id,
+          capturedAmount: paypal.capture.amount?.value,
+          expectedAmount: o.paypal_amount,
+        },
+      );
+      await releaseUnpaidOrder(
+        o.id,
+        null,
+        "PayPal payment did not match the order",
+      );
       return;
     }
     // Never approved, voided or expired at PayPal: nothing was charged.
@@ -443,17 +536,27 @@ async function expireUnpaidOrder(o: any) {
     }
     // Refusals from settlePayment (declined: order already released) are final.
     if (!status && error.status && error.status < 500) {
-      log.info("unpaid order settled by expiry check", { orderId: o.id, reason: error.message });
+      log.info("unpaid order settled by expiry check", {
+        orderId: o.id,
+        reason: error.message,
+      });
       return;
     }
     // PayPal or database outages: retried on a later sweep.
-    log.warn("unpaid order not expired", { orderId: o.id, reason: error.message });
+    log.warn("unpaid order not expired", {
+      orderId: o.id,
+      reason: error.message,
+    });
   }
 }
 
 async function expire(o: any, paypalStatus: string) {
   await releaseUnpaidOrder(o.id, null, "PayPal payment not completed in time");
-  log.info("unpaid paypal order expired", { orderId: o.id, orderNumber: o.order_number, paypalStatus });
+  log.info("unpaid paypal order expired", {
+    orderId: o.id,
+    orderNumber: o.order_number,
+    paypalStatus,
+  });
 }
 
 // ---- PayPal webhooks --------------------------------------------------------
@@ -474,14 +577,29 @@ const SETTLING_EVENTS = [
 // return page can race the webhook.
 export async function handlePayPalWebhook(event: any, requestId?: string) {
   if (!SETTLING_EVENTS.includes(event?.event_type)) {
-    log.info("paypal webhook ignored", { requestId, eventId: event?.id, type: event?.event_type });
+    log.info("paypal webhook ignored", {
+      requestId,
+      eventId: event?.id,
+      type: event?.event_type,
+    });
     return;
   }
   if (event.event_type === "CHECKOUT.ORDER.APPROVED") {
-    const o = (await q(CAPTURE_SELECT + " WHERE paypal_order_id=$1", [event.resource?.id || null]))
-      .rows[0];
-    if (!o || o.status !== "awaiting_payment" || o.payment_status !== "pending") {
-      log.info("paypal approval needs no capture", { requestId, eventId: event.id, found: Boolean(o) });
+    const o = (
+      await q(CAPTURE_SELECT + " WHERE paypal_order_id=$1", [
+        event.resource?.id || null,
+      ])
+    ).rows[0];
+    if (
+      !o ||
+      o.status !== "awaiting_payment" ||
+      o.payment_status !== "pending"
+    ) {
+      log.info("paypal approval needs no capture", {
+        requestId,
+        eventId: event.id,
+        found: Boolean(o),
+      });
       return;
     }
     try {
@@ -491,7 +609,12 @@ export async function handlePayPalWebhook(event: any, requestId?: string) {
       // already released a declined order. Only PayPal or database outages (5xx) are
       // rethrown so PayPal redelivers the event.
       if (!error.status || error.status >= 500) throw error;
-      log.warn("paypal approval capture refused", { requestId, eventId: event.id, orderId: o.id, reason: error.message });
+      log.warn("paypal approval capture refused", {
+        requestId,
+        eventId: event.id,
+        orderId: o.id,
+        reason: error.message,
+      });
     }
     return;
   }
@@ -529,28 +652,46 @@ export async function handlePayPalWebhook(event: any, requestId?: string) {
     await markOrderPaid(o.id, outcome, requestId);
     return;
   }
-  if (o.payment_status !== "paid") await releaseUnpaidOrder(o.id, null, "PayPal denied the payment");
+  if (o.payment_status !== "paid")
+    await releaseUnpaidOrder(o.id, null, "PayPal denied the payment");
 }
 
 // ---- customer cancellation --------------------------------------------------
 
 // Paid PayPal orders are refunded through PayPal; stock is restored once.
-export async function cancelOrder(input: { orderNumber: string; userId: number; requestId?: string }) {
+export async function cancelOrder(input: {
+  orderNumber: string;
+  userId: number;
+  requestId?: string;
+}) {
   const { orderNumber, userId, requestId } = input;
+  await ensureInventorySchema();
   // 1. Validate and, for a paid PayPal order, mark the refund as pending.
   const o = await transaction(async (c) => {
     const order = (
-      await c.query("SELECT * FROM orders WHERE order_number=$1 AND user_id=$2 FOR UPDATE", [orderNumber, userId])
+      await c.query(
+        "SELECT * FROM orders WHERE order_number=$1 AND user_id=$2 FOR UPDATE",
+        [orderNumber, userId],
+      )
     ).rows[0];
     if (!order) throw bad("Order not found.", 404);
     if (!["placed", "processing"].includes(order.status))
       throw bad("This order can no longer be cancelled.", 409);
-    if (order.payment_method === "paypal" && order.payment_status === "paid" && order.paypal_capture_id)
-      await c.query("UPDATE orders SET refund_status='pending',updated_at=now() WHERE id=$1", [order.id]);
+    if (
+      order.payment_method === "paypal" &&
+      order.payment_status === "paid" &&
+      order.paypal_capture_id
+    )
+      await c.query(
+        "UPDATE orders SET refund_status='pending',updated_at=now() WHERE id=$1",
+        [order.id],
+      );
     return order;
   });
   const needsRefund =
-    o.payment_method === "paypal" && o.payment_status === "paid" && o.paypal_capture_id;
+    o.payment_method === "paypal" &&
+    o.payment_status === "paid" &&
+    o.paypal_capture_id;
 
   // 2. Refund outside any transaction (idempotent per order via the request id).
   let refundId: string | undefined;
@@ -562,29 +703,50 @@ export async function cancelOrder(input: { orderNumber: string; userId: number; 
         o.order_number + "-refund",
       ));
     } catch (error) {
-      await q("UPDATE orders SET refund_status='failed',updated_at=now() WHERE id=$1", [o.id]);
+      await q(
+        "UPDATE orders SET refund_status='failed',updated_at=now() WHERE id=$1",
+        [o.id],
+      );
       throw error;
     }
   }
 
   // 3. Record the cancellation; a concurrent request may already have done so.
   await transaction(async (c) => {
-    const current = (await c.query("SELECT status FROM orders WHERE id=$1 FOR UPDATE", [o.id])).rows[0];
+    const current = (
+      await c.query("SELECT status FROM orders WHERE id=$1 FOR UPDATE", [o.id])
+    ).rows[0];
     if (current.status === "cancelled") return;
+    if (!["placed", "processing"].includes(current.status))
+      throw bad("This order can no longer be cancelled.", 409);
     if (needsRefund)
       await c.query(
         "UPDATE orders SET payment_status='refunded',refund_status='completed',refund_amount_cents=total_cents,refunded_at=now() WHERE id=$1",
         [o.id],
       );
     await restoreStock(c, o.id);
-    await c.query("UPDATE orders SET status='cancelled',cancelled_at=now(),updated_at=now() WHERE id=$1", [o.id]);
-    await addHistory(c, o.id, "cancelled", refundId ? "PayPal refund " + refundId : "Customer cancellation", "customer");
+    await c.query(
+      "UPDATE orders SET status='cancelled',cancelled_at=now(),updated_at=now() WHERE id=$1",
+      [o.id],
+    );
+    await addHistory(
+      c,
+      o.id,
+      "cancelled",
+      refundId ? "PayPal refund " + refundId : "Customer cancellation",
+      "customer",
+    );
     await c.query(
       "INSERT INTO audit_logs(actor_type,actor_id,action,entity_type,entity_id) VALUES('customer',$1,'cancel_order','order',$2)",
       [String(userId), String(o.id)],
     );
   });
-  log.info("order cancelled by customer", { requestId, orderId: o.id, orderNumber: o.order_number, refundId });
+  log.info("order cancelled by customer", {
+    requestId,
+    orderId: o.id,
+    orderNumber: o.order_number,
+    refundId,
+  });
   return { refunded: Boolean(refundId) };
 }
 
@@ -628,24 +790,85 @@ function toOrder(o: any, items: any[]) {
 
 export async function listOrders(userId: number) {
   const orders = (
-    await q("SELECT * FROM orders WHERE user_id=$1 ORDER BY created_at DESC", [userId])
+    await q("SELECT * FROM orders WHERE user_id=$1 ORDER BY created_at DESC", [
+      userId,
+    ])
   ).rows;
   if (!orders.length) return [];
   // One query for every order's lines instead of one query per order.
   const items = (
-    await q(ITEM_SELECT + " WHERE i.order_id = ANY($1) ORDER BY i.id", [orders.map((o) => o.id)])
+    await q(ITEM_SELECT + " WHERE i.order_id = ANY($1) ORDER BY i.id", [
+      orders.map((o) => o.id),
+    ])
   ).rows;
-  return orders.map((o) => toOrder(o, items.filter((i) => String(i.order_id) === String(o.id))));
+  return orders.map((o) =>
+    toOrder(
+      o,
+      items.filter((i) => String(i.order_id) === String(o.id)),
+    ),
+  );
 }
 
 export async function getOrder(orderNumber: string, userId: number) {
   const o = (
-    await q("SELECT * FROM orders WHERE order_number=$1 AND user_id=$2", [orderNumber, userId])
+    await q("SELECT * FROM orders WHERE order_number=$1 AND user_id=$2", [
+      orderNumber,
+      userId,
+    ])
   ).rows[0];
   if (!o) throw bad("Order not found.", 404);
   const [items, history] = await Promise.all([
     q(ITEM_SELECT + " WHERE order_id=$1 ORDER BY i.id", [o.id]),
-    q("SELECT status,note,actor,created_at FROM order_status_history WHERE order_id=$1 ORDER BY created_at", [o.id]),
+    q(
+      "SELECT status,note,actor,created_at FROM order_status_history WHERE order_id=$1 ORDER BY created_at",
+      [o.id],
+    ),
   ]);
   return { ...toOrder(o, items.rows), history: history.rows };
+}
+
+// Fulfillment and inventory move together; an error rolls both back.
+export async function updateFulfillment(
+  orderId: string,
+  status: string,
+  adminId: string,
+) {
+  await ensureInventorySchema();
+  return transaction(async (c) => {
+    const current = (
+      await c.query("SELECT * FROM orders WHERE id=$1 FOR UPDATE", [orderId])
+    ).rows[0];
+    if (!current) throw bad("Order not found.", 404);
+    const states = ["placed", "processing", "shipped", "delivered"];
+    if (
+      !states.includes(current.status) ||
+      !states.includes(status) ||
+      states.indexOf(status) < states.indexOf(current.status)
+    )
+      throw bad(
+        "Fulfillment cannot move backwards or change payment/cancellation states.",
+        409,
+      );
+    if (current.refund_status === "pending")
+      throw bad("A cancellation refund is in progress.", 409);
+    const updated = (
+      await c.query(
+        "UPDATE orders SET status=$2,updated_at=now() WHERE id=$1 RETURNING *",
+        [orderId, status],
+      )
+    ).rows[0];
+    await syncWebsiteOrder(c, orderId, "admin");
+    if (current.status !== status) {
+      await addHistory(c, orderId, status, "Status updated in admin", "admin");
+      await c.query(
+        "INSERT INTO audit_logs(actor_type,actor_id,action,entity_type,entity_id,metadata) VALUES('admin',$1,'order_status_update','order',$2,$3)",
+        [
+          adminId,
+          orderId,
+          JSON.stringify({ from: current.status, to: status }),
+        ],
+      );
+    }
+    return updated;
+  });
 }

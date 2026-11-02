@@ -1,3 +1,5 @@
+import { ensureInventorySchema } from "../inventory/schema.js";
+import { WEBSITE_STOCK_SQL } from "../inventory/website.js";
 import express from "express";
 import { pool, q } from "../lib/db.js";
 import { dto } from "../services/catalog.js";
@@ -5,14 +7,16 @@ import { bad } from "../lib/errors.js";
 import { owner } from "../auth/customer/guest.js";
 const app = express.Router();
 app.get("/api/cart", async (req: any, res) => {
+  await ensureInventorySchema();
   const key = await owner(req, res);
   const { rows } = await q(
-    "SELECT p.*,c.quantity FROM carts c JOIN products p ON p.id=c.product_id WHERE c.owner_key=$1 AND p.active=true ORDER BY c.updated_at",
+    `SELECT p.*, ${WEBSITE_STOCK_SQL} AS stock_qty,c.quantity FROM carts c JOIN products p ON p.id=c.product_id WHERE c.owner_key=$1 AND p.active=true ORDER BY c.updated_at`,
     [key],
   );
   res.json(rows.map((r: any) => ({ product: dto(r), qty: r.quantity })));
 });
 app.put("/api/cart", async (req: any, res) => {
+  await ensureInventorySchema();
   const key = await owner(req, res);
   const items = req.body.items;
   if (!Array.isArray(items) || items.length > 100) throw bad("Invalid bag.");
@@ -30,7 +34,7 @@ app.put("/api/cart", async (req: any, res) => {
     for (const [slug, qty] of normalized) {
       const p = (
         await c.query(
-          "SELECT id,stock_qty FROM products WHERE slug=$1 AND active=true",
+          `SELECT p.id, ${WEBSITE_STOCK_SQL} AS stock_qty FROM products p WHERE p.slug=$1 AND p.active=true`,
           [slug],
         )
       ).rows[0];
