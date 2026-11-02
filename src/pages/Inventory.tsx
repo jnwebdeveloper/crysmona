@@ -346,7 +346,6 @@ export default function Inventory() {
                     searchable={false}
                     headers={[
                       "Product / SKU",
-                      "Location",
                       "Physical",
                       "Reserved",
                       "Available",
@@ -380,7 +379,6 @@ export default function Inventory() {
                             <small>{i.sku}</small>
                           </div>
                         </div>,
-                        i.location || "—",
                         i.physical,
                         i.reserved,
                         i.available,

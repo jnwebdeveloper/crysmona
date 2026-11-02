@@ -771,10 +771,10 @@
 .inv-stock-card td:last-child {
   min-width: 112px !important;
 }
-.inv-stock-card td:nth-child(n + 3):nth-child(-n + 6) {
+.inv-stock-card td:nth-child(n + 2):nth-child(-n + 5) {
   text-align: right;
 }
-.inv-stock-card th:nth-child(n + 3):nth-child(-n + 6) .inv-sort {
+.inv-stock-card th:nth-child(n + 2):nth-child(-n + 5) .inv-sort {
   width: 100%;
   justify-content: flex-end;
 }
