@@ -4,10 +4,11 @@
 
 ## Stock setup
 
-1. Create an inventory item and record physical stock using **Stock movements → Receive stock**.
-2. In **SKU mappings**, map the exact website product SKU to the inventory item with channel **Website**. A product reference alone is not a stock mapping.
-3. Website availability is **physical − reserved**. An unmapped product has zero available stock and cannot be purchased. Multiple channel SKUs may share one inventory item.
-4. Manage quantities through inventory. The old product stock column is no longer authoritative; admin product listings/export and website reads show inventory availability. Legacy stock edits do not change available units.
+1. Add a product in the website admin. An inventory item and website SKU mapping are created automatically in the same database transaction. Products without a SKU receive a generated `WEB-...` SKU.
+2. Existing products missing mappings are linked automatically on upgrade. Existing manual mappings and physical/reserved stock are preserved. Existing matching item SKUs or product references are reused instead of creating duplicate items. Editing a website SKU retains the previous stock item and keeps the old mapping for historical order references.
+3. Newly created inventory items start with **zero physical stock**, regardless of the old admin stock field. Receive physical stock using **Stock movements → Receive stock** before selling. Automatic listing does not import historical stock numbers.
+4. Website availability is **physical − reserved**. Multiple channel SKUs may share one inventory item; Etsy SKU mapping remains manual. You can still create inventory-only items independently.
+5. Manage quantities through inventory. The old product stock column is no longer authoritative; admin product listings/export and website reads show inventory availability. Legacy stock edits do not change available units.
 
 ## Website order flow
 
@@ -45,6 +46,6 @@ Connect Etsy from Integrations and approve order read access. OAuth uses PKCE, s
 
 ## Deployment and checks
 
-Deploy the updated code normally. Existing inventory tables are reused; no extra migration is needed for website-driven availability. The additive explicit installer remains available as `npm run db:migrate:inventory`.
+Deploy the updated code normally. Existing inventory tables are reused. Automatic initialization also installs the `012-inventory-auto-products.sql` product-linking triggers and backfills missing website mappings. Deploying is sufficient; no separate command is required. The additive explicit installer remains available as `npm run db:migrate:inventory`.
 
 Checks: `npm run build`, `npm run check:server`, `node --import tsx --test tests/inventory.test.ts`. Against an isolated test database with the existing schema/seed and an active development admin, run `INV_TEST_DATABASE=1 DATABASE_URL=... node --import tsx --test tests/inventory-checkout-db.test.ts tests/inventory-db.test.ts`. Never point fixture tests at production.

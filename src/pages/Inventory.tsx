@@ -578,12 +578,12 @@ export default function Inventory() {
                 <section className="inv-card">
                   <h2>Before your first sync</h2>
                   <p>
-                    Map website SKUs and record stock before selling. Available
-                    stock is physical minus reserved; unmapped products are
-                    unavailable. Website orders update inventory automatically.
-                    Manual reconciliation includes historical orders, so account
-                    for past shipments in opening stock. Etsy imports remain
-                    manual.
+                    Admin products are listed and mapped automatically. Receive
+                    physical stock before selling. Available stock is physical
+                    minus reserved; unmapped products are unavailable. Website
+                    orders update inventory automatically. Manual reconciliation
+                    includes historical orders, so account for past shipments in
+                    opening stock. Etsy imports remain manual.
                   </p>
                 </section>
                 <section className="inv-card">

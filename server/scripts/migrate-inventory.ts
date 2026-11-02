@@ -1,14 +1,9 @@
 import "dotenv/config";
-import { readFile } from "node:fs/promises";
 import { pool } from "../lib/db.js";
+import { ensureInventorySchema } from "../inventory/schema.js";
 try {
-  await pool.query(
-    await readFile(
-      new URL("../../database/011-inventory.sql", import.meta.url),
-      "utf8",
-    ),
-  );
-  console.log("Inventory tables ready.");
+  await ensureInventorySchema();
+  console.log("Inventory tables and automatic website product linking ready.");
 } finally {
   await pool.end();
 }

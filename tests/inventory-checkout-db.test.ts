@@ -39,17 +39,18 @@ test(
         )
       ).rows[0].id;
       let p = await (await fetch(`${base}/api/products/${slug}`)).json();
-      assert.equal(p.stockQty, 0, "unmapped stock must not fall back to 999");
+      assert.equal(
+        p.stockQty,
+        0,
+        "automatically listed item starts at zero rather than legacy stock",
+      );
       item = (
         await q(
-          "INSERT INTO inv_items(sku,name,physical) VALUES($1,'Stock test',5) RETURNING id",
+          "SELECT item_id FROM inv_mappings WHERE channel='website' AND external_sku=$1",
           [sku],
         )
-      ).rows[0].id;
-      await q(
-        "INSERT INTO inv_mappings(item_id,channel,external_sku) VALUES($1,'website',$2)",
-        [item, sku],
-      );
+      ).rows[0].item_id;
+      await q("UPDATE inv_items SET physical=5 WHERE id=$1", [item]);
       p = await (await fetch(`${base}/api/products/${slug}`)).json();
       assert.equal(p.stockQty, 5);
       const input = {

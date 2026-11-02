@@ -74,3 +74,18 @@ test("serverless inventory schema matches the standalone migration", async () =>
     ),
   );
 });
+
+import { INVENTORY_AUTO_PRODUCTS_SQL } from "../server/inventory/schema.js";
+test("serverless automatic product linking matches its migration", async () => {
+  const migration = (
+    await readFile(
+      new URL("../database/012-inventory-auto-products.sql", import.meta.url),
+      "utf8",
+    )
+  )
+    .trim()
+    .replace(/^BEGIN;/, "")
+    .replace(/COMMIT;$/, "")
+    .trim();
+  assert.equal(INVENTORY_AUTO_PRODUCTS_SQL.trim(), migration);
+});
