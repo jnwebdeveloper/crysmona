@@ -1100,3 +1100,148 @@
     min-width: 180px;
   }
 }
+.inv-etsy-buttons {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.inv-etsy-shop {
+  padding: 16px;
+  background: #f7f1e8;
+  border: 1px solid #e6d9c9;
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+}
+.inv-etsy-shop small {
+  font-size: 11px;
+  color: #8b7566;
+}
+.inv-etsy-hint {
+  border-left: 3px solid #b7863e;
+  padding-left: 12px;
+  font-size: 12px;
+}
+.inv-setup-toggle {
+  margin: 8px 0 18px;
+}
+.inv-etsy-setup {
+  border-top: 1px solid #e6d9c9;
+  padding-top: 18px;
+}
+.inv-etsy-setup ol {
+  padding-left: 22px;
+  margin: 0;
+}
+.inv-etsy-setup ol > li {
+  padding: 0 0 20px 8px;
+  font-size: 13px;
+}
+.inv-etsy-setup p {
+  font-size: 12px;
+}
+.inv-etsy-setup a {
+  color: #9c6b2d;
+}
+.inv-copy-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: #f7f1e8;
+  border: 1px solid #e6d9c9;
+  padding: 12px;
+  border-radius: 5px;
+}
+.inv-copy-row code {
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.8;
+  flex: 1;
+  min-width: 0;
+}
+.inv-copy-row button {
+  flex-shrink: 0;
+}
+.inv-etsy-setup pre {
+  white-space: pre-wrap;
+  padding: 12px;
+  background: #f7f1e8;
+  font-size: 12px;
+  border-radius: 4px;
+}
+.inv-env-checklist {
+  padding: 0;
+  margin: 14px 0;
+  list-style: none;
+}
+.inv-env-checklist li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border-bottom: 1px solid #eee4d8;
+  padding: 12px 0;
+}
+.inv-env-checklist small {
+  display: block;
+  margin-top: 5px;
+  color: #8b7566;
+  font-size: 10px;
+}
+.inv-env-checklist code {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.inv-etsy-last {
+  border-top: 1px solid #e6d9c9;
+  padding-top: 16px;
+}
+.inv-etsy-last > small {
+  color: #8b7566;
+  font-size: 10px;
+  margin-right: 10px;
+}
+.inv-etsy-last p {
+  font-size: 12px;
+}
+.inv-etsy-card {
+  min-width: 0;
+}
+@media (max-width: 650px) {
+  .inv-copy-row {
+    flex-direction: column;
+  }
+  .inv-env-checklist li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.inv-integrations {
+  align-items: start;
+}
+.inv-integrations:has(.inv-etsy-setup) {
+  grid-template-columns: 1fr;
+}
+.inv-etsy-setup > ol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 32px;
+}
+.inv-etsy-setup > ol > li:nth-child(3) {
+  grid-column: 1/-1;
+}
+.inv-env-checklist {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 22px;
+}
+.inv-etsy-setup > ol > li > p {
+  max-width: 900px;
+}
+@media (max-width: 650px) {
+  .inv-etsy-setup > ol,
+  .inv-env-checklist {
+    grid-template-columns: 1fr;
+  }
+}

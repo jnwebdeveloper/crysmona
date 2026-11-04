@@ -38,7 +38,7 @@ Set these server-only environment variables:
 
 - `ETSY_CLIENT_ID`: app keystring.
 - `ETSY_SHARED_SECRET`: app shared secret.
-- `ETSY_SHOP_ID`: numeric shop ID.
+- `ETSY_SHOP_ID`: optional numeric shop restriction; otherwise detected after authorization.
 - `ETSY_REDIRECT_URI`: `https://crysmona.vercel.app/api/inventory/etsy/callback`, registered in your Etsy app.
 - `INV_ENCRYPTION_KEY`: base64 encoded 32-byte random key. Generate with `openssl rand -base64 32` and keep stable.
 
@@ -85,3 +85,13 @@ Existing orders created before per-product snapshots are reconstructed only when
 Full cancellation after partial shipping is blocked. Returns, refunds of remaining items and partial cancellation are separate workflows, not included in this change. Etsy shipment status is still managed in Etsy and imported by sync.
 
 The automatic initializer applies `014-inventory-shipments.sql`, creating only `inv_` shipment tables and adding shipped quantities to inventory order lines. Tests in `tests/inventory-partial-db.test.ts` cover three-product orders, split quantities, duplicate/concurrent requests, overship rejection, shared stock SKUs, old-order reconstruction, remapping, customer status and dashboard counts.
+
+## Guided Etsy connection
+
+Inventory → Integrations contains an Etsy setup guide with the exact callback URL, safe readiness checks for server environment variables, instructions for Etsy app registration/Vercel, and Connect, Test connection, Sync and Disconnect controls. Secret values and OAuth tokens are never returned to the browser.
+
+Required server settings are `ETSY_CLIENT_ID` (Keystring), `ETSY_SHARED_SECRET`, `ETSY_REDIRECT_URI`, and `INV_ENCRYPTION_KEY` (generate with `openssl rand -base64 32`). Save them for Production in Vercel and redeploy. Keep the encryption key stable. `ETSY_SHOP_ID` is now optional: the callback discovers the shop owned by the authorized Etsy user and verifies order-read access before storing the encrypted connection. If provided, the configured shop ID must match. The workspace connects one shop at a time.
+
+The UI returns from OAuth with a readable success, denied, expired, or failed notice. Connection failures appear in Etsy sync history. Test connection reads one receipt page without importing or changing stock. Tokens refresh automatically when necessary. Etsy cancellation is recognized from its receipt status as well as a cancellation flag, so unshipped imported orders release their reservations when cancelled.
+
+The additive `015-etsy-connection.sql` migration stores the shop display name and is applied automatically. `tests/etsy.test.ts` uses simulated network responses to check safe setup status, account/shop verification, pagination, token refresh and error handling. `tests/etsy-db.test.ts` checks PKCE state, callback replay rejection, encrypted storage, repeat order imports, cancellation and disconnection against an explicitly opted-in isolated test database. A real connection still requires your Etsy app credentials and shop-owner authorization.

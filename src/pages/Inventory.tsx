@@ -62,6 +62,23 @@ export default function Inventory() {
     [adding, setAdding] = useState(false),
     [shipping, setShipping] = useState<Row | null>(null);
   useEffect(() => {
+    const etsyResult = new URLSearchParams(window.location.search).get("etsy");
+    if (etsyResult === "connected")
+      setNotice(
+        "Etsy connected successfully. Map your Etsy SKUs before syncing orders.",
+      );
+    if (etsyResult === "denied")
+      setError(
+        "Etsy access was declined. Connect again and approve order-read access.",
+      );
+    if (etsyResult === "expired")
+      setError(
+        "The Etsy connection attempt expired. Sign in and try Connect Etsy again.",
+      );
+    if (etsyResult === "failed")
+      setError(
+        "Etsy connection could not be completed. See the latest Etsy sync history entry below for details.",
+      );
     const previous = document.title;
     document.title = "Crysmona Inventory";
     const meta = document.createElement("meta");
@@ -830,47 +847,7 @@ export default function Inventory() {
                       Sync website orders
                     </button>
                   </section>
-                  <section className="inv-card">
-                    <h2>Etsy</h2>
-                    <span className="inv-badge">
-                      {data.integrations.length ? "Connected" : "Not connected"}
-                    </span>
-                    <p>
-                      Connect your configured Etsy shop to import orders. OAuth
-                      tokens are encrypted in inventory storage.
-                    </p>
-                    <a
-                      className="inv-button"
-                      href="/api/inventory/etsy/connect"
-                    >
-                      Connect Etsy
-                    </a>{" "}
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        void run(
-                          () => api("/sync/etsy", {}),
-                          "Etsy orders checked.",
-                        )
-                      }
-                    >
-                      Sync Etsy orders
-                    </button>
-                    {data.integrations.length > 0 && (
-                      <button
-                        className="inv-secondary"
-                        disabled={busy}
-                        onClick={() =>
-                          void run(
-                            () => api("/etsy/disconnect", {}),
-                            "Etsy disconnected.",
-                          )
-                        }
-                      >
-                        Disconnect
-                      </button>
-                    )}
-                  </section>
+                  <EtsyIntegration data={data} busy={busy} run={run} />
                 </div>
                 <section className="inv-card">
                   <h2>Before your first sync</h2>
@@ -1729,5 +1706,229 @@ function Dashboard({ data }: { data: Row }) {
         />
       </section>
     </div>
+  );
+}
+
+function EtsyIntegration({
+  data,
+  busy,
+  run,
+}: {
+  data: Row;
+  busy: boolean;
+  run: (work: () => Promise<unknown>, message: string) => Promise<void>;
+}) {
+  const setup = data.etsySetup || {
+    ready: false,
+    requirements: [],
+    callback: "https://crysmona.vercel.app/api/inventory/etsy/callback",
+  };
+  const shop = data.integrations[0];
+  const last = data.history.find((h: Row) => h.channel === "etsy");
+  const [showSetup, setShowSetup] = useState(!setup.ready || !shop);
+  return (
+    <section className="inv-card inv-etsy-card">
+      <div className="inv-card-heading">
+        <h2>Etsy</h2>
+        <span className={"inv-badge " + (!shop ? "inv-low" : "")}>
+          {shop ? "Connected" : "Not connected"}
+        </span>
+      </div>
+      <p>
+        Import paid Etsy orders into the same physical inventory. Website
+        availability follows the updated stock automatically.
+      </p>
+      {shop && (
+        <div className="inv-etsy-shop">
+          <b>{shop.shop_name || "Etsy shop"}</b>
+          <small>Shop ID: {shop.shop_id}</small>
+          <small>OAuth token refresh is handled automatically.</small>
+        </div>
+      )}
+      <div className="inv-etsy-buttons">
+        <button
+          disabled={busy || !setup.ready}
+          onClick={() => window.location.assign("/api/inventory/etsy/connect")}
+        >
+          {shop ? "Reconnect Etsy" : "Connect Etsy"}
+        </button>
+        <button
+          className="inv-secondary"
+          disabled={busy || !setup.ready || !shop}
+          onClick={() =>
+            void run(
+              () => api("/etsy/test", {}),
+              "Etsy connection verified. Order-read access is working.",
+            )
+          }
+        >
+          Test connection
+        </button>
+        <button
+          disabled={busy || !setup.ready || !shop}
+          onClick={() => {
+            if (
+              window.confirm(
+                "Sync Etsy orders? Historical shipped orders can deduct physical stock. Confirm your opening stock and Etsy SKU mappings are ready.",
+              )
+            )
+              void run(
+                () => api("/sync/etsy", {}),
+                "Etsy orders checked. See channel orders and sync history for results.",
+              );
+          }}
+        >
+          Sync Etsy orders
+        </button>
+        {shop && (
+          <button
+            className="inv-secondary"
+            disabled={busy}
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Disconnect Etsy from this inventory workspace? Imported orders and stock history will be kept.",
+                )
+              )
+                void run(
+                  () => api("/etsy/disconnect", {}),
+                  "Etsy disconnected. Imported history was retained.",
+                );
+            }}
+          >
+            Disconnect
+          </button>
+        )}
+      </div>
+      {!setup.ready && (
+        <p className="inv-etsy-hint">
+          Finish the server settings below, then redeploy to enable connection.
+          App status “Personal Access” is suitable for connecting your own
+          authorized shop.
+        </p>
+      )}
+      <button
+        className="inv-secondary inv-setup-toggle"
+        aria-expanded={showSetup}
+        onClick={() => setShowSetup(!showSetup)}
+      >
+        {showSetup ? "Hide setup guide" : "Show setup guide"}
+      </button>
+      {showSetup && (
+        <div className="inv-etsy-setup">
+          <ol>
+            <li>
+              <b>Open your Etsy app</b>
+              <p>
+                In{" "}
+                <a
+                  href="https://www.etsy.com/developers/your-apps"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Etsy Your Apps
+                </a>
+                , open your approved app and locate its Keystring and Shared
+                Secret.
+              </p>
+            </li>
+            <li>
+              <b>Register the callback URL</b>
+              <p>Add this exact URL in your Etsy app's callback settings:</p>
+              <div className="inv-copy-row">
+                <code>{setup.callback}</code>
+                <button
+                  className="inv-secondary"
+                  onClick={() =>
+                    void run(
+                      () => navigator.clipboard.writeText(setup.callback),
+                      "Callback URL copied.",
+                    )
+                  }
+                >
+                  Copy URL
+                </button>
+              </div>
+            </li>
+            <li>
+              <b>Add server settings in Vercel</b>
+              <p>
+                Open Crysmona → Settings → Environment Variables. Add these for
+                Production. Keep secret values in Vercel; this screen shows only
+                whether each setting is valid.
+              </p>
+              <ul className="inv-env-checklist">
+                {setup.requirements.map((r: Row) => (
+                  <li key={r.name}>
+                    <span
+                      className={"inv-badge " + (r.present ? "" : "inv-low")}
+                    >
+                      {r.present ? "Ready" : "Missing / invalid"}
+                    </span>
+                    <div>
+                      <code>{r.name}</code>
+                      <small>{r.description}</small>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p>
+                Use your Etsy Keystring for ETSY_CLIENT_ID and Shared Secret for
+                ETSY_SHARED_SECRET. Set ETSY_REDIRECT_URI to the callback above.
+              </p>
+              <p>Generate INV_ENCRYPTION_KEY in Terminal with:</p>
+              <pre>openssl rand -base64 32</pre>
+              <p>
+                Save the generated value in Vercel and keep it stable. Shop ID
+                is detected automatically after authorization; ETSY_SHOP_ID is
+                optional if you want to restrict connection to a specific shop.
+              </p>
+              <a
+                href="https://vercel.com/dashboard"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open Vercel dashboard ↗
+              </a>
+            </li>
+            <li>
+              <b>Redeploy and connect</b>
+              <p>
+                Redeploy Crysmona after saving environment variables. Return
+                here, click Connect Etsy, sign in as the shop owner and approve
+                order-read access. Then use Test connection.
+              </p>
+            </li>
+            <li>
+              <b>Map SKUs, then sync</b>
+              <p>
+                In SKU mappings choose Etsy, enter the exact Etsy SKU for each
+                product/variation, and select its inventory item. Record opening
+                physical stock before your first sync. Historical shipped orders
+                are included, so opening balances must account for those sales.
+              </p>
+            </li>
+          </ol>
+        </div>
+      )}
+      <p className="inv-form-note">
+        Orders are imported when you click Sync. This integration does not
+        publish listings or send quantities back to Etsy. Manage Etsy shipping
+        and cancellations on Etsy, then sync again.
+      </p>
+      {last && (
+        <div className="inv-etsy-last">
+          <small>Latest Etsy activity · {date(last.created_at)}</small>
+          <span
+            className={
+              "inv-badge " + (last.status === "failed" ? "inv-out" : "")
+            }
+          >
+            {last.status}
+          </span>
+          <p>{last.message}</p>
+        </div>
+      )}
+    </section>
   );
 }

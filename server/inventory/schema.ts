@@ -88,6 +88,9 @@ async function install(): Promise<void> {
       "ALTER TABLE inv_items ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT false",
     );
     await client.query(INVENTORY_SHIPMENTS_SQL);
+    await client.query(
+      "ALTER TABLE inv_integrations ADD COLUMN IF NOT EXISTS shop_name TEXT NOT NULL DEFAULT ''",
+    );
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");

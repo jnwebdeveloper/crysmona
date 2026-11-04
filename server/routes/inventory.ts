@@ -96,7 +96,7 @@ router.get("/data", async (_req, res) => {
       ),
       q("SELECT * FROM inv_sync_history ORDER BY id DESC LIMIT 100"),
       q("SELECT id,sku,name FROM products ORDER BY name"),
-      q("SELECT shop_id,expires_at FROM inv_integrations"),
+      q("SELECT shop_id,shop_name,expires_at FROM inv_integrations"),
     ]);
   res.json({
     items: items.rows,
@@ -106,6 +106,7 @@ router.get("/data", async (_req, res) => {
     history: history.rows,
     products: products.rows,
     integrations: integrations.rows,
+    etsySetup: etsy.setup(),
   });
 });
 router.get("/dashboard", async (_req, res) => {
@@ -475,15 +476,12 @@ router.post("/sync/:channel", async (req, res) => {
       }
     } else {
       for (const order of await etsy.receipts()) {
-        if (!order.is_paid && !order.is_canceled) continue;
+        const state = etsy.orderState(order);
+        if (!state) continue;
         await importOrder(
           channel,
           String(order.receipt_id),
-          order.is_canceled
-            ? "cancelled"
-            : order.is_shipped
-              ? "shipped"
-              : "open",
+          state,
           (order.transactions || []).map((t: any) => ({
             sku: t.sku,
             quantity: t.quantity,
@@ -526,25 +524,73 @@ router.get("/etsy/connect", async (req, res) => {
   });
   res.redirect("https://www.etsy.com/oauth/connect?" + params);
 });
+router.post("/etsy/test", async (_req, res) =>
+  res.json(await etsy.testConnection()),
+);
 router.get("/etsy/callback", async (req, res) => {
-  const state = (
+  try {
+    if (typeof req.query.state !== "string")
+      throw bad("Invalid authorization state.", 400);
+    const state = (
+      await q(
+        "DELETE FROM inv_oauth_states WHERE state=$1 AND session_hash=$2 AND expires_at>now() RETURNING verifier",
+        [req.query.state, session(req)],
+      )
+    ).rows[0];
+    if (!state) {
+      res.redirect("/inventory/integrations?etsy=expired");
+      return;
+    }
+    if (req.query.error) {
+      res.redirect("/inventory/integrations?etsy=denied");
+      return;
+    }
+    if (typeof req.query.code !== "string")
+      throw bad("Etsy did not provide an authorization code.", 400);
+    const data = await etsy.tokens({
+      grant_type: "authorization_code",
+      code: req.query.code,
+      redirect_uri: etsy.config().redirect,
+      code_verifier: state.verifier,
+    });
+    const shop = await etsy.discoverShop(data);
+    // This inventory workspace connects one shop at a time. Replace only after
+    // authorization and order-read permission have both been verified.
+    const c = await pool.connect();
+    try {
+      await c.query("BEGIN");
+      await c.query("SELECT pg_advisory_xact_lock(183621591,2)");
+      await c.query("DELETE FROM inv_integrations WHERE shop_id<>$1", [
+        shop.id,
+      ]);
+      await c.query(
+        `INSERT INTO inv_integrations(shop_id,tokens,expires_at,shop_name) VALUES($1,$2,now()+$3*interval '1 second',$4) ON CONFLICT(shop_id) DO UPDATE SET tokens=excluded.tokens,expires_at=excluded.expires_at,shop_name=excluded.shop_name`,
+        [
+          shop.id,
+          etsy.encrypt(JSON.stringify(data)),
+          data.expires_in,
+          shop.name,
+        ],
+      );
+      await c.query("COMMIT");
+    } catch (e) {
+      await c.query("ROLLBACK");
+      throw e;
+    } finally {
+      c.release();
+    }
     await q(
-      "DELETE FROM inv_oauth_states WHERE state=$1 AND session_hash=$2 AND expires_at>now() RETURNING verifier",
-      [req.query.state, session(req)],
-    )
-  ).rows[0];
-  if (!state || typeof req.query.code !== "string")
-    throw bad("Etsy authorization expired. Connect again.");
-  const shop = process.env.ETSY_SHOP_ID;
-  if (!shop || !/^\d+$/.test(shop)) throw bad("Configure ETSY_SHOP_ID.", 503);
-  const data = await etsy.tokens({
-    grant_type: "authorization_code",
-    code: req.query.code,
-    redirect_uri: etsy.config().redirect,
-    code_verifier: state.verifier,
-  });
-  await etsy.save(shop, data);
-  res.redirect("/inventory/integrations");
+      "INSERT INTO inv_sync_history(channel,status,message) VALUES('etsy','success',$1)",
+      ["Connected Etsy shop " + shop.name],
+    );
+    res.redirect("/inventory/integrations?etsy=connected");
+  } catch (error) {
+    await q(
+      "INSERT INTO inv_sync_history(channel,status,message) VALUES('etsy','failed',$1)",
+      [error instanceof Error ? error.message : "Etsy connection failed"],
+    );
+    res.redirect("/inventory/integrations?etsy=failed");
+  }
 });
 router.post("/etsy/disconnect", async (_req, res) => {
   await q("DELETE FROM inv_integrations");
