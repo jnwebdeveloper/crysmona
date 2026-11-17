@@ -80,6 +80,7 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
             src={slide.image_url}
             alt={slide.title.replace(/\n/g, " ")}
             loading="eager"
+            fetchPriority="high"
           />
         </div>
       </div>

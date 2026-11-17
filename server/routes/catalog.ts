@@ -6,6 +6,11 @@ import { dto } from "../services/catalog.js";
 import { q } from "../lib/db.js";
 import { expireUnpaidOrders } from "../services/orders.js";
 const app = express.Router();
+// Public catalog reads are the same for every visitor, so Vercel's CDN may serve
+// them for a minute and refresh in the background. Checkout still checks live
+// stock, so a briefly stale count can't oversell.
+const shared = (res: express.Response) =>
+  res.set("Cache-Control", "public, max-age=0, s-maxage=60, stale-while-revalidate=600");
 // Product reads release stock held by abandoned PayPal checkouts first, so shoppers
 // do not see items as sold out that nobody paid for (at most one check a minute).
 app.get("/api/products", async (_req, res) => {
@@ -16,7 +21,7 @@ app.get("/api/products", async (_req, res) => {
      FROM products p LEFT JOIN admin_record_order o ON o.resource='products' AND o.record_id=p.id
      WHERE p.active=true ORDER BY o.position NULLS LAST,p.created_at,p.name`,
   );
-  res.json(rows.map(dto));
+  shared(res).json(rows.map(dto));
 });
 app.get("/api/products/:slug", async (req, res) => {
   await ensureInventorySchema();
@@ -47,7 +52,7 @@ app.get("/api/storefront", async (_req, res) => {
       q("SELECT key,value FROM settings"),
       q("SELECT * FROM reviews WHERE active=true"),
     ]);
-  res.json({
+  shared(res).json({
     content: content.rows,
     navigation: navigation.rows,
     categories: categories.rows,

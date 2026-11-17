@@ -158,7 +158,7 @@ export default function Home() {
           ).map(([n, img, slug]: string[]) => (
             <article key={n}>
               <div>
-                <img src={img} alt={n} />
+                <img src={img} alt={n} loading="lazy" decoding="async" />
               </div>
               <h3>{n}</h3>
               <a

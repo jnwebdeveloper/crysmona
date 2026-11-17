@@ -21,7 +21,7 @@ export default function ProductCard({
             navTo("/product/" + p.slug);
           }}
         >
-          <img src={p.image} alt={p.name} />
+          <img src={p.image} alt={p.name} loading="lazy" decoding="async" />
         </a>
         <WishButton product={p} />
         {(p.stockQty ?? 0) <= 0 && (
