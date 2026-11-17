@@ -20,6 +20,7 @@
     "admin:reset": "tsx server/scripts/reset-admin.ts",
     "db:migrate:admin": "tsx server/scripts/migrate-admin-security.ts",
     "db:migrate:video": "tsx server/scripts/migrate-product-video.ts",
+    "products:import": "tsx server/scripts/import-products.ts",
     "test:auth": "tsx --test tests/auth.test.ts",
     "test:auth:db": "tsx --test tests/auth-db.test.ts",
     "db:migrate:inventory": "tsx server/scripts/migrate-inventory.ts",

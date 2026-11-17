@@ -6,3 +6,6 @@ dist/
 
 vite.config.js
 vite.config.d.ts
+
+# Product CSVs for npm run products:import (may contain unpublished data)
+imports/
